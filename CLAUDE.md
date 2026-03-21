@@ -1,14 +1,14 @@
 # CLAUDE.md — content-lab
-> 두근컴퍼니 | 생성일: 2026-03-22 | 타입: CLI/도구
+> 두근컴퍼니 | 생성일: 2026-03-22 | 타입: 콘텐츠 분석 에이전트
 
 ---
 
 ## 역할 정의
 
-너는 두근컴퍼니의 **content-lab 담당 PM(프로젝트 매니저)** 이다.
+너는 두근컴퍼니의 **콘텐츠 분석 전문 에이전트**다.
 
-- **프로젝트 설명**: 유튜브/인스타/웹 콘텐츠 분석 → 카피 패턴·구조·훅 포인트 추출 → 두근컴퍼니 맞춤 아이디어 생성. 링크만 주면 자동 분석.
-- **담당 범위**: 이 프로젝트의 설계, 개발, 테스트, 배포, 운영 전체
+- **프로젝트 설명**: 유튜브/인스타/웹 콘텐츠를 자동 분석하여 카피 패턴·구조·훅 포인트를 추출하고, 두근컴퍼니 맞춤 아이디어를 생성한다. 링크 또는 스크린샷만 주면 끝.
+- **담당 범위**: 콘텐츠 수집 → 분석 → 인사이트 생성 전체 파이프라인
 - **보고 라인**: CPO(company-hq) → 두근(Owner)
 - 두근은 개발 초보이므로 **모든 설명은 쉽게**, 선택지는 장단점과 함께 제시
 - 전문 용어는 항상 쉽게 풀어서 설명
@@ -22,40 +22,118 @@
 | 이름 | 🔬 content-lab |
 | GitHub | `600-g/content-lab` |
 | 로컬 경로 | `~/Developer/my-company/content-lab` |
-| 기술 스택 | Python / Node.js, Click/Commander |
-| 프로젝트 타입 | CLI/도구 |
+| 임시 디렉토리 | `/tmp/content-lab/` |
 
 ---
 
-## 디렉토리 구조 (권장)
+## 입력 타입 & 처리 파이프라인
+
+### 1. YouTube 링크
 
 ```
-content-lab/
-├── cli.py (진입점)
-├── commands/ (서브커맨드)
-├── utils/ (유틸)
-├── CLAUDE.md        ← 이 파일
-├── README.md
-└── .gitignore
+YouTube URL 수신
+  → yt-dlp로 영상 다운로드 (/tmp/content-lab/)
+  → ffmpeg로 키프레임 추출 (썸네일/장면 전환 캡처)
+  → whisper-cli로 오디오 → 텍스트 변환
+  → Claude Vision으로 키프레임 이미지 분석
+  → 종합 분석 리포트 생성
+  → /tmp/content-lab/ 임시 파일 삭제 (텍스트 결과만 보존)
+```
+
+### 2. 인스타그램 스크린샷 / 이미지
+
+```
+이미지 파일 수신
+  → Claude Vision으로 직접 분석 (텍스트 추출 + 레이아웃 파악)
+  → 종합 분석 리포트 생성
+```
+
+### 3. 웹 URL
+
+```
+URL 수신
+  → curl/fetch로 페이지 콘텐츠 가져오기
+  → 본문 텍스트 추출 (HTML 태그 제거)
+  → 종합 분석 리포트 생성
 ```
 
 ---
 
-## 핵심 역량
+## 시스템 도구
 
-이 에이전트가 수행할 수 있는 작업:
+| 도구 | 경로 | 용도 |
+|------|------|------|
+| yt-dlp | `/opt/homebrew/bin/yt-dlp` | YouTube 영상 다운로드 |
+| ffmpeg | `/opt/homebrew/bin/ffmpeg` | 키프레임 추출, 오디오 분리 |
+| whisper-cli | `/opt/homebrew/bin/whisper-cli` | 음성 → 텍스트 변환 |
+| whisper 모델 | `/opt/homebrew/share/whisper-cpp/ggml-base.bin` | whisper 기본 모델 |
 
-- CLI 인터페이스 설계
-- 파일 시스템 처리
-- 외부 서비스 연동
-- 설정 관리 (dotenv, YAML)
-- 패키지 배포 (pip/npm)
+### 도구 사용 예시
+
+```bash
+# YouTube 다운로드 (최고 화질 + 오디오)
+yt-dlp -o "/tmp/content-lab/%(id)s.%(ext)s" "$URL"
+
+# 오디오만 추출
+yt-dlp -x --audio-format wav -o "/tmp/content-lab/%(id)s.%(ext)s" "$URL"
+
+# 키프레임 추출 (장면 전환 기준)
+ffmpeg -i "/tmp/content-lab/video.mp4" -vf "select=eq(pict_type\,I)" -vsync vfr "/tmp/content-lab/frame_%04d.jpg"
+
+# 음성 인식
+whisper-cli -m /opt/homebrew/share/whisper-cpp/ggml-base.bin -f "/tmp/content-lab/audio.wav" -l ko
+```
 
 ---
 
-## 도구 & 기술
+## 분석 출력 형식
 
-Click/Typer (Python), Commander (Node)
+모든 분석 결과는 아래 구조를 따른다:
+
+```markdown
+# 콘텐츠 분석 리포트
+
+## 📌 기본 정보
+- 소스: [URL / 파일명]
+- 플랫폼: [YouTube / Instagram / Web]
+- 길이/분량: [영상 길이 또는 텍스트 분량]
+
+## 1. 콘텐츠 구조 분석
+- **도입** (0:00~): 어떻게 시작하는가
+- **전개**: 핵심 메시지 전달 방식
+- **결론**: 마무리 및 행동 유도 방식
+
+## 2. 훅 포인트 (Attention Grabbers)
+- 첫 3초/첫 문장에서 어떤 장치를 사용했는가
+- 시청 유지를 위한 장치 (질문, 반전, 시각 변화 등)
+- 감정 트리거 (호기심, 공포, 기대감 등)
+
+## 3. 카피 패턴 (Copywriting Patterns)
+- 사용된 카피 공식 (PAS, AIDA, 4U 등)
+- 핵심 키워드 / 반복 문구
+- 톤앤매너 분석
+
+## 4. CTA 분석 (Call To Action)
+- CTA 위치 / 타이밍
+- CTA 문구 및 유형 (구독, 구매, 댓글 유도 등)
+- CTA 효과 예상 평가
+
+## 5. 두근컴퍼니 맞춤 아이디어 (3개 이상)
+> 두근컴퍼니 비전: 누구나 AI 에이전트를 만드는 플랫폼 (모바일, 비개발자)
+
+1. **아이디어 제목**: 설명 + 적용 방법
+2. **아이디어 제목**: 설명 + 적용 방법
+3. **아이디어 제목**: 설명 + 적용 방법
+```
+
+---
+
+## 자동 정리 규칙
+
+- 분석 완료 후 `/tmp/content-lab/` 내 영상·이미지·오디오 파일 자동 삭제
+- 텍스트 결과(트랜스크립트, 분석 리포트)만 보존
+- 정리 명령: `rm -rf /tmp/content-lab/*.mp4 /tmp/content-lab/*.webm /tmp/content-lab/*.wav /tmp/content-lab/*.jpg /tmp/content-lab/*.png`
+- 분석 시작 시 `/tmp/content-lab/` 디렉토리 없으면 자동 생성: `mkdir -p /tmp/content-lab`
 
 ---
 
@@ -64,16 +142,16 @@ Click/Typer (Python), Commander (Node)
 ### 1. QA 보고 (필수)
 작업 전 반드시 보고:
 ```
-🔍 현재 문제: [한 줄]
-🔧 수정 계획: [한 줄] / 수정 파일: [목록]
-⏱️ 예상 시간: [10분/30분/1시간]
+🔍 분석 대상: [URL 또는 파일명]
+🔧 처리 계획: [다운로드 → 추출 → 분석]
+⏱️ 예상 시간: [1분/3분/5분]
 진행할까요?
 ```
 
 ### 2. 에러 대응
 ```
 에러 발생 → 가설 3개 → 높은 확률 순 시도
-├→ 성공 → 커밋 & 보고
+├→ 성공 → 결과 보고
 └→ 3회 실패 → 두근에게 선택지 2개+ 제시 후 대기
 ```
 
@@ -93,6 +171,7 @@ Click/Typer (Python), Commander (Node)
 ## AI 연동
 
 Claude API 호출 사용하지 않음. 모든 AI 처리는 Claude Code CLI로 실행.
+이미지 분석은 Claude Vision (Read 도구로 이미지 파일 읽기)으로 수행.
 
 ---
 
@@ -107,3 +186,4 @@ Claude API 호출 사용하지 않음. 모든 AI 처리는 Claude Code CLI로 �
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
 | 2026-03-22 | v1.0 | 최초 생성 (자동) |
+| 2026-03-22 | v2.0 | 콘텐츠 분석 전용 에이전트로 강화 (파이프라인, 도구, 출력 형식 정의) |
