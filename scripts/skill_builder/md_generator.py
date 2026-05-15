@@ -1,14 +1,14 @@
-"""AnalysisResult → ECC 표준 SKILL.md (TEMPLATE v2.2 — 사람 가독성 우선).
+"""AnalysisResult → ECC 표준 SKILL.md (TEMPLATE v2.3 — 제3자 한눈에).
 
-v2.2 변경점:
-- 영문 헤더 키 제거 (한국어만)
-- 빈 섹션 자동 생략 ("(해당 없음)" 표시 X)
-- 메타 callout 한 묶음으로 압축
-- TL;DR 강조
+v2.3 변경점:
+- ⚡ 30초 핵심 카드 (무엇/언제/시작/두근 적용) 페이지 맨 위
+- <details> HTML 제거 (Notion 미지원 → 텍스트 노출 버그)
+- 빈 섹션 자동 생략 (v2.2 유지)
 """
 from __future__ import annotations
 
 import datetime
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -126,13 +126,36 @@ metadata:
 
     body_sections = "".join(sections)
 
+    # ⚡ 30초 핵심 — 첫 트리거 + 첫 단계 추출
+    first_when = ""
+    for line in (result.when_to_use or "").splitlines():
+        s = line.strip().lstrip("-*•").strip()
+        if s:
+            first_when = s
+            break
+    first_step = ""
+    for line in (result.steps or "").splitlines():
+        s = line.strip()
+        if s and (s[0].isdigit() or s.startswith(("-", "*"))):
+            first_step = re.sub(r"^\d+\.\s*|^[-*]\s*", "", s)
+            break
+
+    quick_lines = [f"> **⚡ 30초 핵심**"]
+    quick_lines.append(f"> ")
+    quick_lines.append(f"> 🎯 **무엇** — {result.tldr or result.summary[:100]}")
+    if first_when:
+        quick_lines.append(f"> ⏰ **언제** — {first_when[:80]}")
+    if first_step:
+        quick_lines.append(f"> 🛠 **시작** — {first_step[:80]}")
+    quick_lines.append(f"> 🏢 **두근 적용** — {targets_str}")
+    quick_card = "\n".join(quick_lines)
+
     body = f"""
 # {icon} {result.skill_title_ko}{merged_badge}
 
-> **💡 {result.tldr or result.summary}**
->
-> **{result.grade}** · {result.category} · {result.difficulty}
-> 🤖 {tools_str} → 🎯 {targets_str}
+{quick_card}
+
+> **{result.grade}** · {result.category} · {result.difficulty} · 🤖 {tools_str}
 {body_sections}
 
 ---
