@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="aiskillbox">
+<meta name="format-detection" content="telephone=no">
+<title>aiskillbox · 두근컴퍼니 스킬 자산화</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/style.css?v={{ build_id }}">
+{% if notion.db_app %}
+<meta name="notion-db-app" content="{{ notion.db_app }}">
+<meta name="notion-db-web" content="{{ notion.db_web }}">
+{% endif %}
+{% if notion.hub_app %}
+<meta name="notion-hub-app" content="{{ notion.hub_app }}">
+<meta name="notion-hub-web" content="{{ notion.hub_web }}">
+{% endif %}
+</head>
+<body>
+
+<div class="bg-fx" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-logo">🧠</span>
+    <span class="brand-name">aiskillbox</span>
+  </div>
+  <div class="topbar-actions">
+    {% if notion.db_web %}
+    <a id="db-chip" class="chip" href="{{ notion.db_web }}"
+       data-app="{{ notion.db_app }}" data-web="{{ notion.db_web }}"
+       target="_blank" rel="noopener" title="두근 스킬 DB">
+      <span>📚</span><span class="chip-label">DB</span>
+    </a>
+    {% endif %}
+    <button id="drawer-toggle" class="drawer-toggle" aria-label="설정 메뉴">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>티끌 모아 태산</h1>
+    <p>URL 한 줄씩 모아 두근컴퍼니 영구 자산으로</p>
+  </section>
+
+  <section class="collect-card">
+    <form id="collect-form" autocomplete="off">
+      <div class="input-wrap">
+        <input type="url" id="url" name="url"
+               inputmode="url" enterkeyhint="go"
+               autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="https://youtu.be/... · github.com/... · instagram.com/..."
+               required>
+      </div>
+      <button type="submit" id="submit-btn">
+        <span class="btn-label">수집 시작</span>
+        <span class="btn-arrow">→</span>
+      </button>
+      <p class="hint">💡 같은 스킬이 있으면 <b>자동 합병</b> · 출처 누적 · 본문 풍부화</p>
+    </form>
+
+    <div id="job-status" class="hidden" aria-live="polite">
+      <div class="job-row">
+        <span class="badge" id="job-badge">대기 중</span>
+        <span id="job-stage">큐 대기</span>
+      </div>
+      <details id="job-detail" class="hidden">
+        <summary>JSON 상세</summary>
+        <pre id="job-result"></pre>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p class="mini muted">aiskillbox v4.0 · 두근컴퍼니 콘텐츠랩</p>
+</footer>
+
+<!-- 측면 드로어 -->
+<div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+<aside id="drawer" class="drawer" aria-label="설정 메뉴" aria-hidden="true">
+  <div class="drawer-head">
+    <h3>설정</h3>
+    <button id="drawer-close" class="drawer-close" aria-label="닫기">✕</button>
+  </div>
+
+  <div class="drawer-body">
+
+    <section class="drawer-section" id="active-jobs-section">
+      <h4>진행 중 <span id="active-count" class="muted"></span></h4>
+      <ul id="active-list" class="active-list"></ul>
+      <p id="active-empty" class="empty mini">현재 처리 중인 잡이 없어요.</p>
+    </section>
+
+    <section class="drawer-section">
+      <h4>최근 수집 <span id="recent-count" class="muted"></span></h4>
+      <input type="search" id="recent-search" class="search-input"
+             placeholder="🔍 검색 (제목·태그·카테고리)"
+             autocomplete="off">
+      <div class="filter-chips" id="grade-filters">
+        <button data-filter="all" class="chip-filter active">전체</button>
+        <button data-filter="S" class="chip-filter grade-S">S</button>
+        <button data-filter="A" class="chip-filter grade-A">A</button>
+        <button data-filter="B" class="chip-filter grade-B">B</button>
+      </div>
+      <ul id="recent-list" class="recent-list"></ul>
+      <p id="recent-empty" class="empty hidden">검색 결과 없음 또는 아직 수집된 스킬이 없어요.</p>
+    </section>
+
+    {% if notion.db_app or notion.hub_app %}
+    <section class="drawer-section">
+      <h4>통합 Notion 페이지</h4>
+      <div class="link-grid">
+        {% if notion.db_app %}
+        <a class="link-card notion-deeplink"
+           data-app="{{ notion.db_app }}" data-web="{{ notion.db_web }}"
+           href="{{ notion.db_web }}" target="_blank" rel="noopener">
+          <span class="link-icon">📚</span>
+          <span class="link-text">
+            <b>스킬 마스터 DB</b>
+            <small>모든 수집 스킬 한눈에</small>
+          </span>
+          <span class="link-chev">→</span>
+        </a>
+        {% endif %}
+        {% if notion.hub_app %}
+        <a class="link-card notion-deeplink"
+           data-app="{{ notion.hub_app }}" data-web="{{ notion.hub_web }}"
+           href="{{ notion.hub_web }}" target="_blank" rel="noopener">
+          <span class="link-icon">🏠</span>
+          <span class="link-text">
+            <b>AI 스킬 수집소</b>
+            <small>카테고리별 허브</small>
+          </span>
+          <span class="link-chev">→</span>
+        </a>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="drawer-section">
+      <h4>시스템 상태</h4>
+      <div class="health-grid">
+        <div class="health-row"><span>Gemini API</span><span id="health-gemini" class="dot">⏳</span></div>
+        <div class="health-row"><span>Notion API</span><span id="health-notion" class="dot">⏳</span></div>
+        <div class="health-row"><span>활성 잡</span><span id="health-jobs" class="muted">-</span></div>
+        <div class="health-row"><span>누적 수집</span><span id="health-recent" class="muted">-</span></div>
+      </div>
+      <button id="health-refresh" class="btn-secondary">새로고침</button>
+    </section>
+
+    <section class="drawer-section">
+      <h4>도움말</h4>
+      <ul class="link-list">
+        <li><a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener">Notion 인티그레이션 발급 →</a></li>
+        <li><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini API 키 발급 →</a></li>
+        <li><a href="/healthz" target="_blank" rel="noopener">/healthz (raw JSON)</a></li>
+      </ul>
+    </section>
+
+  </div>
+</aside>
+
+<script src="/static/app.js?v={{ build_id }}"></script>
+</body>
+</html>

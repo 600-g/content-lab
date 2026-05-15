@@ -1,308 +1,228 @@
-# CLAUDE.md — content-lab
-> 두근컴퍼니 | v3.0 | 업데이트: 2026-03-29 | 타입: 콘텐츠 분석 에이전트
+# CLAUDE.md
 
----
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 역할 정의
+## What this is
 
-너는 두근컴퍼니의 **콘텐츠 분석 전문 에이전트**다.
+**aiskillbox** (콘텐츠랩 v4.0) — URL 한 줄 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 + Notion 마스터 DB 등록.
 
-- **프로젝트 설명**: 유튜브/인스타/웹 콘텐츠를 자동 분석하여 카피 패턴·구조·훅 포인트를 추출하고, 두근컴퍼니 맞춤 아이디어를 생성한다. 링크 또는 스크린샷만 주면 끝.
-- **담당 범위**: 콘텐츠 수집 → 분석 → 인사이트 생성 전체 파이프라인
-- **보고 라인**: CPO(company-hq) → 두근(Owner)
-- 두근은 개발 초보이므로 **모든 설명은 쉽게**, 선택지는 장단점과 함께 제시
-- 전문 용어는 항상 쉽게 풀어서 설명
+좋은 콘텐츠를 한 번 보고 끝내지 않고 **스킬 자산**으로 영구 활용 가능한 형태로 보관. 두근컴퍼니의 모든 다른 AI 에이전트가 이 DB와 글로벌 `~/.claude/skills/` 에서 자동으로 활용.
 
----
+- Live: https://aiskillbox.600g.net (Cloudflare Tunnel, token-mode)
+- Local: http://localhost:5050 (Flask, launchd `com.doogeun.aiskillbox`)
 
-## 프로젝트 정보
-
-| 항목 | 내용 |
-|------|------|
-| 이름 | 🔬 content-lab |
-| GitHub | `600-g/content-lab` |
-| 로컬 경로 | `~/Developer/my-company/content-lab` |
-| 임시 디렉토리 | `/tmp/content-lab/` |
-
----
-
-## 입력 타입 & 처리 파이프라인
-
-### 1. YouTube 링크
-
-```
-YouTube URL 수신
-  → yt-dlp로 영상 다운로드 (/tmp/content-lab/)
-  → ffmpeg로 키프레임 추출 (썸네일/장면 전환 캡처)
-  → whisper-cli로 오디오 → 텍스트 변환
-  → Claude Vision으로 키프레임 이미지 분석
-  → 종합 분석 리포트 생성
-  → /tmp/content-lab/ 임시 파일 삭제 (텍스트 결과만 보존)
-```
-
-### 2. 인스타그램 스크린샷 / 이미지
-
-```
-이미지 파일 수신
-  → Claude Vision으로 직접 분석 (텍스트 추출 + 레이아웃 파악)
-  → 종합 분석 리포트 생성
-```
-
-### 3. 웹 URL
-
-```
-URL 수신
-  → curl/fetch로 페이지 콘텐츠 가져오기
-  → 본문 텍스트 추출 (HTML 태그 제거)
-  → 종합 분석 리포트 생성
-```
-
----
-
-## 시스템 도구
-
-| 도구 | 경로 | 용도 |
-|------|------|------|
-| yt-dlp | `/opt/homebrew/bin/yt-dlp` | YouTube 영상 다운로드 |
-| ffmpeg | `/opt/homebrew/bin/ffmpeg` | 키프레임 추출, 오디오 분리 |
-| whisper-cli | `/opt/homebrew/bin/whisper-cli` | 음성 → 텍스트 변환 |
-| whisper 모델 | `/opt/homebrew/share/whisper-cpp/ggml-base.bin` | whisper 기본 모델 |
-
-### 도구 사용 예시
+## Common commands
 
 ```bash
-# YouTube 다운로드 (최고 화질 + 오디오)
-yt-dlp -o "/tmp/content-lab/%(id)s.%(ext)s" "$URL"
+# venv (첫 실행 시 aiskillbox_start.sh 가 자동 처리하기도 함)
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+playwright install chromium
 
-# 오디오만 추출
-yt-dlp -x --audio-format wav -o "/tmp/content-lab/%(id)s.%(ext)s" "$URL"
+# 수집 — CLI 한 줄
+python -m scripts.collect "https://youtu.be/<영상ID>"
+python -m scripts.collect "<URL>" --no-notion        # Notion 등록 생략
+python -m scripts.collect "<URL>" --skip-duplicate   # 중복 시 합병 안 하고 스킵
 
-# 키프레임 추출 (장면 전환 기준)
-ffmpeg -i "/tmp/content-lab/video.mp4" -vf "select=eq(pict_type\,I)" -vsync vfr "/tmp/content-lab/frame_%04d.jpg"
+# 컴파일 사전 검증 (변경 후 항상)
+python -m py_compile app.py scripts/**/*.py
 
-# 음성 인식
-whisper-cli -m /opt/homebrew/share/whisper-cpp/ggml-base.bin -f "/tmp/content-lab/audio.wav" -l ko
+# 서비스 (launchd, 코드 수정 후 반영)
+launchctl kickstart -k "gui/$(id -u)/com.doogeun.aiskillbox"
+launchctl load -w ~/Library/LaunchAgents/com.doogeun.aiskillbox.plist
+tail -f logs/launchd_stdout.log
+
+# 헬스 + 외부 검증
+curl -s http://localhost:5050/healthz | python3 -m json.tool
+curl -s https://aiskillbox.600g.net/healthz | python3 -m json.tool
+
+# Notion 인티그레이션 권한 확인
+source .env && curl -s -X POST "https://api.notion.com/v1/search" \
+  -H "Authorization: Bearer ${NOTION_API_KEY}" \
+  -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" -d '{"page_size":10}' \
+  | python3 -c "import json,sys;print(len(json.load(sys.stdin).get('results',[])),'건 접근 가능')"
+
+# DB 전수 큐레이션 batch
+python -m scripts.curate_db analyze              # 변경 X, 분석만
+python -m scripts.curate_db fix-emoji            # 제목 첫 이모지 → 아이콘 이동
+python -m scripts.curate_db fix-meta             # Gemini로 카테고리/등급 재평가
+python -m scripts.curate_db polish-body --limit 1 --dry  # 본문 1건 미리보기
+python -m scripts.curate_db all                  # 전체 순차
 ```
 
----
+## High-level architecture
 
-## 분석 출력 형식
+### 데이터 흐름 (collect.py 한 사이클)
 
-모든 분석 결과는 아래 구조를 따른다:
-
-```markdown
-# 콘텐츠 분석 리포트
-
-## 📌 기본 정보
-- 소스: [URL / 파일명]
-- 플랫폼: [YouTube / Instagram / Web]
-- 길이/분량: [영상 길이 또는 텍스트 분량]
-
-## 1. 콘텐츠 구조 분석
-- **도입** (0:00~): 어떻게 시작하는가
-- **전개**: 핵심 메시지 전달 방식
-- **결론**: 마무리 및 행동 유도 방식
-
-## 2. 훅 포인트 (Attention Grabbers)
-- 첫 3초/첫 문장에서 어떤 장치를 사용했는가
-- 시청 유지를 위한 장치 (질문, 반전, 시각 변화 등)
-- 감정 트리거 (호기심, 공포, 기대감 등)
-
-## 3. 카피 패턴 (Copywriting Patterns)
-- 사용된 카피 공식 (PAS, AIDA, 4U 등)
-- 핵심 키워드 / 반복 문구
-- 톤앤매너 분석
-
-## 4. CTA 분석 (Call To Action)
-- CTA 위치 / 타이밍
-- CTA 문구 및 유형 (구독, 구매, 댓글 유도 등)
-- CTA 효과 예상 평가
-
-## 5. 두근컴퍼니 맞춤 아이디어 (3개 이상)
-> 두근컴퍼니 비전: 누구나 AI 에이전트를 만드는 플랫폼 (모바일, 비개발자)
-
-1. **아이디어 제목**: 설명 + 적용 방법
-2. **아이디어 제목**: 설명 + 적용 방법
-3. **아이디어 제목**: 설명 + 적용 방법
+```
+URL 입력 (CLI / 웹UI / Telegram)
+  ↓
+scripts/scraper/router.py  ── detect_source() → 전용 스크래퍼 → Playwright → requests 폴백 (3단)
+  ↓ ScrapeResult
+scripts/analyzer/gemini.py ── Gemini 2.5 Flash → 2.0 Flash → Gemma 4 26B(로컬) 3단 폴백
+  ↓ AnalysisResult (8섹션 + 메타)
+중복 검사 (mirror + 글로벌 슬러그 + Notion URL) → 있으면 scripts/analyzer/merger.py 로 합병
+  ↓
+scripts/skill_builder/md_generator.py ── ECC 표준 SKILL.md 렌더 (프론트매터 + 본문)
+  ↓ 동시 저장
+  ├─ ~/.claude/skills/{slug}/SKILL.md   (글로벌 ECC, 모든 Claude Code 세션 자동 인식)
+  └─ ./skills/{slug}/SKILL.md            (git 추적용 mirror)
+  ↓
+scripts/notion_client/register.py ── Notion DB 등록 (또는 update if existing)
 ```
 
----
+### LLM 폴백 체인 (`scripts/analyzer/gemini.py:call_gemma_json`)
 
-## 콘텐츠 품질 평가 기준
+비용 0원 + quota 무한 보장:
+1. **Gemini 2.5 Flash** (cloud, 빠름, 무료 20/day per project)
+2. **Gemini 2.0 Flash** (cloud, fallback)
+3. **Gemma 4 26B 또는 e4b** (Ollama localhost:11434, 무제한, cold start 20-30s)
 
-### 점수 매트릭스 (각 1-10점, 총 50점)
-1. **훅 강도**: 첫 3초/첫 문장이 즉시 관심을 끄는가?
-2. **구조 완성도**: 도입-전개-결론 흐름이 자연스러운가?
-3. **CTA 효과**: 행동 유도가 명확하고 자연스러운가?
-4. **적용 가능성**: 두근컴퍼니에 실제로 적용할 수 있는 패턴인가?
-5. **독창성**: 흔한 패턴인가, 새로운 접근인가?
+같은 패턴이 `analyzer/merger.py`, `curate_db.py` 의 `_gemini_reclassify` / `_gemini_polish_body` 에도 적용.
+환경변수로 모델/타임아웃 튜닝: `GEMMA_MODEL=gemma4:e4b`, `GEMMA_TIMEOUT=300`.
 
-### 등급 분류
-- **40점 이상 ⭐ 필수 적용** — CPO에게 즉시 공유 (디스패치)
-- **30-39점 📌 참고 가치** — `insights/` 아이디어 풀에 저장
-- **29점 이하 📋 기록만** — 트렌드 파악용
+### Notion DB v2 스키마 (TEMPLATE.md 가 단일 진실)
 
-### 인사이트 누적 저장
+**중요**: 4곳에서 같은 enum을 써야 함. 변경 시 모두 동시 업데이트:
+- `scripts/analyzer/prompt.py` (`CATEGORIES`, `TAGS`, `AI_TOOLS`, `TARGETS`)
+- `scripts/notion_client/register.py` (`CATEGORY_TO_DB`, `DB_TAGS`, `DIFFICULTY_TO_DB`, `CATEGORY_ICON`)
+- `TEMPLATE.md` (사람용 문서)
+- Notion DB select/multi_select 옵션 (실제 DB)
+
+속성 9개만: `스킬명 / 등급 / 난이도 / 카테고리 / AI 도구 / 태그 / 적용 대상 / 출처 URL / 상태`. v1에서 제거된 5개(수집일/핵심요약/적용메모/출처유형/관련스킬)는 본문 메타 callout에 흡수.
+
+### 카테고리(7) vs 태그(15) 분리 원칙
+
+- **카테고리** = "어떤 작업 영역인가?" (select, 1개) — `프롬프트 / 자동화 / 콘텐츠 / 디자인 / 개발 / 업무 / 기타`
+- **태그** = "어떤 기술/방법을 쓰는가?" (multi_select) — `MCP / API / RAG / Function Calling / Vision / Multimodal / 프롬프트체이닝 / CoT / Tool Use / Webhook / Streaming / CLI / GitHub Actions / 자체호스팅 / 오픈소스`
+
+둘이 겹치지 않게 설계. Gemini 프롬프트에서 enum 강제 + register.py에서 enum 미일치 값은 자동 제거.
+
+### 표준 8섹션 본문 (TEMPLATE.md v2.1)
+
+모든 신규 페이지가 따르는 구조 — AI 에이전트의 RAG와 사람 가독성 양쪽 친화:
 ```
-content-lab/insights/
-├── 2026-03/
-│   ├── youtube_trends.md    ← 월별 유튜브 트렌드 요약
-│   ├── copy_patterns.md     ← 발견한 카피 패턴 모음
-│   └── applied_ideas.md     ← 실제 적용한 아이디어 + 결과
-└── best_practices.md        ← 시간 불문, 최고 사례 모음
-```
+> **TL;DR** — 한 줄 정의
+> **메타** 등급 / 카테고리 / 난이도 / 도구 / 적용 대상
 
----
-
-## 팀 전달 프로토콜
-
-### CPO에게 (주간)
-매주 `company-hq/shared/weekly_brief.md` 갱신:
-- 이번 주 분석 건수
-- 상위 3개 인사이트 (점수 + 한줄 요약)
-- 즉시 적용 제안 1-2개
-
-### 디자인팀에게 (수시)
-UI/비주얼 트렌드 발견 시 디스패치:
-- 레퍼런스 스크린샷/설명
-- 왜 좋은지 한줄
-- 두근컴퍼니 적용 방향
-
-### 프론트/백엔드에게 (수시)
-기술 트렌드 발견 시 디스패치:
-- 기술명 + 원문 링크
-- 현재 스택과의 관련성
-- 적용 시 장단점
-
----
-
-## 자동 정리 규칙
-
-- 분석 완료 후 `/tmp/content-lab/` 내 영상·이미지·오디오 파일 자동 삭제
-- 텍스트 결과(트랜스크립트, 분석 리포트)만 보존
-- 정리 명령: `rm -rf /tmp/content-lab/*.mp4 /tmp/content-lab/*.webm /tmp/content-lab/*.wav /tmp/content-lab/*.jpg /tmp/content-lab/*.png`
-- 분석 시작 시 `/tmp/content-lab/` 디렉토리 없으면 자동 생성: `mkdir -p /tmp/content-lab`
-
----
-
-## 작업 규칙
-
-### 1. QA 보고 (필수)
-작업 전 반드시 보고:
-```
-🔍 분석 대상: [URL 또는 파일명]
-🔧 처리 계획: [다운로드 → 추출 → 분석]
-⏱️ 예상 시간: [1분/3분/5분]
-진행할까요?
+## 🎯 When to use
+## 🔑 How it works
+## 🛠 Steps
+## 💡 Examples
+## 🏢 두근 환경 적용        ← 외부 도구 등장 시 두근 대체 매핑 명시 (TEMPLATE.md "외부 도구 대체 매핑" 표)
+## ⚠️ Caveats
+## 📎 Sources
 ```
 
-### 2. 에러 대응
+### SKILL.md ↔ Notion 본문 분리
+
+`md_generator.render_skill_md()` 는 YAML 프론트매터 + H1 + 8섹션 (SKILL.md 표준).
+**Notion 본문에 넣을 때는 `register.py:_strip_for_notion()` 이 프론트매터 + 최상위 H1 자동 제거**. 이걸 안 하면 YAML이 Notion 페이지 본문에 paragraph로 박혀버림 (실제 발생했던 버그).
+
+## Module map
+
 ```
-에러 발생 → 가설 3개 → 높은 확률 순 시도
-├→ 성공 → 결과 보고
-└→ 3회 실패 → 두근에게 선택지 2개+ 제시 후 대기
+app.py                              ── Flask 진입점, 잡 큐(메모리+disk), /healthz, /api/collect, /api/status/<id>, /api/jobs/active
+scripts/
+  collect.py                        ── 메인 파이프라인 (단계별 한글 에러 + 부분 성공 처리)
+  curate_db.py                      ── DB 전수 큐레이션 CLI (analyze/fix-emoji/fix-meta/polish-body/find-dupes/all)
+  scraper/
+    router.py                       ── detect_source() + 3단 폴백 + 80자 미만 시 자동 폴백
+    youtube.py                      ── yt-dlp 자막(ko→en) + 메타
+    github.py                       ── GitHub REST API (Playwright보다 10배 빠름, README+stars+topics)
+    social.py                       ── Instagram/TikTok/Twitter (yt-dlp 우선, X는 로그인 벽 명시)
+    web.py                          ── Playwright + trafilatura + UA 회전 4종 (mobile UA 1종 포함)
+    mcp_fallback.py                 ── requests 최후 폴백 (정적 페이지만)
+  analyzer/
+    prompt.py                       ── ANALYSIS_PROMPT_TEMPLATE (enum 강제 + 외부 도구 대체 매핑 14종)
+    gemini.py                       ── analyze() + call_gemma_json() + AnalysisResult 데이터클래스
+    merger.py                       ── merge_with_existing() — 중복 시 기존+신규 합병 (출처 URL 누적)
+  skill_builder/
+    md_generator.py                 ── render_skill_md() — SKILL.md 프론트매터 + 8섹션
+    installer.py                    ── 글로벌(~/.claude/skills/) + mirror(./skills/) 동시 설치
+  notion_client/
+    register.py                     ── raw HTTP API (notion-client v3 호환 이슈 회피), 한글 에러 한글화
+    curator.py                      ── v2에서 no-op (관련 스킬 relation 제거됨)
+templates/index.html                ── 단일 페이지 — Hero + 입력 + 결과 + 드로어
+static/{app.js, style.css}          ── 클라이언트 — localStorage 잡 추적, PTR, 알림 3중
+logs/{recent.json, jobs.json}       ── 영속화 (jobs.json은 서버 재시작 시 interrupted 마킹)
 ```
 
-## Git 규칙 (필수 — 자동 커밋)
+## Environment
 
-**코드 수정 후 반드시 커밋+푸시해야 한다. 예외 없음.**
+`.env.example` 복사 후 채우기 — `chmod 600 .env`:
+- `GEMINI_API_KEY` (필수) — https://aistudio.google.com/apikey
+- `NOTION_API_KEY` (필수) — https://www.notion.so/my-integrations + DB 페이지에 Connections 추가
+- `NOTION_DB_ID=35f14362-1b4b-814b-8947-cca66ca16dcb` (🧠 AI 스킬 마스터)
+- `NOTION_HUB_PAGE_ID=35f14362-1b4b-8103-940d-cd81547feda4` (📒 AI 스킬 수집소)
+- `SKILL_INSTALL_DIR=~/.claude/skills` (변경 시 ECC 환경과 분리됨 — 권장 X)
+- `GEMMA_MODEL=gemma4:e4b` / `GEMMA_TIMEOUT=300` (튜닝)
 
-작업 완료 시 아래를 자동 실행:
-```bash
-git add .
-git commit -m "feat/fix/refactor: 한글 작업 내용 요약"
-git push
-```
+## Operational gotchas (실 운영 중 발견한 함정)
 
-커밋 타입: feat, fix, refactor, docs, config, chore
+1. **Notion DB 권한** — 인티그레이션이 Connection 안 붙어 있으면 모든 호출이 `object_not_found`. 진단: `curl /v1/search` 가 0건 반환. 해결: 노션 DB 페이지 우측 상단 `⋯` → Connections → 인티그레이션 추가.
 
-⚠️ 커밋 안 하면 다른 에이전트/세션에서 작업이 유실됨
-⚠️ 큰 작업은 중간중간 커밋 (한번에 몰아서 X)
+2. **notion-client v3 호환성** — v3에서 `databases.query()` 메서드 삭제됨. `register.py`는 `requests`로 raw HTTP 직접 호출하므로 SDK 변경에 영향 없음.
 
-### 4. 코드 품질
-- 함수 50줄 이내, 파일 800줄 이내
-- 에러 핸들링 필수
-- 하드코딩 금지 (상수/환경변수 사용)
-- 보안: 시크릿 하드코딩 절대 금지
+3. **SKILL.md 프론트매터 누수** — `render_skill_md()` 결과를 그대로 Notion에 보내면 YAML이 본문에 박힘. 반드시 `_strip_for_notion()` 통과시킬 것.
 
----
+4. **Gemma 4 콜드 스타트** — Ollama `OLLAMA_KEEP_ALIVE=0`(루트 워크스페이스 CLAUDE.md 정책)이라 idle 시 unload. 첫 호출은 60-90초+ (26B), 20-30초 (e4b). 본문 정리는 e4b 권장, 분류는 26B도 OK.
 
-## AI 연동
+5. **이모지 이중 표시** — 페이지 아이콘 + 제목 시작 이모지 둘 다 있으면 카드/링크에서 `🔍 ⚡ 제목` 처럼 두 번. `register.py:_clean_title()` 이 제목 첫 이모지 자동 제거 + `CATEGORY_ICON` 으로 아이콘 자동 설정.
 
-Claude API 호출 사용하지 않음. 모든 AI 처리는 Claude Code CLI로 실행.
-이미지 분석은 Claude Vision (Read 도구로 이미지 파일 읽기)으로 수행.
+6. **JOBS 메모리 영속화** — `app.py:_save_jobs()` 가 매 상태 변경 시 `logs/jobs.json` 저장. 서버 재시작 시 `_load_jobs()` 가 `queued/running` 잡을 `interrupted` 로 마킹 (실제 백그라운드 스레드는 사라졌으므로 사용자에게 "다시 시도" 안내).
 
----
+7. **캐시 무효화** — `app.py:index()` 가 `app.js` + `style.css` mtime 기반 `build_id` 를 매 응답에 주입. HTML에 `<script src="/static/app.js?v={{ build_id }}">`. 코드 수정 후 launchctl kickstart만 하면 사용자 강제 새로고침 없이 즉시 새 JS 로드.
 
-## 비용 원칙
+8. **Cloudflare Tunnel** — token-mode (Remotely-managed). config.yml 없음. Public Hostname 추가는 Cloudflare Zero Trust 대시보드 → Networks → Tunnels → 해당 터널 → Configure → Public Hostname.
 
-모든 도구 무료 티어 사용. 유료 발생 시 반드시 사전 고지.
+9. **두근컴퍼니 에이전트 페르소나** — 아래 "Agent persona" 섹션은 `~/Developer/my-company/company-hq/server/team_prompts.json` 의 `content-lab` 시스템 프롬프트가 참조한다. 이 섹션을 함부로 삭제/대체하지 말 것. 변경 시 두근컴퍼니 에이전트 동작 영향.
 
----
+## Related docs in this repo
 
-## 공통 규칙 (company-hq v2.0)
-
-### 디스패치 협업
-- CPO 또는 다른 팀에서 디스패치 작업이 올 수 있다
-- 디스패치 작업을 받으면 본인 역할 범위 내에서 수행하고 결과를 텍스트로 반환
-- 본인 담당이 아닌 작업이면 '⏭ 해당없음' 한 줄만 답변
-
-### 보안 규칙
-- API Key, 토큰, 비밀번호는 채팅에 절대 노출 금지
-- .env 파일 내용은 로그/채팅/커밋에 포함 금지
-- 파일 삭제, 덮어쓰기 전 반드시 확인
-
-### 에러 대응
-- 확실하지 않으면 "확실하지 않다"고 솔직히 말한다
-- 모르면 "모르겠다"고 말한다 (거짓 답변 금지)
-- 해결 후 "이게 보이면 성공" 확인 방법 제시
-
-### 응답 규칙
-- CLAUDE.md 최우선. 무응답 금지
-- 완료 → ✅ 한 줄 요약
-- 에러 → ❌ 에러 내용
-- 한국어로 자연스럽게 대화
+- **`TEMPLATE.md`** — 스킬 페이지 표준 템플릿 v2.1 (단일 진실, enum/구조/외부 도구 매핑 14종 정의)
+- **`README.md`** — 사용자 facing 빠른 시작 가이드
+- **`DEPLOY.md`** — Cloudflare Tunnel + LaunchAgent 배포 가이드
+- **`lessons.md`** — 운영 중 발견한 패턴/실수 누적 (새 패턴 발견 시 추가)
 
 ---
 
-## 자가 발전 루프 (lessons.md)
+## Agent persona (런타임 — 두근컴퍼니 시스템이 참조)
 
-실수나 수정이 발생하면 패턴을 기록하여 같은 실수를 반복하지 않는다.
+> 이 섹션은 두근컴퍼니 `team_prompts.json` 의 `content-lab` 시스템 프롬프트가 참조합니다. 코드베이스 가이드와 별개로 유지.
 
-- 프로젝트 루트에 `lessons.md` 파일 유지
-- 형식: `[날짜] 문제 → 원인 → 재발 방지 규칙`
-- 새 대화 시작 시 lessons.md를 읽고 과거 실수를 인지한다
-- 같은 실수 2회 반복 시 CLAUDE.md 본문에 규칙으로 승격
+너는 두근컴퍼니의 **콘텐츠 스킬 자산화 에이전트**다.
 
----
+URL 하나만 던지면:
+1. 자동으로 스크래핑 (YouTube/IG/TikTok/Notion/Web/GitHub)
+2. Gemini → Gemma 4 폴백으로 핵심 AI 스킬 추출 + 등급 판정
+3. ECC 표준 `SKILL.md` 자동 생성 (8섹션 표준)
+4. 글로벌 `~/.claude/skills/{slug}/SKILL.md` + mirror에 설치
+5. Notion 마스터 DB v2 (9속성) 등록 (중복 시 자동 합병)
 
-## 완료 전 필수 검증
+**핵심 가치**: 좋은 콘텐츠 한 번 보고 끝나지 않는다. 스킬 형태로 자산화해서 모든 두근컴퍼니 에이전트가 영구 활용.
 
-코드 수정 후 "작동한다"는 증거 없이 완료 보고하지 않는다.
+### 작업 규칙
 
-- 코드 수정 → 빌드/테스트 성공 확인 필수
-- 빌드 실패 시 완료 보고 금지, 즉시 수정 루프 진입
-- "이렇게 확인해봐" 가이드 필수 제공
-- 검증 통과 후에만 ✅ 완료 보고
+- **무응답 금지** — 완료: `✅ 스킬화 — <slug> (등급 X, 카테고리 Y)`. 부분 성공: 어디까지 됐는지 명시. 에러: `❌ <한글 사유>` + 우회안.
+- **두근은 개발 초보** → 쉽게 설명, 선택지는 장단점과 함께
+- **80% 확신이면 실행 후 보고**, 되묻지 않음
+- **한 번에 끝내기** — 코드 수정 시 미정의 함수/import 잔존 확인 (`python -m py_compile`)
+- **자동 합병 정책** — `skip_duplicate=False` 가 기본. 중복은 합병하고 출처 누적 (사용자가 정성껏 쌓은 자산 보존)
+- **무료 도구 우선** — Gemini 1500/day, Playwright/yt-dlp/Notion API 모두 무료. 비용 발생 가능성 사전 고지.
 
----
+### 보안
 
-## 계획 우선 원칙
+- `.env` (`GEMINI_API_KEY`, `NOTION_API_KEY`) 채팅 노출 금지
+- API 키 하드코딩 금지 — 환경변수만
 
-3단계 이상의 복잡한 작업은 계획 → 검증 → 실행 순서를 지킨다.
+### 변경 로그
 
-- 단순 작업(1~2단계)은 바로 실행 OK
-- 복잡한 작업은 먼저 "이렇게 할게" 목록을 보여주고 진행
-- 계획 변경 시 변경 사항을 먼저 공유
-- 완료 후 전체 결과 요약 보고
-
----
-
-## [변경 로그]
-
-| 날짜 | 버전 | 변경 내용 |
+| 날짜 | 버전 | 변경 |
 |------|------|----------|
-| 2026-03-22 | v1.0 | 최초 생성 (자동) |
-| 2026-03-22 | v2.0 | 콘텐츠 분석 전용 에이전트로 강화 (파이프라인, 도구, 출력 형식 정의) |
-| 2026-03-29 | v3.0 | 고도화 — 품질 평가 매트릭스, 인사이트 누적 체계, 팀 전달 프로토콜 추가 |
-| 2026-03-23 | v2.1 | 공통 규칙 추가 (디스패치/보안/에러대응) — company-hq v2.0 동기화 |
+| 2026-03-22 | v1.0 | 최초 생성 |
+| 2026-03-22 | v2.0 | 콘텐츠 분석 전용 에이전트 |
+| 2026-03-29 | v3.0 | 품질 평가 매트릭스, 인사이트 누적 |
+| 2026-05-14 | v4.0 | 스크래핑 + 스킬 자산화 통합. SKILL_AGENT.md 흡수. ECC 표준 SKILL.md + 글로벌 설치 + Notion master |
+| 2026-05-15 | v4.1 | TEMPLATE.md v2 (DB 슬림화 15→9, 카테고리 7, 태그 15 기술/방법 분리). LLM 폴백 체인 + Gemma 4. 본문 정리/이모지 정리 batch. Pull-to-Refresh + 완료 알림 + 검색 UI |

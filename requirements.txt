@@ -1,0 +1,24 @@
+# 콘텐츠랩 v4.0 — 스크래핑 + 분석 + 스킬화 + Notion 등록
+# Python 3.11+
+
+# 스크래핑
+playwright>=1.45.0          # JS 렌더링 (IG/TikTok/Notion 등)
+yt-dlp>=2024.7.0            # YouTube/IG/TikTok 자막+캡션
+beautifulsoup4>=4.12.0      # HTML 파싱
+requests>=2.32.0            # 정적 페이지
+trafilatura>=1.12.0         # 본문 추출 최강 (광고/네비 자동 제거)
+lxml>=5.2.0                 # trafilatura 의존
+
+# AI 분석
+google-generativeai>=0.7.0  # Gemini API (무료 1500/day)
+
+# Notion DB
+notion-client>=2.2.1
+
+# 웹 UI (aiskillbox.600g.net)
+flask>=3.0.0
+
+# 유틸
+python-dotenv>=1.0.0
+python-slugify>=8.0.4       # 스킬명 → 슬러그 변환
+markdown>=3.6               # Notion 본문 변환

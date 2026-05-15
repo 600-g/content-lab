@@ -1,0 +1,17 @@
+.env
+.env.bak*
+.env.local
+*.pyc
+__pycache__/
+venv/
+.venv/
+logs/
+/tmp/content-lab/
+.DS_Store
+
+# 분석 작업물 (재현 가능, 무겁) - 정리된 인사이트만 커밋
+/tmp_workspace/
+*.mp4
+*.webm
+*.wav
+*.m4a
