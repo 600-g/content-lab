@@ -154,14 +154,14 @@ def _validate(d: dict) -> dict:
         "skill_name", "skill_title_ko", "category", "grade", "grade_reason",
         "targets", "summary", "when_to_use", "memo",
     ]
-    # 8섹션 필드 (없으면 "(해당 없음)" 로 기본값)
+    # 8섹션 필드 — v2.2: 빈 값 그대로 두어서 md_generator 가 자동 생략
     section_fields = ["tldr", "how_it_works", "steps", "examples", "doogeun", "caveats"]
     for k in required:
         if k not in d:
             raise ValueError(f"필수 필드 누락: {k}")
     for k in section_fields:
         if not d.get(k):
-            d[k] = "(해당 없음)"
+            d[k] = ""  # 빈 문자열 → 섹션 자동 생략
     # 레거시 body_content 호환 — 없으면 8섹션 합성
     if not d.get("body_content"):
         d["body_content"] = _compose_body(d)

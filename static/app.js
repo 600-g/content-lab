@@ -1,12 +1,21 @@
 // aiskillbox 클라이언트
 const ACTIVE_JOB_KEY = 'aiskillbox.activeJob.v1';
 
-// ── 완료 알림 권한 (페이지 진입 시 한 번만 요청) ────────
+// ── 완료 알림 권한 (사용자 제스처 시 요청 — iOS Safari 필수) ────────
 function ensureNotifyPermission() {
-  if (!('Notification' in window)) return;
+  if (!('Notification' in window)) return 'unsupported';
+  return Notification.permission;
+}
+
+async function requestNotifyOnGesture() {
+  if (!('Notification' in window)) return 'unsupported';
   if (Notification.permission === 'default') {
-    Notification.requestPermission().catch(() => {});
+    try {
+      const r = await Notification.requestPermission();
+      return r;
+    } catch { return 'error'; }
   }
+  return Notification.permission;
 }
 
 function notifyDone(title, body) {
@@ -180,6 +189,9 @@ form.addEventListener('submit', async (e) => {
   jobBadge.textContent = '대기 중';
   jobStage.innerHTML = '큐 대기';
   urlInput.blur();
+
+  // 사용자 제스처 시점에 권한 요청 (iOS Safari 정책)
+  requestNotifyOnGesture();
 
   try {
     const resp = await fetch('/api/collect', {
@@ -376,7 +388,29 @@ function _renderRecentList() {
   attachNotionHandlers();
 }
 
-// _renderRecentItem 은 위 새 정의 사용 (중복 제거됨)
+function _renderRecentItem(item) {
+  const grade = item.grade || 'C';
+  const title = item.skill_title || item.skill_name || '(제목없음)';
+  const mergePill = item.source_count > 1
+    ? `<span class="merge-pill">🔀 ${item.source_count}</span>` : '';
+  const cat = item.category ? `${item.category} · ` : '';
+  const notionApp = item.notion_app_url || '';
+  const notionWeb = item.notion_web_url || '';
+  const notionLink = notionWeb
+    ? `<a class="notion notion-deeplink" data-app="${escapeHtml(notionApp)}" data-web="${escapeHtml(notionWeb)}" href="${escapeHtml(notionWeb)}" target="_blank" rel="noopener">📝 Notion</a>`
+    : '';
+  const originLink = item.url
+    ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🔗 원본</a>` : '';
+  return `<li>
+    <div class="row1">
+      <span class="grade grade-${grade}">${grade}</span>
+      <span class="title">${escapeHtml(title)}</span>
+      ${mergePill}
+    </div>
+    <div class="meta">${escapeHtml(cat)}${escapeHtml(item.ts || '')}</div>
+    <div class="actions">${notionLink}${originLink}</div>
+  </li>`;
+}
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({
@@ -469,4 +503,5 @@ attachNotionHandlers();
   });
 })();
 
-ensureNotifyPermission();
+// 페이지 로드 시 권한 상태 콘솔 표시 (디버그)
+console.log('[aiskillbox] Notification permission:', ensureNotifyPermission());
