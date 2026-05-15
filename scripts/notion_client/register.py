@@ -112,13 +112,17 @@ def _request(method: str, path: str, body: dict | None = None, context: str = ""
 
 
 def check_duplicate(source_url: str) -> Optional[str]:
-    """출처 URL이 이미 등록되어 있는지 확인. 페이지 ID 반환 or None.
+    """출처 URL이 이미 등록되어 있는지 확인 (정규화 URL로 fuzzy match).
 
-    404/401 같은 권한 문제는 (None, 등록 시도 시 다시 한글 에러 받게) 흘려보냄.
+    fbclid/utm 등 트래킹 파라미터 다른 URL도 같은 페이지로 인식.
+    404/401 같은 권한 문제는 None.
     """
     if not _api_key() or not _db_id():
         return None
+    from ..skill_builder.installer import normalize_url
+    target = normalize_url(source_url)
     try:
+        # 1차: 정확 일치
         data = _request(
             "POST",
             f"databases/{_db_id()}/query",
@@ -131,6 +135,27 @@ def check_duplicate(source_url: str) -> Optional[str]:
         results = data.get("results", [])
         if results:
             return results[0].get("id")
+
+        # 2차: 정규화 URL로 fuzzy 매치 — 도메인 + path 시작 부분으로 contains
+        try:
+            from urllib.parse import urlsplit
+            s = urlsplit(target)
+            stem = f"{s.scheme}://{s.netloc}{s.path}"
+            data2 = _request(
+                "POST",
+                f"databases/{_db_id()}/query",
+                {
+                    "filter": {"property": "출처 URL", "url": {"contains": stem[:80]}},
+                    "page_size": 5,
+                },
+                context="중복 체크(fuzzy)",
+            )
+            for r in data2.get("results", []):
+                ru = (r.get("properties", {}).get("출처 URL", {}) or {}).get("url", "")
+                if normalize_url(ru) == target:
+                    return r.get("id")
+        except Exception:
+            pass
     except NotionError as e:
         logger.info("중복 체크 스킵: %s", e)
     return None

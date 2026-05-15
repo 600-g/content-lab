@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 if TYPE_CHECKING:
     from ..analyzer.gemini import AnalysisResult
@@ -16,6 +18,36 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_GLOBAL_SKILLS_DIR = "~/.claude/skills"
 LOCAL_MIRROR_DIR = Path(__file__).resolve().parents[2] / "skills"
+
+# 트래킹 파라미터 (중복 감지 시 무시)
+TRACKING_PARAMS = {
+    "fbclid", "gclid", "msclkid", "yclid",
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
+    "_ga", "_gl", "mc_cid", "mc_eid",
+    "ref", "ref_src", "referrer",
+    "pvs", "p", "n",  # notion.site 트래킹
+    "fragment", "from",
+}
+
+
+def normalize_url(url: str) -> str:
+    """URL 정규화 — 트래킹 파라미터 제거 + 끝 슬래시 통일.
+
+    같은 PDF/페이지가 fbclid 등으로 다른 URL이 되어 중복 감지 실패하는 문제 해결.
+    """
+    if not url:
+        return ""
+    try:
+        s = urlsplit(url.strip())
+        # query 정리
+        qs = [(k, v) for k, v in parse_qsl(s.query, keep_blank_values=False)
+              if k.lower() not in TRACKING_PARAMS]
+        q = urlencode(qs)
+        # path 끝 슬래시 통일 (제거)
+        path = re.sub(r"/+$", "", s.path) or "/"
+        return urlunsplit((s.scheme.lower(), s.netloc.lower(), path, q, ""))
+    except Exception:
+        return url
 
 
 def _global_skills_dir() -> Path:
@@ -68,14 +100,17 @@ def mirror_skill(
 
 
 def find_existing_by_url(source_url: str) -> Path | None:
-    """이미 같은 URL이 source_urls에 포함된 스킬 찾기."""
+    """이미 같은 URL이 source_urls에 포함된 스킬 찾기 (정규화 URL 비교)."""
     if not LOCAL_MIRROR_DIR.exists():
         return None
+    target = normalize_url(source_url)
     for skill_md in LOCAL_MIRROR_DIR.glob("*/SKILL.md"):
         try:
             txt = skill_md.read_text(encoding="utf-8")
-            if source_url in txt:
-                return skill_md
+            # 본문 안의 모든 URL 후보 추출해서 정규화 비교
+            for m in re.finditer(r"https?://[^\s\"<>)\\]+", txt):
+                if normalize_url(m.group(0)) == target:
+                    return skill_md
         except Exception:  # noqa: BLE001
             continue
     return None

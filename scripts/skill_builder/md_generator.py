@@ -137,13 +137,6 @@ metadata:
 
 ---
 
-<details>
-<summary>📋 메타 정보</summary>
-
-- 최초 수집: `{collected_at}` · 마지막 갱신: `{today}` · 합병: {len(source_urls)}회
-- 템플릿: v2.2 · slug: `{result.skill_name}`
-- 자동 생성: 두근컴퍼니 콘텐츠랩
-
-</details>
+> 📋 *수집 `{collected_at}` · 갱신 `{today}` · 합병 {len(source_urls)}회 · v2.2*
 """
     return frontmatter + body
