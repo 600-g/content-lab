@@ -277,10 +277,13 @@ function pollJob(jobId) {
   }, 1500);
 }
 
+let _lastFailedUrl = '';
+
 function renderResult(job) {
   const r = job.result || {};
   const partial = r.partial_ok;
   const merged = r.skill?.merged;
+  _lastFailedUrl = (job.status === 'failed' || partial) ? (job.url || '') : '';
 
   if (job.status === 'completed') {
     if (partial) { jobBadge.className = 'badge warn'; jobBadge.textContent = '⚠️ 부분 성공'; }
@@ -313,9 +316,17 @@ function renderResult(job) {
     </div>`;
   }
   const msgBlock = r.message_ko ? `<div class="success-msg">${escapeHtml(r.message_ko)}</div>` : '';
-  jobStage.innerHTML = `${msgBlock}${hintBlock}<div class="stages">${stageRows}</div>`;
+  const retryBtn = _lastFailedUrl
+    ? `<button id="retry-btn" class="retry-btn" type="button">🔄 다시 시도</button>` : '';
+  jobStage.innerHTML = `${msgBlock}${hintBlock}<div class="stages">${stageRows}</div>${retryBtn}`;
   jobResult.textContent = JSON.stringify(job.result || { error: job.error }, null, 2);
   jobDetail.classList.remove('hidden');
+  // 재시도 버튼 바인딩
+  document.getElementById('retry-btn')?.addEventListener('click', () => {
+    if (!_lastFailedUrl) return;
+    urlInput.value = _lastFailedUrl;
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+  });
 }
 
 function showError(title, hint) {

@@ -408,6 +408,26 @@ pre {
   line-height: 1.5;
 }
 
+/* 재시도 버튼 (실패 시) */
+.retry-btn {
+  width: auto;
+  margin-top: 12px;
+  padding: 9px 16px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--r-sm);
+  min-height: 36px;
+  box-shadow: none;
+}
+.retry-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fecaca;
+  box-shadow: none;
+}
+
 footer {
   text-align: center;
   padding: 24px 16px;

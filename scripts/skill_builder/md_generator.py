@@ -26,11 +26,30 @@ CATEGORY_ICON = {
 }
 
 
-def _has_content(s: str | None) -> bool:
-    """빈 섹션 판정: None/공백/"(해당 없음)"/"-" 류 모두 빈 것으로."""
-    if not s:
-        return False
-    t = s.strip()
+def _normalize(content) -> str:
+    """list/dict/None → string 정규화 (Gemini가 list로 줘도 안전)."""
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        # 항목 끝의 점/줄바꿈 정리, "-" 없으면 자동 추가
+        parts = []
+        for x in content:
+            s = str(x).strip()
+            if not s:
+                continue
+            if not s.startswith(("- ", "* ", "1.", "2.", "3.", "4.", "5.")):
+                s = f"- {s}"
+            parts.append(s)
+        return "\n".join(parts)
+    if isinstance(content, dict):
+        # dict면 key: value 형식
+        return "\n".join(f"- **{k}**: {v}" for k, v in content.items())
+    return str(content)
+
+
+def _has_content(s) -> bool:
+    """빈 섹션 판정: None/공백/placeholder 모두 빈 것으로."""
+    t = _normalize(s).strip()
     if not t:
         return False
     if t in ("(해당 없음)", "(없음)", "(없음.)", "(N/A)", "(해당없음)", "-", "—"):
@@ -38,11 +57,11 @@ def _has_content(s: str | None) -> bool:
     return True
 
 
-def _section(emoji: str, label: str, content: str | None) -> str:
+def _section(emoji: str, label: str, content) -> str:
     """섹션 내용 있으면 헤더+본문 반환, 없으면 빈 문자열."""
     if not _has_content(content):
         return ""
-    return f"\n## {emoji} {label}\n\n{content.strip()}\n"
+    return f"\n## {emoji} {label}\n\n{_normalize(content).strip()}\n"
 
 
 def render_skill_md(result: "AnalysisResult", source_url: str, source_type: str) -> str:

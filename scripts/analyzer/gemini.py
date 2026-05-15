@@ -155,13 +155,26 @@ def _validate(d: dict) -> dict:
         "targets", "summary", "when_to_use", "memo",
     ]
     # 8섹션 필드 — v2.2: 빈 값 그대로 두어서 md_generator 가 자동 생략
-    section_fields = ["tldr", "how_it_works", "steps", "examples", "doogeun", "caveats"]
+    section_fields = ["tldr", "how_it_works", "steps", "examples", "doogeun", "caveats", "when_to_use"]
     for k in required:
         if k not in d:
             raise ValueError(f"필수 필드 누락: {k}")
+    # Gemini가 가끔 list로 반환 — 문자열로 정규화
     for k in section_fields:
-        if not d.get(k):
-            d[k] = ""  # 빈 문자열 → 섹션 자동 생략
+        v = d.get(k)
+        if v is None:
+            d[k] = ""
+        elif isinstance(v, list):
+            parts = []
+            for x in v:
+                s = str(x).strip()
+                if not s: continue
+                if not s.startswith(("- ", "* ", "1.", "2.", "3.")):
+                    s = f"- {s}"
+                parts.append(s)
+            d[k] = "\n".join(parts)
+        elif not isinstance(v, str):
+            d[k] = str(v)
     # 레거시 body_content 호환 — 없으면 8섹션 합성
     if not d.get("body_content"):
         d["body_content"] = _compose_body(d)
