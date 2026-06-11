@@ -992,10 +992,16 @@ html, body { touch-action: pan-y; }
   font-size: 24px;
   cursor: pointer;
   box-shadow: 0 8px 24px rgba(0,0,0,.35);
-  z-index: 50;
-  transition: transform .12s ease;
+  /* 패널/백드롭(55/60) 보다 위에 떠야 '닫기 토글' 로 작동. */
+  z-index: 70;
+  transition: transform .12s ease, background .15s ease;
 }
 #chat-fab:hover { transform: translateY(-2px); }
+#chat-fab.is-close {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  font-size: 22px;
+  font-weight: 700;
+}
 
 /* 배경 차단 백드롭 — 채팅 열 때 본문이 비치는 문제 해소. 클릭으로 닫기 가능. */
 .chat-backdrop {

@@ -11,6 +11,7 @@
   const panel = $("#chat-panel");
   const backdrop = $("#chat-backdrop");
   const closeBtn = $("#chat-close");
+  const closeBottom = $("#chat-close-bottom");
   const form = $("#chat-form");
   const input = $("#chat-input");
   const sendBtn = $("#chat-send");
@@ -29,7 +30,11 @@
       backdrop.classList.add("open");
       backdrop.setAttribute("aria-hidden", "false");
     }
-    fab.style.display = "none";
+    // 열림 상태에서 FAB 를 '닫기' 토글로 변환 (닫기 버튼이 안 보이거나 작아서 못 찾는 fallback).
+    fab.classList.add("is-close");
+    fab.textContent = "✕";
+    fab.setAttribute("aria-label", "채팅 닫기");
+    fab.title = "채팅 닫기";
     loadStatus();
     input.focus();
   }
@@ -41,7 +46,15 @@
       backdrop.classList.remove("open");
       backdrop.setAttribute("aria-hidden", "true");
     }
-    fab.style.display = "";
+    fab.classList.remove("is-close");
+    fab.textContent = "💬";
+    fab.setAttribute("aria-label", "자가 운영 채팅");
+    fab.title = "채팅으로 운영·설정 편집";
+  }
+
+  function toggle() {
+    if (panel.classList.contains("open")) closePanel();
+    else openPanel();
   }
 
   const STORE_KEY = "aiskillbox_chat_session";
@@ -112,7 +125,8 @@
   }
 
   async function askPin() {
-    const pin = window.prompt("PIN 입력 (기본 0910)");
+    // PIN 값을 UI 에 적지 않는다 — placeholder/힌트로도 노출 X (보안). 사용자가 본인이 알아야.
+    const pin = window.prompt("PIN 입력");
     if (!pin) return false;
     const r = await fetch("/api/chat/pin", {
       method: "POST",
@@ -173,11 +187,12 @@
     }
   }
 
-  fab.addEventListener("click", openPanel);
-  closeBtn.addEventListener("click", closePanel);
-  if (backdrop) backdrop.addEventListener("click", closePanel);
-  // ESC 키로 닫기.
-  document.addEventListener("keydown", (ev) => {
+  // 채팅 닫는 방법 4가지 — 어떤 환경에서도 한 가지는 작동.
+  fab.addEventListener("click", toggle);           // 1) FAB (열림 상태에선 ✕ 로 변신)
+  closeBtn.addEventListener("click", closePanel);  // 2) 헤더 우측 [닫기 ✕] 버튼
+  if (closeBottom) closeBottom.addEventListener("click", closePanel); // 3) 하단 [나가기] 버튼
+  if (backdrop) backdrop.addEventListener("click", closePanel);       // 4) 백드롭 클릭
+  document.addEventListener("keydown", (ev) => {                       // 5) ESC 키
     if (ev.key === "Escape" && panel.classList.contains("open")) {
       ev.preventDefault();
       closePanel();
