@@ -1,0 +1,61 @@
+"""채팅용 Flask 엔드포인트. app.py 가 register_chat_routes(app) 으로 등록."""
+from __future__ import annotations
+
+import logging
+
+from flask import jsonify, request
+
+from scripts.chat import engine, history, safety
+
+logger = logging.getLogger(__name__)
+
+
+def register_chat_routes(app) -> None:
+    @app.route("/api/chat/status", methods=["GET"])
+    def chat_status():
+        return jsonify({
+            "ok": True,
+            "configured": safety.is_configured(),
+            "key_present": bool(_anthropic_key_present()),
+        })
+
+    @app.route("/api/chat/pin", methods=["POST"])
+    def chat_pin():
+        data = request.get_json(silent=True) or {}
+        pin = str(data.get("pin", ""))
+        ok, token, reason = safety.verify_pin(pin)
+        if not ok:
+            return jsonify({"ok": False, "error": reason}), 401
+        return jsonify({"ok": True, "session_token": token})
+
+    @app.route("/api/chat/message", methods=["POST"])
+    def chat_message():
+        data = request.get_json(silent=True) or {}
+        text = str(data.get("text", "")).strip()
+        token = data.get("session_token") or None
+        if not text:
+            return jsonify({"ok": False, "error": "빈 메시지"}), 400
+        result = engine.chat_turn(text, session_token=token)
+        status = 200 if result.get("ok") else 500
+        return jsonify(result), status
+
+    @app.route("/api/chat/history", methods=["GET"])
+    def chat_history():
+        try:
+            limit = int(request.args.get("limit", 50))
+        except Exception:
+            limit = 50
+        return jsonify({"ok": True, "items": history.tail_history(limit)})
+
+    @app.route("/api/chat/audit", methods=["GET"])
+    def chat_audit():
+        try:
+            limit = int(request.args.get("limit", 50))
+        except Exception:
+            limit = 50
+        return jsonify({"ok": True, "items": history.tail_audit(limit)})
+
+
+def _anthropic_key_present() -> bool:
+    import os
+    return bool(os.getenv("ANTHROPIC_API_KEY", "").strip())

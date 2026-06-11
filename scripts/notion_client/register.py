@@ -190,6 +190,41 @@ def _strip_for_notion(md: str) -> str:
     return "\n".join(lines)
 
 
+# Notion code block 허용 언어 enum (주요 항목만 — 모르는 건 plain text 폴백)
+_NOTION_CODE_LANGS = {
+    "abap","abc","agda","arduino","ascii art","assembly","bash","basic","bnf","c","c#",
+    "c++","clojure","coffeescript","coq","css","dart","dhall","diff","docker","ebnf",
+    "elixir","elm","erlang","f#","flow","fortran","gherkin","glsl","go","graphql",
+    "groovy","haskell","hcl","html","idris","java","javascript","json","julia","kotlin",
+    "latex","less","lisp","livescript","llvm ir","lua","makefile","markdown","markup",
+    "matlab","mathematica","mermaid","nix","notion formula","objective-c","ocaml","pascal",
+    "perl","php","plain text","powershell","prolog","protobuf","purescript","python",
+    "r","racket","reason","ruby","rust","sass","scala","scheme","scss","shell","smalltalk",
+    "solidity","sql","swift","toml","typescript","vb.net","verilog","vhdl","visual basic",
+    "webassembly","xml","yaml","java/c/c++/c#",
+}
+_LANG_ALIASES = {
+    "sh": "shell", "zsh": "shell", "fish": "shell", "ksh": "shell",
+    "py": "python", "python3": "python",
+    "js": "javascript", "jsx": "javascript",
+    "ts": "typescript", "tsx": "typescript",
+    "yml": "yaml",
+    "tex": "latex",
+    "dockerfile": "docker",
+    "md": "markdown",
+    "console": "shell",
+    "tsv": "plain text", "csv": "plain text", "text": "plain text",
+    "": "plain text",
+}
+
+
+def _norm_code_lang(lang: str) -> str:
+    """노션 enum 강제. 모르는 언어 → plain text."""
+    lang = (lang or "").strip().lower()
+    lang = _LANG_ALIASES.get(lang, lang)
+    return lang if lang in _NOTION_CODE_LANGS else "plain text"
+
+
 def _markdown_to_blocks(md: str) -> list[dict]:
     """간단 마크다운 → Notion 블록. SKILL.md 프론트매터 자동 제거."""
     md = _strip_for_notion(md)
@@ -206,7 +241,7 @@ def _markdown_to_blocks(md: str) -> list[dict]:
                     "type": "code",
                     "code": {
                         "rich_text": [{"type": "text", "text": {"content": "\n".join(code_buf)[:1900]}}],
-                        "language": code_lang or "plain text",
+                        "language": _norm_code_lang(code_lang),
                     },
                 })
                 in_code = False
@@ -222,7 +257,19 @@ def _markdown_to_blocks(md: str) -> list[dict]:
         s = line.strip()
         if not s:
             continue
-        # 인용/callout (> **TL;DR** 같은) → quote 블록
+        # v2.6: 💡 로 시작하는 단락 → Notion callout 블록 (blue_background, 인라인 서식 적용)
+        if s.startswith("💡 "):
+            blocks.append({
+                "object": "block",
+                "type": "callout",
+                "callout": {
+                    "rich_text": _rich_text(s[2:].strip()[:1900]),
+                    "icon": {"type": "emoji", "emoji": "💡"},
+                    "color": "blue_background",
+                },
+            })
+            continue
+        # 인용/quote (메타 박스 폐기됐지만 호환용)
         if s.startswith("> "):
             blocks.append(_block("quote", s[2:]))
             continue
@@ -240,16 +287,77 @@ def _markdown_to_blocks(md: str) -> list[dict]:
             blocks.append({"object": "block", "type": "divider", "divider": {}})
         else:
             blocks.append(_block("paragraph", s[:1900]))
-        if len(blocks) >= 95:
-            break
+        # page_replacer.append_blocks() 가 100-block/request 제한을 chunk 분할로 처리하므로
+        # 여기서 임의 cap 을 두지 않는다. 풍부한 본문 보존 우선.
     return blocks
+
+
+import re as _re_inline
+
+# 마크다운 인라인 서식 파서 — Notion rich_text annotations 적용
+# 우선순위: code(`) > bold(**) > link([](url)) > italic(*)
+_INLINE_PATTERNS = [
+    ("code",   _re_inline.compile(r"`([^`\n]+)`")),
+    ("bold",   _re_inline.compile(r"\*\*([^*\n]+)\*\*")),
+    ("link",   _re_inline.compile(r"\[([^\]\n]+)\]\(([^)\s]+)\)")),
+    ("italic", _re_inline.compile(r"(?<![\*\w])\*([^*\n]+)\*(?![\*\w])")),
+]
+
+
+def _rich_text(s: str) -> list[dict]:
+    """마크다운 인라인 서식 → Notion rich_text 배열."""
+    if not s:
+        return [{"type": "text", "text": {"content": ""}}]
+    # 모든 패턴의 매치를 위치별로 수집
+    matches = []
+    for kind, regex in _INLINE_PATTERNS:
+        for m in regex.finditer(s):
+            matches.append((m.start(), m.end(), kind, m))
+    # 우선순위 충돌 — 시작 위치 정렬 + 겹침은 먼저 잡힌 것 우선 (code > bold > link > italic)
+    matches.sort(key=lambda x: (x[0], _INLINE_PATTERNS.index(next(p for p in _INLINE_PATTERNS if p[0] == x[2]))))
+    accepted = []
+    last_end = 0
+    for start, end, kind, m in matches:
+        if start < last_end:
+            continue  # 이미 처리된 영역과 겹침
+        accepted.append((start, end, kind, m))
+        last_end = end
+    accepted.sort(key=lambda x: x[0])
+
+    result: list[dict] = []
+    cursor = 0
+    for start, end, kind, m in accepted:
+        if start > cursor:
+            result.append({"type": "text", "text": {"content": s[cursor:start]}})
+        if kind == "code":
+            result.append({"type": "text", "text": {"content": m.group(1)},
+                          "annotations": {"code": True}})
+        elif kind == "bold":
+            result.append({"type": "text", "text": {"content": m.group(1)},
+                          "annotations": {"bold": True}})
+        elif kind == "link":
+            url_val = m.group(2)
+            if url_val.startswith(("http://", "https://", "mailto:")):
+                result.append({"type": "text",
+                              "text": {"content": m.group(1), "link": {"url": url_val}}})
+            else:
+                # 상대경로/빈 URL — 노션 거부 → plain 으로 폴백
+                result.append({"type": "text",
+                              "text": {"content": f"[{m.group(1)}]({url_val})"}})
+        elif kind == "italic":
+            result.append({"type": "text", "text": {"content": m.group(1)},
+                          "annotations": {"italic": True}})
+        cursor = end
+    if cursor < len(s):
+        result.append({"type": "text", "text": {"content": s[cursor:]}})
+    return result or [{"type": "text", "text": {"content": s}}]
 
 
 def _block(btype: str, text: str) -> dict:
     return {
         "object": "block",
         "type": btype,
-        btype: {"rich_text": [{"type": "text", "text": {"content": text}}]},
+        btype: {"rich_text": _rich_text(text)},
     }
 
 
@@ -339,14 +447,13 @@ DB_TARGETS = {"두근펫", "매매봇", "검은별", "클로드코드", "AI900",
 
 
 def _properties(result: "AnalysisResult", source_url: str, source_type: str) -> dict:
-    """TEMPLATE v2: 9개 속성만 (수집일/핵심요약/적용메모/출처유형/관련스킬 제거)."""
+    """v2.4: 6개 핵심 속성만 (태그·적용대상·상태 폐기).
+
+    유지: 스킬명 / 카테고리(어떤 류) / 등급 / 난이도 / AI 도구(어떤 툴) / 출처 URL.
+    """
     category = CATEGORY_TO_DB.get(result.category, "기타")
     difficulty = DIFFICULTY_TO_DB.get(result.difficulty, "🟡 중급")
-
     ai_tools = [t for t in result.ai_tools if t in DB_AI_TOOLS][:10]
-    tags = [t for t in result.tags if t in DB_TAGS][:10]
-    targets = [t for t in result.targets if t in DB_TARGETS][:10] or ["공통"]
-
     clean_title = _clean_title(result.skill_title_ko)
 
     return {
@@ -355,10 +462,7 @@ def _properties(result: "AnalysisResult", source_url: str, source_type: str) -> 
         "등급": {"select": {"name": f"{result.grade}-{_grade_label(result.grade)}"}},
         "난이도": {"select": {"name": difficulty}},
         "AI 도구": {"multi_select": [{"name": t} for t in ai_tools]},
-        "태그": {"multi_select": [{"name": t} for t in tags]},
-        "적용 대상": {"multi_select": [{"name": t} for t in targets]},
         "출처 URL": {"url": source_url},
-        "상태": {"select": {"name": "신규"}},
     }
 
 

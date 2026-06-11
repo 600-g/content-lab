@@ -1,0 +1,127 @@
+[
+  {
+    "title": "Anthropic Claude API 활용 가이드",
+    "url": "https://github.com/anthropics/anthropic-quickstarts",
+    "page_id": "36b14362-1b4b-81df-9314-ca9ae491e727"
+  },
+  {
+    "title": "Python용 Claude API SDK 연동 및 활용",
+    "url": "https://github.com/anthropics/anthropic-sdk-python",
+    "page_id": "36b14362-1b4b-81ef-9764-c648dfc4f4e0"
+  },
+  {
+    "title": "다중 에이전트 기반 의사결정 위원회 (Council)",
+    "url": "https://abounding-helmet-0e4.notion.site/Council-34f73c7b15ad8196b771daa0a2bd85cf?pvs=149",
+    "page_id": "36914362-1b4b-8161-a4bd-e0295eb827e6"
+  },
+  {
+    "title": "I 기반 인스타그램 카드뉴스 프롬프트 자동 생성기 (통합)",
+    "url": "https://maize-lipstick-ed8.notion.site/AI-361ff898004a8068be6fe1dc0a166203?pvs=149",
+    "page_id": "36914362-1b4b-8167-a906-c334075ed043"
+  },
+  {
+    "title": "PT-2 기반 고품질 이미지 생성: 6단계 공식 및 한글 텍스트 렌더링",
+    "url": "https://jasper-tartan-fcc.notion.site/GPT2-16-35200b4db8dc8051b4bee15a9e1bddb1?pvs=149",
+    "page_id": "36614362-1b4b-8140-8184-d30da106a9f5"
+  },
+  {
+    "title": "실수 분석 및 원리 학습 튜터링",
+    "url": "https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149",
+    "page_id": "36614362-1b4b-8115-a0cd-f728326e90e1"
+  },
+  {
+    "title": "AI 기반 애니메이션 제작 완전 가이드 (캐릭터부터 최종 편집까지)",
+    "url": "https://vaulted-decade-3b2.notion.site/AI-361f563cd706808ba6d7e626f0f159a4?pvs=149",
+    "page_id": "36614362-1b4b-81ef-8028-d847941ab2bf"
+  },
+  {
+    "title": "AI 기반 다차원 분석 및 문제 해결 프레임워크",
+    "url": "https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149",
+    "page_id": "36614362-1b4b-815d-9a8b-cd16a929c848"
+  },
+  {
+    "title": "클로드 서브에이전트 패턴: 컨텍스트 보호 및 병렬 작업 최적화",
+    "url": "https://abounding-helmet-0e4.notion.site/50-300-36373c7b15ad81ccac8ded33f43886d5",
+    "page_id": "36614362-1b4b-816d-bbc2-f508a13275ec"
+  },
+  {
+    "title": "AI 기반 정부지원금 통합 컨설팅 에이전트",
+    "url": "https://tangerine-twilight-e7fe25.netlify.app/?fbclid=PAVERFWAR-5sxleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAadanhUAahDU-V-zugqAdY62M8OF0DLHKwg62995AoAO_whdMHe7A6WShOltcQ_aem_crN_5QS9u3EXvupvQjpkmw",
+    "page_id": "36614362-1b4b-8198-ade8-e98cd04b1867"
+  },
+  {
+    "title": "AI 이커머스 업무 비서: 자연어 기반 업무 자동화",
+    "url": "https://instagram.com/p/DYYyIEqACDx/",
+    "page_id": "36214362-1b4b-815d-95db-d653c265c259"
+  },
+  {
+    "title": "고도화된 커스텀 링크인바이오 구축 및 자동화",
+    "url": "https://www.instagram.com/reel/DW_asMNk8wG/?igsh=MW1xcHVmMHRwbHhvYQ==",
+    "page_id": "36114362-1b4b-8149-8e19-f72549702bd6"
+  },
+  {
+    "title": "상황 기반 맥락 주입 프롬프트 엔지니어링",
+    "url": "https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view",
+    "page_id": "36114362-1b4b-81c1-84bc-d0ba0c0d6cb1"
+  },
+  {
+    "title": "I 개발 환경 마이그레이션: Claude Code → OpenAI Codex",
+    "url": "https://abounding-helmet-0e4.notion.site/Claude-Code-Codex-35873c7b15ad81fa95a4d608d35164a3?pvs=149",
+    "page_id": "36114362-1b4b-81a6-95c2-c9038141a3d2"
+  },
+  {
+    "title": "옵시디언 기반 지식 자산화 볼트 시스템",
+    "url": "https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149",
+    "page_id": "36114362-1b4b-8151-b42a-e43e00bd636a"
+  },
+  {
+    "title": "클로드 기반 메타 광고 자동 운영 (MCP 연동)",
+    "url": "https://ink-jay-f32.notion.site/360f2e12ad5c81b0b2faf12936955f85?pvs=149",
+    "page_id": "36014362-1b4b-81da-80db-f89e0205afed"
+  },
+  {
+    "title": "Claude 브라우저 자동화 (Chrome Extension)",
+    "url": "https://resonant-frog-df5.notion.site/Claude-Chrome-Extension-3223a1a3234380e5b515f5ec22d1f556",
+    "page_id": "35f14362-1b4b-8130-bcd4-ec1be928af43"
+  },
+  {
+    "title": "AI 세로영상 자동생성 (Pixelle + Gemini)",
+    "url": "https://resonant-frog-df5.notion.site/Pixelle-Video-Gemini-3573a1a32343817196bec934ee86fb5f",
+    "page_id": "35f14362-1b4b-8172-8e77-e82a87e106b3"
+  },
+  {
+    "title": "Claude Code MEMORY.md 200줄 법칙 활용법",
+    "url": "https://waiting-drug-536.notion.site/4-317d86104de280078bbbe9e3bc98ff18",
+    "page_id": "35f14362-1b4b-81b7-b60b-f346ff57d7a6"
+  },
+  {
+    "title": "카카오 PlayMCP — AI에서 카톡·맵·멜론 연동",
+    "url": "https://playmcp.kakao.com/",
+    "page_id": "35f14362-1b4b-8111-a8b3-f0dde37786f3"
+  },
+  {
+    "title": "AI 네이티브 워크플로우 5단계 프레임워크 (OpenAI × 무신사)",
+    "url": "https://waiting-drug-536.notion.site/OpenAI-AI-Native-Workflow-34bd86104de280e1b0dede7e9717d416",
+    "page_id": "35f14362-1b4b-811d-82a1-cd8b9036da82"
+  },
+  {
+    "title": "Claude Code 자율실행 모드 (/goal + Agent View)",
+    "url": "https://resonant-frog-df5.notion.site/Claude-Code-goal-Agent-View-35f3a1a32343814082d5f0245cb359e5",
+    "page_id": "35f14362-1b4b-8129-8daa-c58a923f5c30"
+  },
+  {
+    "title": "URL → 광고영상+BGM 자동 제작 (HyperFrames)",
+    "url": "https://resonant-frog-df5.notion.site/HyperFrames-Claude-3503a1a3234380b685bddfa2931f3665",
+    "page_id": "35f14362-1b4b-818d-a90f-c86fe02ee13e"
+  },
+  {
+    "title": "Claude Code 토큰 절약 치트시트",
+    "url": "https://waiting-drug-536.notion.site/73-34bd86104de28031b19ff79353c17b83",
+    "page_id": "35f14362-1b4b-81c1-9a86-df733794b799"
+  },
+  {
+    "title": "Claude Code × Notion MCP 연동",
+    "url": "https://developers.notion.com/guides/mcp/get-started-with-mcp",
+    "page_id": "35f14362-1b4b-8181-aa6e-d6d7536be602"
+  }
+]

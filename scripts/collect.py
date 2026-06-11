@@ -103,6 +103,20 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
         summary["hint"] = summary["stages"]["scrape"]["hint"]
         return summary
 
+    # 의도적 사전 차단 (IG 로그인 벽 등) — 실패가 아닌 'skipped' 로 깔끔 종료.
+    if getattr(scrape_res, "skip_reason", None):
+        summary["stages"]["scrape"] = {
+            "stage": "스크래핑",
+            "ok": True,
+            "source_type": scrape_res.source_type,
+            "skipped": True,
+            "skip_reason": scrape_res.skip_reason,
+        }
+        summary["ok"] = True
+        summary["skipped"] = True
+        summary["message_ko"] = scrape_res.skip_message_ko or "사전 차단된 URL 입니다."
+        return summary
+
     summary["stages"]["scrape"] = {
         "stage": "스크래핑",
         "ok": scrape_res.ok and bool(scrape_res.text.strip()),
@@ -145,6 +159,22 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
     existing = find_global_by_slug(analysis.skill_name) or find_mirror_by_slug(analysis.skill_name)
     if not existing:
         existing = find_existing_by_url(url)
+    # 위 두 단계가 모두 미스면 — 의미 임베딩 dedup 시도. 후보가 있으면 그 슬러그의
+    # 기존 SKILL.md 경로를 existing 으로 채택.
+    semantic_hit: str | None = None
+    if not existing:
+        try:
+            from scripts.analyzer.dedup_finder import find_semantic_candidates
+            candidates = find_semantic_candidates(analysis, exclude_slug=analysis.skill_name)
+            if candidates:
+                top = candidates[0]
+                cand_path = find_global_by_slug(top.slug) or find_mirror_by_slug(top.slug)
+                if cand_path:
+                    existing = cand_path
+                    semantic_hit = top.slug
+                    log.info("의미 dedup 매칭: %s (score=%.3f)", top.slug, top.score)
+        except Exception as e:  # noqa: BLE001
+            log.warning("의미 dedup 스킵 (%s) — 신규로 진행", e)
     if existing:
         if skip_duplicate:
             summary["stages"]["merge"] = {
@@ -162,6 +192,8 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
                 "stage": "중복 합병", "ok": True,
                 "existing": str(existing),
                 "source_count": len(analysis.raw.get("_merged_source_urls", [])),
+                "match_kind": "semantic" if semantic_hit else "exact",
+                "semantic_hit": semantic_hit,
             }
         except Exception as e:  # noqa: BLE001
             log.warning("합병 실패, 신규로 진행: %s", e)
@@ -184,6 +216,16 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
             "mirror": str(mirror_path),
             "new": was_new,
         }
+        # 임베딩 캐시 갱신 — 다음 번 신규 스킬 dedup 후보가 되게.
+        try:
+            from scripts.analyzer.dedup_finder import _component_text
+            from scripts.analyzer import embedder as _embedder
+            components = ["callout", "ai_tools", "category"]
+            text_for_embed = _component_text(analysis, components)
+            if text_for_embed:
+                _embedder.get_or_embed(analysis.skill_name, text_for_embed)
+        except Exception as e:  # noqa: BLE001
+            log.warning("임베딩 캐시 갱신 실패: %s", e)
     except Exception as e:  # noqa: BLE001
         log.exception("SKILL.md 저장 실패")
         summary["stages"]["install"] = {

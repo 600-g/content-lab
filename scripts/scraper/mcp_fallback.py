@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import requests
 from .router import ScrapeResult
-from .web import _extract_text
+from .web import _bs4_extract
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def scrape(url: str, source_type: str = "web") -> ScrapeResult:
     try:
         resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=20)
         resp.raise_for_status()
-        title, text = _extract_text(resp.text)
+        title, text = _bs4_extract(resp.text)
         if not text.strip():
             return ScrapeResult(
                 url=url,

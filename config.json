@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "version": 1,
+    "description": "aiskillbox 운영 파라미터. 채팅(scripts/chat)이 편집한다. 비밀 키는 .env 에만."
+  },
+  "dedup": {
+    "enabled": true,
+    "threshold": 0.80,
+    "components": ["callout", "ai_tools", "category"],
+    "top_k": 3,
+    "cache_path": "scripts/skills/embeddings.json"
+  },
+  "ig_block": {
+    "enabled": true,
+    "patterns": ["instagram.com/p/"]
+  },
+  "chat": {
+    "enabled": true,
+    "model": "claude-opus-4-8",
+    "history_path": "inbox/chat_history.jsonl",
+    "audit_path": "inbox/chat_audit.jsonl",
+    "session_minutes": 30,
+    "max_input_chars": 12000
+  }
+}

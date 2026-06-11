@@ -1,37 +1,24 @@
-"""AnalysisResult → ECC 표준 SKILL.md (TEMPLATE v2.3 — 제3자 한눈에).
+"""AnalysisResult → SKILL.md (v2.4 — 폼 자유화, 속성 가지치기).
 
-v2.3 변경점:
-- ⚡ 30초 핵심 카드 (무엇/언제/시작/두근 적용) 페이지 맨 위
-- <details> HTML 제거 (Notion 미지원 → 텍스트 노출 버그)
-- 빈 섹션 자동 생략 (v2.2 유지)
+v2.4 변경 (2026-05-25):
+- 메타 quote 박스 폐기 (30초 핵심·메타·도구·적용대상 stripe 다 제거)
+- frontmatter 6키만: name / description / origin / grade / difficulty / category / ai_tools / sources
+- 본문: # 제목 + 💡 1줄 + body_md(자유 형식) + ## 출처. 7섹션 강제 없음.
+- 태그·적용대상·날짜·합병 메타 줄·이모지 아이콘 prefix 폐기.
 """
 from __future__ import annotations
 
 import datetime
-import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..analyzer.gemini import AnalysisResult
 
 
-CATEGORY_ICON = {
-    "프롬프트": "💬",
-    "자동화": "🤖",
-    "콘텐츠": "🎬",
-    "디자인": "🎨",
-    "개발": "💻",
-    "업무": "⚡",
-    "기타": "📦",
-}
-
-
 def _normalize(content) -> str:
-    """list/dict/None → string 정규화 (Gemini가 list로 줘도 안전)."""
     if content is None:
         return ""
     if isinstance(content, list):
-        # 항목 끝의 점/줄바꿈 정리, "-" 없으면 자동 추가
         parts = []
         for x in content:
             s = str(x).strip()
@@ -42,124 +29,72 @@ def _normalize(content) -> str:
             parts.append(s)
         return "\n".join(parts)
     if isinstance(content, dict):
-        # dict면 key: value 형식
         return "\n".join(f"- **{k}**: {v}" for k, v in content.items())
     return str(content)
 
 
-def _has_content(s) -> bool:
-    """빈 섹션 판정: None/공백/placeholder 모두 빈 것으로."""
-    t = _normalize(s).strip()
-    if not t:
-        return False
-    if t in ("(해당 없음)", "(없음)", "(없음.)", "(N/A)", "(해당없음)", "-", "—"):
-        return False
-    return True
+def _compose_legacy_body(r: "AnalysisResult") -> str:
+    """v2.2 데이터(8섹션)로 들어왔을 때 body_md 합성 — 빈 섹션 생략."""
+    out: list[str] = []
 
+    def section(label, content):
+        s = _normalize(content).strip()
+        if s and s not in ("(해당 없음)", "(없음)", "-", "—"):
+            out.append(f"## {label}\n\n{s}")
 
-def _section(emoji: str, label: str, content) -> str:
-    """섹션 내용 있으면 헤더+본문 반환, 없으면 빈 문자열."""
-    if not _has_content(content):
-        return ""
-    return f"\n## {emoji} {label}\n\n{_normalize(content).strip()}\n"
+    section("어떻게 작동", r.how_it_works)
+    section("따라 하기", r.steps)
+    section("실제 예시", r.examples)
+    section("두근컴퍼니 적용", r.doogeun or r.memo)
+    section("주의할 점", r.caveats)
+    return "\n\n".join(out)
 
 
 def render_skill_md(result: "AnalysisResult", source_url: str, source_type: str) -> str:
-    """SKILL.md: 프론트매터 + TEMPLATE v2.2 본문 (사람 가독성 우선)."""
-    today = datetime.date.today().isoformat()
+    """SKILL.md — v2.4 lean. 제목 + 💡 1줄 + body + 출처."""
+    today = datetime.date.today().isoformat()  # noqa: F841 — 호환용 (현재 본문엔 미사용)
     is_merged = bool(result.raw.get("_is_merged"))
     source_urls: list[str] = result.raw.get("_merged_source_urls") or [source_url]
-    collected_at = result.raw.get("_merged_collected_at") or today
-    icon = CATEGORY_ICON.get(result.category, "📦")
 
-    # 프론트매터용 description (AI 활성화 트리거)
-    description = (
-        f"{result.tldr or result.summary} "
-        f"Use when: {result.when_to_use}"
-    ).replace("\n", " ").strip()
-    if len(description) > 350:
-        description = description[:347] + "..."
+    # body — v2.4 우선, legacy fallback
+    body_md = (getattr(result, "body_md", "") or "").strip()
+    if not body_md:
+        body_md = _compose_legacy_body(result)
 
-    targets_yaml = ", ".join(f'"{t}"' for t in result.targets)
-    tools_yaml = ", ".join(f'"{t}"' for t in result.ai_tools) if result.ai_tools else ""
-    tags_yaml = ", ".join(f'"{t}"' for t in result.tags) if result.tags else ""
-    urls_yaml = "\n".join(f'    - "{u}"' for u in source_urls)
+    # description (frontmatter, AI 활성화 트리거) — callout/tldr 한 줄
+    _callout = (getattr(result, "callout", "") or "").strip()
+    description = (_callout or result.tldr or result.summary or "").replace("\n", " ").strip()
+    if len(description) > 280:
+        description = description[:277] + "..."
+
+    tools_yaml = ", ".join(f'"{t}"' for t in (result.ai_tools or []))
+    sources_yaml = "\n".join(f"  - {u}" for u in source_urls)
 
     frontmatter = f"""---
 name: {result.skill_name}
 description: {description}
 origin: content-lab
-metadata:
-  template_version: "v2.2"
-  category: "{result.category}"
-  grade: "{result.grade}"
-  difficulty: "{result.difficulty}"
-  targets: [{targets_yaml}]
-  ai_tools: [{tools_yaml}]
-  tags: [{tags_yaml}]
-  source_urls:
-{urls_yaml}
-  source_type: "{source_type}"
-  collected_at: "{collected_at}"
-  last_updated_at: "{today}"
-  merge_count: {len(source_urls)}
+grade: {result.grade}
+difficulty: {result.difficulty or "중급"}
+category: {result.category}
+ai_tools: [{tools_yaml}]
+sources:
+{sources_yaml}
 ---
 """
 
-    # 메타 — 한 묶음 인용 (3줄 통합)
-    tools_str = " · ".join(result.ai_tools) if result.ai_tools else "도구무관"
-    targets_str = " · ".join(result.targets) if result.targets else "공통"
-    merged_badge = " · 🔀 합병됨" if is_merged else ""
-
-    # 본문 — 빈 섹션 자동 생략
-    sections = []
-    sections.append(_section("🎯", "언제 쓰나", result.when_to_use))
-    sections.append(_section("🔑", "원리", result.how_it_works))
-    sections.append(_section("🛠", "단계", result.steps))
-    sections.append(_section("💡", "예시", result.examples))
-    sections.append(_section("🏢", "두근컴퍼니 적용", result.doogeun or result.memo))
-    sections.append(_section("⚠️", "주의", result.caveats))
-
-    # 출처 — 항상 포함 (검증 가능성)
-    sources_block = "\n".join(f"- [{u}]({u})" for u in source_urls)
-    sections.append(f"\n## 📎 출처\n\n{sources_block}\n")
-
-    body_sections = "".join(sections)
-
-    # ⚡ 30초 핵심 — 첫 트리거 + 첫 단계 추출
-    first_when = ""
-    for line in (result.when_to_use or "").splitlines():
-        s = line.strip().lstrip("-*•").strip()
-        if s:
-            first_when = s
-            break
-    first_step = ""
-    for line in (result.steps or "").splitlines():
-        s = line.strip()
-        if s and (s[0].isdigit() or s.startswith(("-", "*"))):
-            first_step = re.sub(r"^\d+\.\s*|^[-*]\s*", "", s)
-            break
-
-    quick_lines = [f"> **⚡ 30초 핵심**"]
-    quick_lines.append(f"> ")
-    quick_lines.append(f"> 🎯 **무엇** — {result.tldr or result.summary[:100]}")
-    if first_when:
-        quick_lines.append(f"> ⏰ **언제** — {first_when[:80]}")
-    if first_step:
-        quick_lines.append(f"> 🛠 **시작** — {first_step[:80]}")
-    quick_lines.append(f"> 🏢 **두근 적용** — {targets_str}")
-    quick_card = "\n".join(quick_lines)
+    merged_badge = " (합병됨)" if is_merged else ""
+    sources_md = "\n".join(f"- [{u}]({u})" for u in source_urls)
+    # v2.6: callout 은 💡 prefix 로 출력 → register 가 Notion callout 블록으로 변환
+    callout_line = (getattr(result, "callout", "") or result.tldr or "").strip()
+    callout_md = f"\n\n💡 {callout_line}\n" if callout_line else "\n"
 
     body = f"""
-# {icon} {result.skill_title_ko}{merged_badge}
+# {result.skill_title_ko}{merged_badge}{callout_md}
+{body_md.strip()}
 
-{quick_card}
+## 출처
 
-> **{result.grade}** · {result.category} · {result.difficulty} · 🤖 {tools_str}
-{body_sections}
-
----
-
-> 📋 *수집 `{collected_at}` · 갱신 `{today}` · 합병 {len(source_urls)}회 · v2.2*
+{sources_md}
 """
     return frontmatter + body

@@ -39,7 +39,8 @@
       <span>📚</span><span class="chip-label">DB</span>
     </a>
     {% endif %}
-    <button id="drawer-toggle" class="drawer-toggle" aria-label="설정 메뉴">
+    <button id="settings-toggle" class="icon-btn" aria-label="설정" title="설정">⚙️</button>
+    <button id="drawer-toggle" class="drawer-toggle" aria-label="메뉴">
       <span></span><span></span><span></span>
     </button>
   </div>
@@ -64,41 +65,64 @@
         <span class="btn-label">수집 시작</span>
         <span class="btn-arrow">→</span>
       </button>
-      <p class="hint">💡 같은 스킬이 있으면 <b>자동 합병</b> · 출처 누적 · 본문 풍부화</p>
+      <p class="hint">💡 제출하면 입력칸이 바로 비워져요 · 계속 넣으면 <b>순차 처리</b> · 완료 시 알림</p>
     </form>
+  </section>
 
-    <div id="job-status" class="hidden" aria-live="polite">
-      <div class="job-row">
-        <span class="badge" id="job-badge">대기 중</span>
-        <span id="job-stage">큐 대기</span>
-      </div>
-      <details id="job-detail" class="hidden">
-        <summary>JSON 상세</summary>
-        <pre id="job-result"></pre>
-      </details>
-    </div>
+  <section class="job-queue">
+    <h2 class="section-title">작업 큐</h2>
+    <ul id="job-list" class="job-list"></ul>
+    <p id="job-empty" class="empty">아직 작업이 없어요. URL 을 넣어보세요.</p>
   </section>
 </main>
 
 <footer>
-  <p class="mini muted">aiskillbox v4.0 · 두근컴퍼니 콘텐츠랩</p>
+  <p class="mini muted">aiskillbox v4.3 · 두근컴퍼니 콘텐츠랩</p>
 </footer>
+
+<!-- 설정 모달 (PIN 보호) -->
+<div id="settings-backdrop" class="modal-backdrop hidden"></div>
+<div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="설정">
+  <div class="modal-head">
+    <h3>⚙️ 설정</h3>
+    <button id="settings-close" class="drawer-close" aria-label="닫기">✕</button>
+  </div>
+
+  <!-- 1단계: PIN -->
+  <div id="settings-pin-view" class="modal-body">
+    <p class="mini muted">API 키 편집은 PIN 으로 보호돼요.</p>
+    <input type="password" id="settings-pin-input" class="search-input"
+           inputmode="numeric" placeholder="🔒 PIN 입력"
+           autocomplete="off">
+    <p id="settings-pin-error" class="set-error"></p>
+    <button id="settings-pin-submit" class="btn-primary-full">확인</button>
+  </div>
+
+  <!-- 2단계: 키 편집 -->
+  <div id="settings-fields-view" class="modal-body hidden">
+    <div class="notif-row">
+      <div class="notif-text">
+        <b>🔔 완료 알림</b>
+        <span id="notif-status" class="mini muted">확인 중...</span>
+      </div>
+      <button id="notif-toggle" class="btn-secondary hidden">알림 켜기</button>
+    </div>
+    <div id="settings-fields" class="settings-fields"></div>
+    <p id="settings-msg" class="set-msg"></p>
+    <button id="settings-save" class="btn-primary-full">저장</button>
+    <p class="mini muted">저장 즉시 적용돼요. 빈 칸은 기존 값을 유지해요.</p>
+  </div>
+</div>
 
 <!-- 측면 드로어 -->
 <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
-<aside id="drawer" class="drawer" aria-label="설정 메뉴" aria-hidden="true">
+<aside id="drawer" class="drawer" aria-label="메뉴" aria-hidden="true">
   <div class="drawer-head">
-    <h3>설정</h3>
+    <h3>메뉴</h3>
     <button id="drawer-close" class="drawer-close" aria-label="닫기">✕</button>
   </div>
 
   <div class="drawer-body">
-
-    <section class="drawer-section" id="active-jobs-section">
-      <h4>진행 중 <span id="active-count" class="muted"></span></h4>
-      <ul id="active-list" class="active-list"></ul>
-      <p id="active-empty" class="empty mini">현재 처리 중인 잡이 없어요.</p>
-    </section>
 
     <section class="drawer-section">
       <h4>최근 수집 <span id="recent-count" class="muted"></span></h4>
@@ -152,7 +176,8 @@
       <div class="health-grid">
         <div class="health-row"><span>Gemini API</span><span id="health-gemini" class="dot">⏳</span></div>
         <div class="health-row"><span>Notion API</span><span id="health-notion" class="dot">⏳</span></div>
-        <div class="health-row"><span>활성 잡</span><span id="health-jobs" class="muted">-</span></div>
+        <div class="health-row"><span>잡 (처리/대기)</span><span id="health-jobs" class="muted">-</span></div>
+        <div class="health-row"><span>알림 구독</span><span id="health-push" class="muted">-</span></div>
         <div class="health-row"><span>누적 수집</span><span id="health-recent" class="muted">-</span></div>
       </div>
       <button id="health-refresh" class="btn-secondary">새로고침</button>
@@ -170,6 +195,42 @@
   </div>
 </aside>
 
+<!-- 자가 운영 채팅 패널 (Opus 4.8) -->
+<button id="chat-fab" type="button" aria-label="자가 운영 채팅" title="채팅으로 운영·설정 편집">
+  💬
+</button>
+
+<aside id="chat-panel" class="chat-panel" aria-hidden="true">
+  <header class="chat-header">
+    <div class="chat-title">
+      <span class="chat-dot" id="chat-state-dot"></span>
+      <span>자가 운영 채팅</span>
+      <span class="chat-sub" id="chat-state-text">상태 확인 중…</span>
+    </div>
+    <button id="chat-close" type="button" aria-label="닫기">✕</button>
+  </header>
+
+  <div id="chat-log" class="chat-log" aria-live="polite">
+    <div class="chat-msg system">
+      Opus 4.8 운영 채팅. 예: "최근 잡 보여줘", "dedup 임계값 0.85 로 올려줘",
+      "스킬 중복 스캔 돌려줘", "리포트 보여줘".
+      쓰기 명령에는 PIN(0910) 1회 입력.
+    </div>
+  </div>
+
+  <form id="chat-form" class="chat-form" autocomplete="off">
+    <textarea id="chat-input" rows="2"
+              placeholder="자연어로 요청. Enter = 전송, Shift+Enter = 줄바꿈"
+              maxlength="12000"></textarea>
+    <div class="chat-form-row">
+      <button id="chat-send" type="submit">전송</button>
+      <button id="chat-pin-btn" type="button" class="chat-secondary">PIN 입력</button>
+      <span id="chat-session-tag" class="chat-session-tag" hidden>🔓 세션 활성</span>
+    </div>
+  </form>
+</aside>
+
 <script src="/static/app.js?v={{ build_id }}"></script>
+<script src="/static/chat.js?v={{ build_id }}"></script>
 </body>
 </html>

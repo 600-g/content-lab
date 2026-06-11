@@ -98,7 +98,17 @@ def scrape(url: str, source_type: str = "web") -> ScrapeResult:
                 page.goto(url, wait_until="networkidle", timeout=45000)
 
             # JS 렌더링 사이트 대기
-            if source_type in ("instagram", "tiktok", "notion", "twitter"):
+            if source_type == "notion":
+                # Notion SPA — 본문 블록 셀렉터 등장까지 우선 대기, 실패 시 고정 9초.
+                try:
+                    page.wait_for_selector(
+                        "[data-block-id], .notion-page-content",
+                        timeout=9000,
+                    )
+                    page.wait_for_timeout(1500)
+                except Exception:  # noqa: BLE001
+                    page.wait_for_timeout(9000)
+            elif source_type in ("instagram", "tiktok", "twitter"):
                 page.wait_for_timeout(4500)
             else:
                 page.wait_for_timeout(1500)

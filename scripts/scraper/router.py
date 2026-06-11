@@ -12,7 +12,10 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
-MIN_TEXT_LEN = 80  # 본문 너무 짧으면 폴백 트리거
+# 본문 너무 짧으면 폴백 트리거. 80자는 JS-heavy 페이지(netlify SPA / Google Drive view /
+# IG 캡션) 가 placeholder HTML 만 잡혀도 통과시켜서 결과적으로 LLM 입력이 부실해진다.
+# 500자 임계로 올려 의미 있는 본문 확보 후에야 LLM 단계 진입.
+MIN_TEXT_LEN = int(__import__("os").environ.get("SCRAPER_MIN_TEXT_LEN", "500"))
 
 
 @dataclass
@@ -26,6 +29,8 @@ class ScrapeResult:
     meta: dict  # 추가 메타 (author, duration, thumbnail 등)
     ok: bool = True
     error: Optional[str] = None
+    skip_reason: Optional[str] = None  # 의도적 사전 차단 (ig_login_wall 등). 잡은 실패 아닌 'skipped' 처리.
+    skip_message_ko: Optional[str] = None  # 사용자용 한글 안내 메시지.
 
     def to_dict(self) -> dict:
         return {
@@ -36,6 +41,8 @@ class ScrapeResult:
             "meta": self.meta,
             "ok": self.ok,
             "error": self.error,
+            "skip_reason": self.skip_reason,
+            "skip_message_ko": self.skip_message_ko,
         }
 
 
@@ -80,6 +87,42 @@ def _retry(func: Callable[[], "ScrapeResult"], attempts: int = 2, label: str = "
     return None
 
 
+# config 의 IG 차단 토글 — 채팅이 켜고 끌 수 있다.
+def _ig_block_enabled() -> bool:
+    try:
+        from scripts import config_store
+        return bool(config_store.get("ig_block.enabled", True))
+    except Exception:  # noqa: BLE001
+        return True  # config 로딩 실패해도 안전 디폴트는 차단.
+
+
+def _ig_guard(url: str) -> Optional[ScrapeResult]:
+    """IG /p/ 피드 포스트 사전 차단. 차단 시 안내 메시지 담은 ScrapeResult 반환.
+
+    Meta 의 로그인 벽 때문에 /p/ 는 본문 추출이 불가능하다 (~117자만 잡힘).
+    Gemini 가 빈약한 입력으로 JSON 헛 생성 후 잡 죽음을 막기 위해 사전 차단.
+    /reel/ 은 yt-dlp 가 종종 캡션을 뜯어오므로 통과시키되, 실패하면 같은 메시지로 종료.
+    """
+    if not _ig_block_enabled():
+        return None
+    lower = url.lower()
+    if "instagram.com/p/" not in lower:
+        return None
+    return ScrapeResult(
+        url=url,
+        source_type="instagram",
+        title="",
+        text="",
+        meta={},
+        ok=False,
+        skip_reason="ig_login_wall",
+        skip_message_ko=(
+            "이 링크는 인스타그램 피드 포스트라 로그인 없이는 본문을 못 가져옵니다. "
+            "캡션을 직접 붙여넣거나 스크린샷 → 텍스트로 변환해 등록해 주세요."
+        ),
+    )
+
+
 def scrape(url: str) -> ScrapeResult:
     """URL을 적절한 스크래퍼로 처리. 실패 시 fallback 체인 + 재시도.
 
@@ -90,6 +133,13 @@ def scrape(url: str) -> ScrapeResult:
     """
     source = detect_source(url)
     logger.info("scraping url=%s source=%s", url, source)
+
+    # IG 피드 포스트 사전 차단 — 로그인 벽 때문에 본문 추출 불가능.
+    if source == "instagram":
+        blocked = _ig_guard(url)
+        if blocked is not None:
+            logger.info("IG 피드 사전 차단: %s", url)
+            return blocked
 
     # 1단계 — 전용 스크래퍼
     try:

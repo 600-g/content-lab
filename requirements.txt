@@ -17,6 +17,7 @@ notion-client>=2.2.1
 
 # 웹 UI (aiskillbox.600g.net)
 flask>=3.0.0
+pywebpush>=2.0.0            # Web Push (백그라운드 완료 알림 — VAPID)
 
 # 유틸
 python-dotenv>=1.0.0

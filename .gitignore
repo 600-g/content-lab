@@ -1,6 +1,7 @@
 .env
 .env.bak*
 .env.local
+.env.tmp
 *.pyc
 __pycache__/
 venv/

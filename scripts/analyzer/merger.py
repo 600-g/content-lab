@@ -18,8 +18,11 @@ from typing import TYPE_CHECKING
 from .gemini import (
     AnalysisResult, _extract_json, _validate,
     MODEL_PRIMARY, MODEL_FALLBACK, call_gemma_json,
+    _quota_should_skip, _quota_increment, _is_429, _gemini_gen_config,
 )
 from .prompt import CATEGORIES, GRADES, TARGETS
+
+MIN_MERGED_BODY = 1000  # 합병 결과 본문 최소 길이 — 미달 시 Gemma 보강 1회
 
 if TYPE_CHECKING:
     pass
@@ -105,73 +108,89 @@ def merge_with_existing(
     else:
         merged_urls = existing_urls
 
+    # v2.3 합병 prompt — body_md 단일 필드, 새 헤딩 강제, 1500자 이상.
+    # existing/new 본문은 Gemma 컨텍스트 절약 위해 4000자로 cap (기존 8000 자는 24k+ 토큰).
+    new_body_full = (new_result.raw.get("body_md") or new_result.body_content or "")
     prompt = f"""너는 두근컴퍼니의 AI 스킬 큐레이터다.
 
-같은 주제로 기존 스킬과 신규 분석이 들어왔다. 두 개를 **합병**해서 더 풍부한 단일 스킬로 만들어라.
+같은 주제로 기존 스킬과 신규 분석이 들어왔다. **두 출처의 모든 핵심 정보를 보존**하면서 더 풍부한 단일 스킬로 합병하라.
 
 [기존 스킬 — {existing.get('collected_at','?')} 수집]
 - 슬러그: {existing.get('name','?')}
 - 카테고리: {existing.get('category','?')}
 - 등급: {existing.get('grade','?')}
 - 본문:
-{existing.get('body','')[:8000]}
+{existing.get('body','')[:4000]}
 
 [신규 분석 — 오늘 추가]
 - 슬러그(제안): {new_result.skill_name}
 - 카테고리(제안): {new_result.category}
 - 등급(제안): {new_result.grade}
-- 요약: {new_result.summary}
-- 적용메모: {new_result.memo}
+- callout: {new_result.callout or new_result.tldr}
 - 본문:
-{new_result.body_content[:8000]}
+{new_body_full[:4000]}
+
+[🚨 최우선 규칙]
+1. **코드/프롬프트/명령어 절대 요약 금지** — 둘 중 하나에 있던 것은 합병 본문에도 반드시 보존
+2. **본문 body_md 최소 1500자** — 추상 요약 가득한 짧은 결과는 실패로 간주
+3. **빈 출처 없음** — 두 출처를 다 흡수했을 때 자연스러운 분량이 나와야 함
 
 [합병 규칙]
-1. 중복 문장 제거. 누락된 통찰은 통합.
-2. 등급/카테고리는 더 정확한 것 선택 (사유 명시).
-3. 슬러그는 기존 유지 (변경 금지).
-4. 본문은 "## 핵심 패턴 / 적용 단계 / 예시 / 주의사항" 구조 유지.
-5. "## 출처" 섹션은 두 출처 모두 명시 (기존 + 신규).
-6. 두근컴퍼니 환경에 맞는 적용 메모 보강.
+1. 중복 문장 제거, 누락된 통찰 통합.
+2. 등급/카테고리는 더 정확한 것 택.
+3. 슬러그는 **기존 그대로** 유지.
+4. body_md 구조 — 새 v2.3 헤딩만 사용:
+   ## 이게 뭔가요?  /  ## 따라하기  /  ## 활용 예시  /  ## 💡 아이디어 (선택)  /  ## 주의사항 (선택)
+5. 옛 헤딩 금지: "두근컴퍼니 적용", "두근 환경", "핵심 패턴", "적용 단계", "How it works", "Steps".
+6. callout 별도 필드 (1~2문장, body_md 안에 또 박지 말 것).
+7. 출처는 body_md 안에 박지 말 것 (md_generator 가 자동 추가).
 
-[응답 — JSON only, 코드블록 없이]
+[응답 — JSON only, 코드블록 펜스 없이]
 {{
   "skill_name": "{existing.get('name', new_result.skill_name)}",
-  "skill_title_ko": "한국어 짧은 제목",
-  "category": "8종 중 택1",
+  "skill_title_ko": "8-15자 동사형 한국어 제목 (이모지 X)",
+  "callout": "이 스킬이 뭔지 1~2문장. 핵심 키워드 **굵게**",
+  "category": "프롬프트/자동화/콘텐츠/디자인/개발/업무/기타 중 1",
   "grade": "S/A/B/C",
-  "grade_reason": "재평가 사유",
+  "grade_reason": "재평가 사유 1줄",
   "targets": ["적용대상"],
   "summary": "통합된 2-3줄 요약",
   "when_to_use": "통합된 트리거 조건",
   "memo": "통합된 적용 메모",
-  "ai_tools": ["통합된 도구"],
+  "ai_tools": ["통합된 도구 14종 중 일치"],
   "tags": ["통합된 태그 5개 이내"],
   "difficulty": "초급/중급/고급",
-  "body_content": "통합된 본문 (## 핵심 패턴 / 적용 단계 / 예시 / 주의사항 / 출처)"
+  "body_md": "## 이게 뭔가요?\\n... (1500자 이상, 코드/프롬프트 전문 보존, 위 v2.3 헤딩만)"
 }}
 """
 
     last_err: Exception | None = None
     raw_text: str = ""
 
-    # 1-2단계: Gemini cloud
+    # 1-2단계: Gemini cloud — quota 임계 도달 모델은 스킵, 429 시 카운터 마킹
     for model_name in (MODEL_PRIMARY, MODEL_FALLBACK):
+        if _quota_should_skip(model_name):
+            logger.info("Gemini merge %s quota 임계 — 스킵", model_name)
+            continue
         try:
             model = genai.GenerativeModel(
                 model_name,
-                generation_config={"response_mime_type": "application/json"},
+                generation_config=_gemini_gen_config(),
             )
             resp = model.generate_content(prompt)
             raw_text = resp.text or ""
+            _quota_increment(model_name)
             if raw_text:
                 break
         except Exception as e:  # noqa: BLE001
             logger.warning("Gemini merge %s 실패: %s", model_name, e)
             last_err = e
+            if _is_429(e):
+                _quota_increment(model_name, hit_429=True)
 
     # 3단계: Gemma 4 로컬 폴백
     if not raw_text:
-        logger.info("Gemini merge 폴백 → Gemma 4 26B")
+        logger.info("Gemini merge 사용 불가 → Gemma 4 로컬")
         raw_text = call_gemma_json(prompt) or ""
 
     if raw_text:
@@ -180,6 +199,35 @@ def merge_with_existing(
             # 기존 슬러그 강제
             data["skill_name"] = existing.get("name", new_result.skill_name)
             data = _validate(data)
+
+            # 합병 본문이 너무 짧으면 Gemma 보강 재요청 1회 — body_md 우선, fallback 으로 body_content
+            # len=0(빈 응답)도 포함 — opt-in 트리거가 못 잡으면 본문이 완전히 비어버림
+            cur_body = (data.get("body_md") or data.get("body_content") or "").strip()
+            if len(cur_body) < MIN_MERGED_BODY:
+                logger.info("합병 본문 %d자 — Gemma 보강 재요청", len(cur_body))
+                boost_prompt = (
+                    prompt
+                    + "\n\n[직전 합병 본문이 너무 짧음 — 두 출처의 누락된 통찰을 모두 살려 "
+                    f"최소 {MIN_MERGED_BODY + 500}자 이상 풍부하게 다시 작성. "
+                    "코드/명령어/링크는 보존. JSON 만 출력]\n"
+                    + "\n[직전 본문]\n" + cur_body[:3000]
+                )
+                boost_text = call_gemma_json(
+                    boost_prompt, num_predict=8192, temperature=0.4
+                ) or ""
+                if boost_text:
+                    try:
+                        data3 = _extract_json(boost_text)
+                        data3["skill_name"] = data["skill_name"]
+                        data3 = _validate(data3)
+                        new_body = (data3.get("body_md") or data3.get("body_content") or "").strip()
+                        if len(new_body) > max(len(cur_body) + 200, 800):
+                            # 본문만 교체. 메타(카테고리/등급/슬러그)는 1차 합병 유지
+                            data["body_md"] = new_body
+                            data["body_content"] = new_body
+                            logger.info("합병 보강 채택: %d자 → %d자", len(cur_body), len(new_body))
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning("합병 보강 응답 파싱 실패 — 원본 유지: %s", e)
 
             merged = AnalysisResult(
                 skill_name=data["skill_name"],
@@ -194,6 +242,7 @@ def merge_with_existing(
                 ai_tools=data.get("ai_tools", []),
                 tags=data.get("tags", []),
                 difficulty=data.get("difficulty", "중급"),
+                body_md=data.get("body_md", ""),
                 body_content=data["body_content"],
                 raw=data,
             )
