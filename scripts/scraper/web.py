@@ -132,6 +132,28 @@ def scrape(url: str, source_type: str = "web") -> ScrapeResult:
         title = title or bs_title
         text = bs_text
 
+    # Notion 비공개 페이지 자동 진단 — generic landing HTML 의 마커가 잡히면 즉시 차단.
+    if source_type == "notion" and _is_notion_private_landing(html, text):
+        logger.info("Notion 비공개 페이지 감지: %s", url)
+        return ScrapeResult(
+            url=url,
+            source_type=source_type,
+            title=title,
+            text="",
+            meta={
+                "html_length": len(html),
+                "text_length": 0,
+                "ua": "mobile" if is_mobile else "desktop",
+            },
+            ok=False,
+            skip_reason="notion_private",
+            skip_message_ko=(
+                "노션 페이지가 비공개 상태라 본문을 가져올 수 없습니다. "
+                "노션에서 페이지 우상단 [Share] → [Publish to web] 토글을 ON 해주세요. "
+                "(페이지를 이동했다면 share 설정이 부모 페이지를 따라 풀렸을 수 있어요)"
+            ),
+        )
+
     return ScrapeResult(
         url=url,
         source_type=source_type,
@@ -143,3 +165,27 @@ def scrape(url: str, source_type: str = "web") -> ScrapeResult:
             "ua": "mobile" if is_mobile else "desktop",
         },
     )
+
+
+_NOTION_LANDING_MARKERS = (
+    "Notion | Where teams and agents work together",
+    "A collaborative AI workspace, built on your company context",
+    "Build and orchestrate agents right alongside",
+)
+
+
+def _is_notion_private_landing(html: str, extracted_text: str) -> bool:
+    """노션 비공개 페이지에 떨어지면 generic 마케팅 랜딩 HTML 이 받힌다.
+
+    판별 기준 (전부 만족):
+    - HTML 안에 위 _NOTION_LANDING_MARKERS 중 하나 이상 포함 (Notion 워크스페이스 카피)
+    - extracted_text 가 매우 짧음 (<500자) — 진짜 페이지 본문이 없음
+    """
+    if not html:
+        return False
+    if len(extracted_text or "") >= 500:
+        return False
+    for marker in _NOTION_LANDING_MARKERS:
+        if marker in html:
+            return True
+    return False

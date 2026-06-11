@@ -997,13 +997,30 @@ html, body { touch-action: pan-y; }
 }
 #chat-fab:hover { transform: translateY(-2px); }
 
+/* 배경 차단 백드롭 — 채팅 열 때 본문이 비치는 문제 해소. 클릭으로 닫기 가능. */
+.chat-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+  z-index: 55;
+}
+.chat-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .chat-panel {
   position: fixed;
   right: 0; top: 0; bottom: 0;
   width: min(420px, 100vw);
-  background: var(--surface);
-  border-left: 1px solid var(--line);
-  box-shadow: -8px 0 24px rgba(0,0,0,.35);
+  /* 완전 불투명 배경 — surface 반투명이라 채팅 너머가 비치던 문제 해결. */
+  background: #0b1220;
+  border-left: 1px solid #1f2937;
+  box-shadow: -8px 0 32px rgba(0,0,0,.55);
   display: flex; flex-direction: column;
   transform: translateX(100%);
   transition: transform .18s ease;
@@ -1028,10 +1045,14 @@ html, body { touch-action: pan-y; }
   font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 4px;
 }
 #chat-close {
-  background: transparent; border: 1px solid var(--line);
-  color: var(--text); border-radius: var(--r-sm);
-  width: 32px; height: 32px; cursor: pointer;
+  background: #1f2937; border: 1px solid #374151;
+  color: #f9fafb; border-radius: var(--r-sm);
+  padding: 8px 14px; min-height: 36px; cursor: pointer;
+  font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px;
 }
+#chat-close:hover { background: #374151; border-color: #4b5563; }
+#chat-close:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
 
 .chat-log {
   flex: 1; overflow-y: auto;

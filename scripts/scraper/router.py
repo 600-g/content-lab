@@ -69,11 +69,15 @@ def detect_source(url: str) -> str:
 
 
 def _retry(func: Callable[[], "ScrapeResult"], attempts: int = 2, label: str = "") -> Optional["ScrapeResult"]:
-    """exponential backoff 재시도."""
+    """exponential backoff 재시도. skip_reason 이 잡히면 즉시 반환 (재시도 무의미)."""
     last_err: Exception | None = None
     for i in range(attempts):
         try:
             r = func()
+            # 사전 차단(skip_reason) 은 재시도해도 결과 동일 → 즉시 반환.
+            if getattr(r, "skip_reason", None):
+                logger.info("%s skip_reason=%s → 재시도 스킵", label, r.skip_reason)
+                return r
             if r.ok and len(r.text or "") >= MIN_TEXT_LEN:
                 return r
             logger.warning("%s attempt %d: 빈/짧은 결과 (len=%d)", label, i + 1, len(r.text or ""))

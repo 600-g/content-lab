@@ -9,6 +9,7 @@
   const $ = (sel) => document.querySelector(sel);
   const fab = $("#chat-fab");
   const panel = $("#chat-panel");
+  const backdrop = $("#chat-backdrop");
   const closeBtn = $("#chat-close");
   const form = $("#chat-form");
   const input = $("#chat-input");
@@ -20,6 +21,28 @@
   const sessionTag = $("#chat-session-tag");
 
   if (!fab || !panel) return;
+
+  function openPanel() {
+    panel.classList.add("open");
+    panel.setAttribute("aria-hidden", "false");
+    if (backdrop) {
+      backdrop.classList.add("open");
+      backdrop.setAttribute("aria-hidden", "false");
+    }
+    fab.style.display = "none";
+    loadStatus();
+    input.focus();
+  }
+
+  function closePanel() {
+    panel.classList.remove("open");
+    panel.setAttribute("aria-hidden", "true");
+    if (backdrop) {
+      backdrop.classList.remove("open");
+      backdrop.setAttribute("aria-hidden", "true");
+    }
+    fab.style.display = "";
+  }
 
   const STORE_KEY = "aiskillbox_chat_session";
 
@@ -150,17 +173,15 @@
     }
   }
 
-  fab.addEventListener("click", () => {
-    panel.classList.add("open");
-    panel.setAttribute("aria-hidden", "false");
-    fab.style.display = "none";
-    loadStatus();
-    input.focus();
-  });
-  closeBtn.addEventListener("click", () => {
-    panel.classList.remove("open");
-    panel.setAttribute("aria-hidden", "true");
-    fab.style.display = "";
+  fab.addEventListener("click", openPanel);
+  closeBtn.addEventListener("click", closePanel);
+  if (backdrop) backdrop.addEventListener("click", closePanel);
+  // ESC 키로 닫기.
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && panel.classList.contains("open")) {
+      ev.preventDefault();
+      closePanel();
+    }
   });
   pinBtn.addEventListener("click", askPin);
   form.addEventListener("submit", (ev) => {
