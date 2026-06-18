@@ -92,6 +92,21 @@ def _humanize(status_code: int, body: dict, context: str) -> NotionError:
     )
 
 
+# Notion API 제약: 한 호출당 children 배열 100개 한도. 그 이상이면 chunk 분할 필수.
+NOTION_CHILDREN_MAX = 100
+
+
+def _append_blocks_chunked(page_id: str, blocks: list) -> None:
+    """blocks 를 100개 단위로 끊어 순차 PATCH. 부분 실패 시 즉시 raise."""
+    for i in range(0, len(blocks), NOTION_CHILDREN_MAX):
+        chunk = blocks[i:i + NOTION_CHILDREN_MAX]
+        _request(
+            "PATCH", f"blocks/{page_id}/children",
+            {"children": chunk},
+            context=f"블록 추가 (chunk {i // NOTION_CHILDREN_MAX + 1})",
+        )
+
+
 def _request(method: str, path: str, body: dict | None = None, context: str = "") -> dict:
     url = f"{NOTION_API}/{path.lstrip('/')}"
     try:
@@ -508,24 +523,31 @@ def register_skill(
                         pass
             except NotionError as e:
                 logger.warning("기존 블록 정리 실패 (계속): %s", e)
-            # 새 블록 추가
-            _request("PATCH", f"blocks/{existing_page_id}/children",
-                     {"children": blocks}, context="블록 추가")
-            logger.info("Notion 페이지 갱신 완료: %s", existing_page_id)
+            # 새 블록 추가 — Notion API 는 한 호출당 children 100개 한도, chunk 분할.
+            _append_blocks_chunked(existing_page_id, blocks)
+            logger.info("Notion 페이지 갱신 완료: %s (블록 %d)", existing_page_id, len(blocks))
             return {"ok": True, "page_id": existing_page_id, "action": "updated"}
 
         # 카테고리에 맞는 아이콘 자동 설정 (제목은 이미 텍스트만)
         category_value = properties.get("카테고리", {}).get("select", {}).get("name", "기타")
         icon_emoji = CATEGORY_ICON.get(category_value, "📦")
 
+        # children 100개 한도 — 첫 100개로 페이지 생성, 나머지는 PATCH 로 append.
+        first_chunk = blocks[:NOTION_CHILDREN_MAX]
+        rest = blocks[NOTION_CHILDREN_MAX:]
         data = _request("POST", "pages", {
             "parent": {"database_id": _db_id()},
             "icon": {"type": "emoji", "emoji": icon_emoji},
             "properties": properties,
-            "children": blocks,
+            "children": first_chunk,
         }, context="페이지 생성")
         page_id = data.get("id", "")
-        logger.info("Notion 신규 등록 완료: %s (아이콘 %s)", page_id, icon_emoji)
+        if rest and page_id:
+            _append_blocks_chunked(page_id, rest)
+        logger.info(
+            "Notion 신규 등록 완료: %s (아이콘 %s, 블록 %d)",
+            page_id, icon_emoji, len(blocks),
+        )
         return {"ok": True, "page_id": page_id, "action": "created"}
 
     except NotionError as e:

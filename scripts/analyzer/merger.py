@@ -19,6 +19,7 @@ from .gemini import (
     AnalysisResult, _extract_json, _validate,
     MODEL_PRIMARY, MODEL_FALLBACK, call_gemma_json,
     _quota_should_skip, _quota_increment, _is_429, _gemini_gen_config,
+    _UNSUPPORTED_MODELS, _is_thinking_config_reject,
 )
 from .prompt import CATEGORIES, GRADES, TARGETS
 
@@ -172,6 +173,9 @@ def merge_with_existing(
         if _quota_should_skip(model_name):
             logger.info("Gemini merge %s quota 임계 — 스킵", model_name)
             continue
+        if model_name in _UNSUPPORTED_MODELS:
+            logger.info("Gemini merge %s — SDK 비호환으로 세션 내 비활성 상태", model_name)
+            continue
         try:
             model = genai.GenerativeModel(
                 model_name,
@@ -187,6 +191,11 @@ def merge_with_existing(
             last_err = e
             if _is_429(e):
                 _quota_increment(model_name, hit_429=True)
+            elif _is_thinking_config_reject(e):
+                _UNSUPPORTED_MODELS.add(model_name)
+                logger.warning(
+                    "%s thinking_config 미지원 — 세션 내 비활성", model_name,
+                )
 
     # 3단계: Gemma 4 로컬 폴백
     if not raw_text:

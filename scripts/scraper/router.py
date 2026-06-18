@@ -59,7 +59,13 @@ def detect_source(url: str) -> str:
         return "tiktok"
     if "instagram.com" in domain:
         return "instagram"
-    if "notion.site" in domain or "notion.so" in domain:
+    # notion.site / notion.so : 공개 share URL.
+    # app.notion.com / www.notion.com : 워크스페이스 멤버 전용 (로그인 필수, 본문 스크랩 절대 불가).
+    if (
+        "notion.site" in domain
+        or "notion.so" in domain
+        or "notion.com" in domain
+    ):
         return "notion"
     if "github.com" in domain:
         return "github"
@@ -98,6 +104,32 @@ def _ig_block_enabled() -> bool:
         return bool(config_store.get("ig_block.enabled", True))
     except Exception:  # noqa: BLE001
         return True  # config 로딩 실패해도 안전 디폴트는 차단.
+
+
+def _notion_auth_guard(url: str) -> Optional[ScrapeResult]:
+    """app.notion.com / www.notion.com 워크스페이스 페이지 사전 차단.
+
+    이 도메인의 페이지는 노션 계정 로그인 + 워크스페이스 멤버 권한이 있어야만 본문 접근 가능.
+    Playwright 로 받혀도 generic landing HTML 만 떨어짐 → quota·시간 낭비 + 잡 실패.
+    공개 share URL (`<slug>.notion.site/...`) 로 다시 받아오라고 안내.
+    """
+    lower = url.lower()
+    if "app.notion.com" not in lower and "www.notion.com" not in lower:
+        return None
+    return ScrapeResult(
+        url=url,
+        source_type="notion",
+        title="",
+        text="",
+        meta={},
+        ok=False,
+        skip_reason="notion_workspace_only",
+        skip_message_ko=(
+            "이 링크는 노션 워크스페이스 멤버만 볼 수 있는 페이지(app.notion.com)라 본문을 가져올 수 없어요. "
+            "노션에서 페이지 우상단 [Share] → [Publish to web] 토글 ON → "
+            "그때 표시되는 공개 URL(<워크스페이스>.notion.site/...)로 다시 등록해 주세요."
+        ),
+    )
 
 
 def _ig_guard(url: str) -> Optional[ScrapeResult]:
@@ -143,6 +175,13 @@ def scrape(url: str) -> ScrapeResult:
         blocked = _ig_guard(url)
         if blocked is not None:
             logger.info("IG 피드 사전 차단: %s", url)
+            return blocked
+
+    # app.notion.com / www.notion.com 사전 차단 — 워크스페이스 멤버 전용 페이지.
+    if source == "notion":
+        blocked = _notion_auth_guard(url)
+        if blocked is not None:
+            logger.info("Notion 워크스페이스 페이지 사전 차단: %s", url)
             return blocked
 
     # 1단계 — 전용 스크래퍼

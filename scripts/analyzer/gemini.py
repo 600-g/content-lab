@@ -375,6 +375,17 @@ def _is_429(err: Exception) -> bool:
     return "429" in s or "quota" in s or "resource_exhausted" in s
 
 
+# SDK 0.8 이 thinking 계열 모델에 자동으로 thinking_config 를 주입하는 경우가 있는데
+# gemini-2.5-flash-lite 같은 thinking 미지원 모델은 그걸 reject 함.
+# 한 번 거부당한 모델은 프로세스 동안 다시 호출하지 않도록 메모리 캐시.
+_UNSUPPORTED_MODELS: set[str] = set()
+
+
+def _is_thinking_config_reject(err: Exception) -> bool:
+    s = f"{err}".lower()
+    return "thinking_config" in s or "thinking config" in s
+
+
 def _gemini_gen_config() -> dict:
     """Gemini generation_config — JSON mime + 충분한 출력 토큰.
 
@@ -429,6 +440,9 @@ def analyze(scrape_dict: dict) -> AnalysisResult:
             logger.info("Gemini %s quota 임계(>=%.0f%%) — 호출 스킵",
                         model_name, QUOTA_SOFT_THRESHOLD * 100)
             continue
+        if model_name in _UNSUPPORTED_MODELS:
+            logger.info("Gemini %s — 이번 세션에서 SDK 비호환으로 비활성화 상태", model_name)
+            continue
         try:
             model = genai.GenerativeModel(
                 model_name,
@@ -444,6 +458,12 @@ def analyze(scrape_dict: dict) -> AnalysisResult:
             last_err = e
             if _is_429(e):
                 _quota_increment(model_name, hit_429=True)
+            elif _is_thinking_config_reject(e):
+                _UNSUPPORTED_MODELS.add(model_name)
+                logger.warning(
+                    "%s thinking_config 미지원 — 세션 내 비활성 (다음 호출부터 스킵)",
+                    model_name,
+                )
 
     # 3단계: Gemma 4 로컬 폴백 (Gemini 둘 다 실패 또는 빈 응답 또는 quota 도달)
     if not raw_text:
