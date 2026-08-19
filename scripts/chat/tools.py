@@ -167,6 +167,26 @@ def _t_list_skills(limit: int = 200) -> dict:
     return {"ok": True, "total": len(slugs), "slugs": slugs[:max(1, int(limit))]}
 
 
+def _t_search_library(query: str, k: int = 5, category: str = "") -> dict:
+    """스킬 라이브러리 하이브리드 검색 (키워드 + 의미). 결과는 메타 + 스니펫만 — 본문은 read_skill_md."""
+    from scripts.library.search import search as _lib_search
+    res = _lib_search(str(query), k=k, category=category or None)
+    if not res.get("ok"):
+        return res
+    slim = [
+        {
+            "slug": r["slug"], "title": r["title"], "description": r["description"][:200],
+            "category": r["category"], "grade": r["grade"], "snippet": r["snippet"],
+            "catalog_url": r["catalog_url"],
+        }
+        for r in res["results"]
+    ]
+    return {
+        "ok": True, "query": res["query"], "semantic_used": res["semantic_used"],
+        "total_indexed": res["total_indexed"], "results": slim,
+    }
+
+
 # ── mutating (적용) 도구 ──────────────────────────────────────────
 
 OP_COMMANDS = {
@@ -208,7 +228,7 @@ def _t_run_op_command(cmd: str) -> dict:
 def _t_write_config(patches: dict) -> dict:
     if not isinstance(patches, dict):
         return {"ok": False, "error": "patches 는 객체여야 합니다"}
-    allowed = ("dedup", "ig_block", "chat")
+    allowed = ("dedup", "ig_block", "chat", "notion", "library")
     res = config_store.patch(patches, allowed_prefixes=allowed)
     res["ok"] = True
     return res
@@ -410,6 +430,27 @@ def _register_all() -> None:
         input_schema={"type": "object", "properties": {}, "required": []},
         handler=_t_dedup_report,
     ))
+    register(ToolSpec(
+        name="search_library",
+        description=(
+            "스킬 라이브러리(SKILL.md 79+건)를 자연어로 검색합니다 — 키워드 + 의미 하이브리드. "
+            "'OO 관련 스킬 있어?' 류 질문에 먼저 호출. 결과는 slug/제목/설명/등급/스니펫/카탈로그 링크. "
+            "본문 전문은 read_skill_md(slug) 로."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "자연어 질의 (2자 이상)"},
+                "k": {"type": "integer", "minimum": 1, "maximum": 20},
+                "category": {
+                    "type": "string",
+                    "enum": ["", "프롬프트", "자동화", "콘텐츠", "디자인", "개발", "업무", "기타"],
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_t_search_library,
+    ))
 
     # ── mutating ──
     register(ToolSpec(
@@ -436,7 +477,8 @@ def _register_all() -> None:
     register(ToolSpec(
         name="write_config",
         description=(
-            "config.json 의 dedup.* / ig_block.* / chat.* 키만 패치 가능. "
+            "config.json 의 dedup.* / ig_block.* / chat.* / notion.* / library.* 키만 패치 가능 "
+            "(notion.register_on_collect 로 수집 시 Notion 등록 on/off). "
             "patches 는 점 표기 키와 값의 객체. 예: {\"dedup.threshold\": 0.85}."
         ),
         input_schema={

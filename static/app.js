@@ -219,12 +219,15 @@ function renderJobCard(item) {
   } else if (item.status === 'completed' && !r.skipped) {
     const web = r.notion_web_url || '';
     const app = web ? web.replace('https://', 'notion://') : '';
-    const links = web
+    const catalogUrl = r.catalog_url || (skill.name ? `/catalog#${encodeURIComponent(skill.name)}` : '');
+    const catalogLink = catalogUrl
+      ? `<a class="job-link" href="${escapeHtml(catalogUrl)}" target="_blank" rel="noopener">📚 카탈로그</a>` : '';
+    const notionLink = web
       ? `<a class="job-link" data-app="${escapeHtml(app)}" data-web="${escapeHtml(web)}"
             href="${escapeHtml(web)}" target="_blank" rel="noopener">📝 Notion</a>` : '';
     detail = `${title ? `<span class="job-title">${escapeHtml(title)}</span>` : ''}
               ${r.message_ko ? `<span class="job-note">${escapeHtml(r.message_ko)}</span>` : ''}
-              ${links}`;
+              ${catalogLink}${notionLink}`;
   } else if (item.status === 'completed' && r.skipped) {
     const fallbackNote = r.skip_kind === 'blocked' ? '수집할 수 없는 URL' : '이미 등록된 스킬';
     detail = `<span class="job-note">${escapeHtml(r.message_ko || fallbackNote)}</span>`;
@@ -368,6 +371,12 @@ async function loadHealth() {
     const pushEl = document.getElementById('health-push');
     if (pushEl) pushEl.textContent = d.push_configured
       ? `구독 ${d.push_subscriptions || 0}` : '미설정';
+    const libEl = document.getElementById('health-library');
+    if (libEl) {
+      const lib = d.library || {};
+      libEl.textContent = lib.total != null
+        ? `${lib.total}건 · 임베딩 ${lib.embedded ?? '-'}` : '비활성';
+    }
   } catch {}
 }
 document.getElementById('health-refresh')?.addEventListener('click', loadHealth);
@@ -439,6 +448,9 @@ function _renderRecentItem(item) {
   const notionLink = notionWeb
     ? `<a class="notion notion-deeplink" data-app="${escapeHtml(notionApp)}" data-web="${escapeHtml(notionWeb)}" href="${escapeHtml(notionWeb)}" target="_blank" rel="noopener">📝 Notion</a>`
     : '';
+  const catalogUrl = item.catalog_url || (item.skill_name ? `/catalog#${encodeURIComponent(item.skill_name)}` : '');
+  const catalogLink = catalogUrl
+    ? `<a href="${escapeHtml(catalogUrl)}" target="_blank" rel="noopener">📚 카탈로그</a>` : '';
   const originLink = item.url
     ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🔗 원본</a>` : '';
   return `<li>
@@ -448,7 +460,7 @@ function _renderRecentItem(item) {
       ${mergePill}
     </div>
     <div class="meta">${escapeHtml(cat)}${escapeHtml(item.ts || '')}</div>
-    <div class="actions">${notionLink}${originLink}</div>
+    <div class="actions">${catalogLink}${notionLink}${originLink}</div>
   </li>`;
 }
 

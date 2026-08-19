@@ -30,6 +30,16 @@ GRADE_ORDER: tuple[str, ...] = ("S", "A", "B", "C")
 DEFAULT_CATEGORY = "기타"
 
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9._\-]*$")
+# scripts/chat/tools.py:_redact_secrets 와 같은 패턴 — 라이브러리는 공개 API 로 본문을 내보내므로
+# 인덱스 단계에서 한 번 거른다 (API/카탈로그/MCP 모두 같은 레코드를 쓴다).
+_SECRET_RE = re.compile(
+    r"(AIza[0-9A-Za-z_\-]{20,}|sk-[A-Za-z0-9_\-]{16,}|key=[0-9A-Za-z_\-]{16,}"
+    r"|secret_[0-9A-Za-z]{16,}|ntn_[0-9A-Za-z]{16,})"
+)
+
+
+def redact_secrets(text: str) -> str:
+    return _SECRET_RE.sub("[REDACTED]", text or "")
 _FM_RE = re.compile(r"^---\n(.*?)\n---\n?", re.S)
 _H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.M)
 _CALLOUT_RE = re.compile(r"^💡\s*(.+?)\s*$", re.M)
@@ -195,7 +205,7 @@ def _title_from_body(body: str, fallback: str) -> str:
 def parse_skill_md(path: Path) -> Optional[SkillRecord]:
     """SKILL.md 1건 → SkillRecord. 읽기/파싱 실패 시 None (호출자가 제외)."""
     try:
-        raw = path.read_text(encoding="utf-8")
+        raw = redact_secrets(path.read_text(encoding="utf-8"))
         st = path.stat()
     except (OSError, UnicodeDecodeError) as e:
         logger.warning("SKILL.md 읽기 실패 — 인덱스 제외: %s (%s)", path, e)

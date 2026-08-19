@@ -189,7 +189,8 @@ def _run_job(job_id: str) -> None:
         job["stage"] = "scraping"
         _save_jobs()
     try:
-        summary = collect(url, register_notion=True, skip_duplicate=False)
+        # v4.5: SKILL.md 가 유일한 원본 — Notion 등록은 config 옵션 (기본 off).
+        summary = collect(url, register_notion=_notion_enabled(), skip_duplicate=False)
         with JOBS_LOCK:
             j = JOBS.get(job_id)
             if j is not None:
@@ -213,6 +214,7 @@ def _run_job(job_id: str) -> None:
                 "notion_page": summary.get("stages", {}).get("notion", ""),
                 "notion_app_url": app_url,
                 "notion_web_url": web,
+                "catalog_url": f"/catalog#{skill.get('name', '')}" if skill.get("name") else "",
             })
     except Exception as e:  # noqa: BLE001
         log.exception("job failed: %s", e)
@@ -308,10 +310,20 @@ def _request_pin() -> str:
 
 
 # ── 라우트 ───────────────────────────────────────────────
+def _notion_enabled() -> bool:
+    """수집 시 Notion 등록 여부 — config.json notion.register_on_collect (기본 False, v4.5 부터 옵션)."""
+    try:
+        from scripts import config_store
+        return bool(config_store.get("notion.register_on_collect", False))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 @app.get("/")
 def index():
     resp = make_response(render_template(
-        "index.html", notion=_notion_urls(), build_id=_build_id()))
+        "index.html", notion=_notion_urls(), notion_enabled=_notion_enabled(),
+        catalog_url="/catalog", build_id=_build_id()))
     resp.headers["Cache-Control"] = "no-cache, must-revalidate"
     return resp
 
@@ -480,12 +492,27 @@ def _last_failure() -> dict | None:
         }
 
 
+def _library_health() -> dict:
+    """라이브러리 인덱스 요약 (실패해도 healthz 는 살아야 함)."""
+    try:
+        from scripts.library.index import get_index
+        from scripts.library.search import load_vectors
+        idx = get_index()
+        vecs = load_vectors()
+        embedded = sum(1 for r in idx.records if r.slug in vecs)
+        return {"total": len(idx.records), "embedded": embedded, "version": idx.version}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)}
+
+
 @app.get("/healthz")
 def healthz():
     return jsonify({
         "ok": True,
         "service": "aiskillbox",
-        "version": "4.4",
+        "version": "4.5",
+        "library": _library_health(),
+        "notion_enabled": _notion_enabled(),
         "last_failure": _last_failure(),
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
         "notion_configured": bool(os.getenv("NOTION_API_KEY")),
@@ -505,6 +532,14 @@ try:
     register_chat_routes(app)
 except Exception as _chat_err:  # noqa: BLE001
     log.warning("채팅 라우트 등록 실패 — 채팅 비활성: %s", _chat_err)
+
+
+# ── 스킬 라이브러리 라우트 (/api/library/* + /catalog) ─────
+try:
+    from scripts.library.routes import register_library_routes
+    register_library_routes(app)
+except Exception as _lib_err:  # noqa: BLE001
+    log.warning("라이브러리 라우트 등록 실패 — 검색/카탈로그 비활성: %s", _lib_err)
 
 
 # ── 시작 ─────────────────────────────────────────────────

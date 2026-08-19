@@ -14,6 +14,14 @@
     "enabled": true,
     "patterns": ["instagram.com/p/"]
   },
+  "notion": {
+    "register_on_collect": false,
+    "_note": "v4.5 부터 SKILL.md 가 유일한 원본. true 로 바꾸면 수집 시 Notion DB 등록 재개 (CLI --notion/--no-notion 이 우선)."
+  },
+  "library": {
+    "search_k": 8,
+    "_note": "스킬 라이브러리 — /api/library/search 기본 k. 검색 인덱스는 skills/ mirror 를 mtime 으로 자동 감지."
+  },
   "chat": {
     "enabled": true,
     "model": "claude-opus-4-8",
