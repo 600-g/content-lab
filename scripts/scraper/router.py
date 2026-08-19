@@ -74,12 +74,15 @@ def detect_source(url: str) -> str:
     return "web"
 
 
-def _retry(func: Callable[[], "ScrapeResult"], attempts: int = 2, label: str = "") -> Optional["ScrapeResult"]:
-    """exponential backoff 재시도. skip_reason 이 잡히면 즉시 반환 (재시도 무의미)."""
+def _retry(func: Callable[[int], "ScrapeResult"], attempts: int = 2, label: str = "") -> Optional["ScrapeResult"]:
+    """exponential backoff 재시도. skip_reason 이 잡히면 즉시 반환 (재시도 무의미).
+
+    func 는 회차 인덱스(0-base)를 받는다 — 스크래퍼가 회차별로 UA 를 바꿀 수 있게.
+    """
     last_err: Exception | None = None
     for i in range(attempts):
         try:
-            r = func()
+            r = func(i)
             # 사전 차단(skip_reason) 은 재시도해도 결과 동일 → 즉시 반환.
             if getattr(r, "skip_reason", None):
                 logger.info("%s skip_reason=%s → 재시도 스킵", label, r.skip_reason)
@@ -215,7 +218,11 @@ def scrape(url: str) -> ScrapeResult:
 
     # 2단계 — 범용 Playwright (2회 재시도, trafilatura+UA 회전 내장)
     from . import web
-    result = _retry(lambda: web.scrape(url, source_type=source), attempts=2, label=f"playwright[{source}]")
+    result = _retry(
+        lambda i: web.scrape(url, source_type=source, attempt=i),
+        attempts=2,
+        label=f"playwright[{source}]",
+    )
     if result:
         return result
 

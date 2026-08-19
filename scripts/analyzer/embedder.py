@@ -1,7 +1,10 @@
-"""Gemini text-embedding-004 기반 의미 임베딩 + 디스크 캐시.
+"""Gemini embedding 기반 의미 임베딩 + 디스크 캐시.
 
 폴백 정책: 임베딩 실패 시 None 반환 → 호출자가 dedup 스킵하고 신규 등록.
 즉 임베딩 인프라가 죽어도 기존 URL-매칭 dedup + 신규 등록은 계속 동작.
+
+모델: 2026-07 기준 gemini-embedding-001 이 최신 stable. text-embedding-004 는
+v1beta 에서 404 반환하기 시작 → 자동 폴백 체인으로 처리.
 """
 from __future__ import annotations
 
@@ -18,11 +21,15 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-EMBED_MODEL = "models/text-embedding-004"
+EMBED_MODELS = (
+    "models/gemini-embedding-001",
+    "models/text-embedding-004",
+)
 EMBED_URL = (
     "https://generativelanguage.googleapis.com/v1beta/"
     "{model}:embedContent"
 )
+_DEAD_MODELS: set[str] = set()  # 404 반환한 모델은 세션 동안 스킵
 CACHE_PATH = Path(__file__).resolve().parents[2] / "scripts" / "skills" / "embeddings.json"
 _CACHE_LOCK = threading.Lock()
 _CACHE: dict[str, dict] = {}
@@ -64,32 +71,49 @@ def _hash(text: str) -> str:
 
 
 def _call_gemini(text: str) -> Optional[list[float]]:
-    """Gemini embedContent API 호출. 실패 시 None."""
+    """Gemini embedContent API 호출. 실패 시 None.
+
+    모델 폴백 체인: gemini-embedding-001 → text-embedding-004.
+    404 반환한 모델은 세션 동안 스킵 (반복 로그 억제).
+    """
     api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         logger.warning("GEMINI_API_KEY 미설정 — 임베딩 불가")
         return None
-    url = EMBED_URL.format(model=EMBED_MODEL) + f"?key={api_key}"
-    payload = {
-        "model": EMBED_MODEL,
-        "content": {"parts": [{"text": text[:8000]}]},  # API 입력 한도 보호.
-        "taskType": "SEMANTIC_SIMILARITY",
-    }
-    try:
-        r = requests.post(url, json=payload, timeout=20)
-        if r.status_code == 429:
-            logger.warning("Gemini embedding quota 초과 — 임베딩 스킵")
-            return None
-        r.raise_for_status()
-        data = r.json()
-        vec = data.get("embedding", {}).get("values")
-        if not vec:
-            logger.warning("Gemini embedding 빈 응답: %s", str(data)[:200])
-            return None
-        return list(vec)
-    except Exception as e:  # noqa: BLE001
-        logger.warning("Gemini embedding 호출 실패: %s", e)
-        return None
+    for model in EMBED_MODELS:
+        if model in _DEAD_MODELS:
+            continue
+        url = EMBED_URL.format(model=model)
+        payload = {
+            "model": model,
+            "content": {"parts": [{"text": text[:8000]}]},
+            "taskType": "SEMANTIC_SIMILARITY",
+        }
+        try:
+            # 키는 헤더로 — URL 쿼리에 넣으면 HTTPError 로그에 그대로 노출됨.
+            r = requests.post(
+                url, json=payload,
+                headers={"x-goog-api-key": api_key},
+                timeout=20,
+            )
+            if r.status_code == 404:
+                _DEAD_MODELS.add(model)
+                logger.warning("Gemini embedding 모델 %s → 404, 폴백", model)
+                continue
+            if r.status_code == 429:
+                logger.warning("Gemini embedding quota 초과 — 임베딩 스킵")
+                return None
+            r.raise_for_status()
+            data = r.json()
+            vec = data.get("embedding", {}).get("values")
+            if not vec:
+                logger.warning("Gemini embedding 빈 응답: %s", str(data)[:200])
+                continue
+            return list(vec)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Gemini embedding 호출 실패 (%s): %s", model, e)
+            continue
+    return None
 
 
 def embed(text: str) -> Optional[list[float]]:

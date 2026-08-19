@@ -7,7 +7,7 @@ difficulty: 중급
 category: 기타
 ai_tools: []
 sources:
-  - (unknown)
+  - https://github.com/anthropics/anthropic-quickstarts
 ---
 
 # 자율 코딩 에이전트 · 🔀 합병

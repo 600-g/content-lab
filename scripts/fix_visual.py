@@ -23,6 +23,7 @@ import json
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
+from scripts.notion_paging import query_all_pages
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -353,8 +354,7 @@ def main() -> int:
     parser.add_argument("--only", type=str, default="", help="제목에 포함된 키워드만")
     args = parser.parse_args()
 
-    r = requests.post(f"{API}/databases/{DB_ID}/query", headers=H, json={"page_size": 50}).json()
-    pages = r.get("results", [])
+    pages = query_all_pages(API, H, DB_ID)
     if args.only:
         pages = [p for p in pages if args.only in "".join(t["plain_text"] for t in p["properties"]["스킬명"]["title"])]
     if args.limit > 0:

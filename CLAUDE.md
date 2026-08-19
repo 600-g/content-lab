@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**aiskillbox** (콘텐츠랩 v4.3) — URL 한 줄 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 + Notion 마스터 DB 등록. 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
+**aiskillbox** (콘텐츠랩 v4.4.3) — URL 한 줄 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 + Notion 마스터 DB 등록. 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
 
 좋은 콘텐츠를 한 번 보고 끝내지 않고 **스킬 자산**으로 영구 활용 가능한 형태로 보관. 두근컴퍼니의 모든 다른 AI 에이전트가 이 DB와 글로벌 `~/.claude/skills/` 에서 자동으로 활용.
 
@@ -174,6 +174,12 @@ app.py                              ── Flask 진입점. 순차 잡 큐(단�
                                         /api/push/*, /api/settings*, /sw.js (루트 스코프 SW 서빙)
 scripts/
   collect.py                        ── 메인 파이프라인 (단계별 한글 에러 + 부분 성공 처리)
+  chat/fixer.py                     ── v4.4 escalate_fix — fix 잡 생성/조회 (logs/fix_jobs.json), 러너 detached spawn
+  chat/fix_runner.py                ── v4.4 fix 러너 (서버와 분리 프로세스). 스냅샷 → claude -p (기본 claude-sonnet-5,
+                                        .env FIX_CLAUDE_MODEL override · ~/.claude-aibox 폴더 존재 시 CLAUDE_CONFIG_DIR
+                                        로 별도 계정(Pro 플랜) 사용, 없으면 기본 Max 로그인)
+                                        → py_compile + 재스크랩 + node --check 검증 → 실패 시 건드린 파일만 원복
+                                        → 성공 시 launchctl 재기동 + Web Push. 동시 1건, 타임아웃 15분, 스냅샷 5개 보존
   push.py                           ── Web Push — VAPID 로드 + 구독 저장(logs/push_subscriptions.json) + send_push (죽은 구독 자동 정리)
   settings_store.py                 ── .env 안전 읽기/쓰기 (주석·순서 보존). 설정 창 PIN 보호 API 가 사용
   curate_db.py                      ── DB 전수 큐레이션 CLI (analyze/fix-emoji/fix-meta/polish-body/find-dupes/all)
@@ -262,6 +268,30 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 18. **설정 창 PIN 보호** — aiskillbox 는 `aiskillbox.600g.net` 으로 공개되고 앱 자체 인증이 없다. API 키 편집 엔드포인트(`/api/settings*`)는 `.env` 의 `ADMIN_PIN` 으로 보호 — `X-Admin-Pin` 헤더, `hmac.compare_digest` 상수시간 비교, 5회 실패 시 5분 잠금. 키 값은 응답에서 항상 마스킹(`settings_store.mask`). 새 비밀/공개 엔드포인트 추가 시 같은 PIN 게이트를 반드시 통과시킬 것.
 
+19. **Claude CLI `--bare` 는 OAuth/keychain 무시** (v4.4.3 도입 시 발굴) — `claude -p ... --bare` 는 minimal 모드로 hooks/skills/auto-memory 를 배제해서 우리 API-style 호출에 이상적으로 보이지만, **인증을 오직 `ANTHROPIC_API_KEY` 만 인식** → 본계정 구독 (OAuth 로그인) 을 무시하고 `Not logged in · Please run /login` 반환. `chat/engine.py:_loop_claude_cli` 는 `--bare` 절대 금지. 대신 `--disable-slash-commands`(스킬 자동 로드 차단) + `--output-format json` + `--json-schema` + `--append-system-prompt` 조합으로 CLI 를 API 처럼 쓴다.
+
+20. **Anthropic tool `input_schema` 는 top-level `oneOf`/`allOf`/`anyOf` 미지원** (v4.4.3 도입 시 발굴) — Claude CLI `--json-schema` 로 `{oneOf: [{tool,args}, {reply}]}` 강제하면 서버가 `API Error: 400 tools.6.custom.input_schema: input_schema does not support oneOf, allOf, or anyOf at the top level` 반환. 해결: 세 필드를 모두 optional 로 두고 프롬프트로 "tool+args 또는 reply 중 하나만" 강제 + 파싱 측에서 `reply` 우선 처리 (`_loop_claude_cli` 방어 로직).
+
+21. **Playwright `wait_until="networkidle"` 은 SPA 폴백에 부적절** (2026-07-31 발굴) — Notion/Instagram/TikTok 등 heartbeat XHR (텔레메트리·연결 유지 폴링) 이 끊이지 않는 사이트는 절대 networkidle 상태가 안 됨 → 지정 timeout 다 소진 후 실패. `scripts/scraper/web.py` 의 goto 폴백 체인은 `domcontentloaded(60s) → load(60s) → commit(45s)` 3단으로 재구성 (networkidle 제거). commit 은 첫 응답 헤더만 받고 리턴하므로 그 뒤 `wait_for_selector` 가 실제 컨텐츠 대기.
+
+22. **Gemini API 는 모든 endpoint 에서 URL query `?key=` 금지** (2026-07-31 발굴) — `chat/engine.py` 는 v4.4.2 에서 `x-goog-api-key` 헤더로 이전했으나 `analyzer/embedder.py` 는 누락돼 있어 `text-embedding-004` 404 실패 시 stderr 에 키가 그대로 노출됨. **모든 신규 Gemini 호출은 반드시 헤더 방식**으로 통일 (`_call_gemini` 계열 helper 를 개별 파일마다 만들 때 이 규칙 필수). embedContent / generateContent / embedBatch 다 동일.
+
+23. **Notion DB 조회는 `page_size` 만 쓰면 조용히 잘린다** (2026-08-16 발굴, 영향 최대) — `page_size` 는 '한 번에 최대 몇 건'이지 '전부'가 아니다. DB 정리/감사 스크립트 14개가 `json={"page_size": 50}` 단발 호출을 복붙해 쓰고 있었고, DB 가 50건을 넘어간 뒤로 **뒤쪽 row 가 통째로 빠진 채 "전수 처리 완료" 라고 출력**됐다 (69건 중 19건 누락). `backup_all` 도 포함돼 있어서 그 19건은 **백업조차 존재하지 않았다** — gotcha #14 의 복원 안전망이 그 범위에서 무효였다는 뜻. 이제 `scripts/notion_paging.py:query_all_pages()` 단일 구현을 쓴다. **새 DB 스크립트는 예외 없이 이 헬퍼 경유.** 오류도 경고도 없이 조용히 빠지는 종류라 눈으로는 절대 안 잡힌다.
+
+24. **노션 '비공개' 판별에 HTML 마케팅 카피를 쓰면 안 된다** (2026-08-16 발굴) — 구버전 `_is_notion_private_landing` 은 HTML 에 Notion 마케팅 문구가 있고 추출 텍스트가 500자 미만이면 비공개로 확정했다. 그런데 **그 문구는 정상 공개 페이지의 렌더 결과에도 그대로 들어있다** (본문 4302자 공개 페이지에서 마커 2개 히트). 결국 실질 판별이 '텍스트 짧으면 비공개' 하나뿐이었고, `router._retry` 가 `skip_reason` 을 재시도 불가로 처리하는 탓에 **렌더가 한 번 느린 것만으로 공개 페이지가 영구 비공개 판정**을 받았다 (실사고 2026-08-11). 현재는 렌더된 DOM 실측으로 판정: `[data-block-id]` 0개 **AND** body innerText 에 '페이지 찾지 못함 / 사용 권한이 없거나' 안내 문구. 진짜 접근 불가 페이지만 잡힌다.
+
+25. **notion.site 는 Chrome UA 로 못 읽는다** (2026-08-16 계측) — UA 풀 4종 전수 테스트 결과 Chrome UA 2종은 goto 가 domcontentloaded/load 둘 다 60s 타임아웃 나고 `page.content()` 가 빈 문자열. WebKit(Safari/iPhone) 2종만 정상 렌더. `random.choice` 라 50% 확률로 못 읽는 UA 를 뽑았다. `web.NOTION_UA_POOL` 이 WebKit 만 남기고, `_pick_ua(source_type, attempt)` 가 재시도 회차별로 UA 를 순환시킨다 (같은 UA 로 두 번 실패하지 않게).
+
+26. **trafilatura 는 Notion SPA 본문을 일부만 뜯을 수 있다** — '빈 결과일 때만 bs4 폴백' 이면 이 케이스를 못 건진다 (실사례: 렌더 1166자 중 311자만 추출 → MIN_TEXT_LEN 미달로 실패). 이제 추출 결과가 `MIN_GOOD_TEXT_LEN` 미만이면 trafilatura / bs4 / `body.innerText` **셋 중 가장 긴 것**을 채택한다.
+
+27. **LLM 이 개행을 리터럴 `\n` 두 글자로 뱉으면 본문이 통째로 한 줄이 된다** (2026-08-16 발굴) — JSON 파서는 진짜 이스케이프만 풀어주므로 모델이 한 번 더 이스케이프하면 그대로 남는다. 마크다운 구조가 전부 무너지고, Notion 등록 시 `heading_2` 하나에 rich_text 119개가 몰려 **페이지 등록 요청 전체가 400** 으로 죽는다 (실사고 2026-08-10 webswing-desktop-pet — 로컬엔 설치됐는데 Notion 에만 조용히 누락). 원인 차단은 `gemini._unescape_literal_newlines`, 방어는 `register._block` 의 rich_text 100요소 / heading 200자 가드. **Notion rich_text 배열 한도는 100개** — 넘으면 그 블록만이 아니라 요청 전체가 실패한다.
+
+28. **슬러그가 같다는 이유만으로 합병하면 안 된다** (2026-08-16 발굴) — `collect.py` 의 `find_global_by_slug` 히트 경로는 임계값·임베딩·LLM 게이트를 **전부 우회**하고 즉시 합병했다. LLM 이 이름 짓기에 실패하면 `untitled-skill` 같은 무의미 슬러그가 나오는데, 서로 무관한 콘텐츠가 여기로 전부 빨려 들어간다 (실사고: 주식 시장 분석 + Claude 프롬프트 60선이 한 스킬로 합쳐지고, 그 여파로 Claude 60 **노션 페이지 제목까지** 합병 제목으로 오염). 현재는 `GENERIC_SLUGS` 영구 제외 + 같은 URL 재수집이 아니면 슬러그 히트도 `_confirm_semantic_merge` 통과 요구. 의미 dedup 후보에서도 `GENERIC_SLUGS` 를 제외한다 (내용이 뒤섞인 스킬은 임베딩이 아무 주제에나 가까워 자석이 됨).
+
+29. **합병 게이트 평가는 동일 문구로 하면 안 된다** — 같은 SKILL.md 를 그대로 넣어 True 가 나오는 건 게이트가 작동한다는 증거가 못 된다. 실제 재수집은 **같은 콘텐츠를 LLM 이 다르게 요약**해서 들어오므로 패러프레이즈 페어로 검증해야 한다. 구 프롬프트는 동일 문구 5/5 통과였지만 패러프레이즈는 놓쳤다. 현재 프롬프트는 동일 5/5 · 패러프레이즈 4/4 · 다른스킬 오합병 0/6.
+
+30. **본문 부족을 등급 C 로 흘려보내면 사용자가 원인을 오해한다** (2026-08-18) — 스크랩이 짧게 끝나도 `text` 가 비어있지만 않으면 분석 단계로 넘어갔고, Gemini 가 빈약한 입력에 등급 C 를 매겨 사용자에겐 **"스킬로 등록할 가치 없는 콘텐츠"** 로 표시됐다. 실제 사유는 로그인 벽이나 렌더 실패인데 콘텐츠 품질 탓으로 오인된다 (실사고 2026-08-13 ChatGPT 공유 링크 106자). 이제 `collect.py` 가 분석 **직전에** `MIN_TEXT_LEN`(스크래퍼 폴백과 동일 기준, `SCRAPER_MIN_TEXT_LEN` 로 조정) 미만이면 실제 글자수와 출처별 우회 안내(`_short_text_hint`)를 담아 스크랩 실패로 종료한다 — LLM 쿼터도 아낀다. 등급 C 메시지는 본문이 충분히 확보된 경우에만 쓰이며 판정 사유를 함께 보여준다.
+
 ## Related docs in this repo
 
 - **`TEMPLATE.md`** — 스킬 페이지 표준 템플릿 v2.1 (단일 진실, enum/구조/외부 도구 매핑 14종 정의)
@@ -304,6 +334,13 @@ URL 하나만 던지면:
 
 | 날짜 | 버전 | 변경 |
 |------|------|----------|
+| 2026-08-16 | v4.4.6 | **비공개 오탐 · 슬러그 오합병 · 조용한 데이터 누락 3종 근절.** ① **노션 비공개 오탐** — 판별 마커가 공개 페이지 렌더 결과에도 들어있어 실질 기준이 '텍스트 짧으면 비공개' 뿐이었고, `skip_reason` 이 재시도까지 차단해 렌더 지연 한 번에 공개 페이지가 영구 차단됐다 (실사고 8/11). 렌더 DOM 실측(`[data-block-id]` 0개 + '페이지 찾지 못함' 문구)으로 교체 — 4케이스 검증 통과. ② **UA 룰렛** — notion.site 는 Chrome UA 2종으로 goto 60s 타임아웃 + html=0, WebKit 2종만 정상. `NOTION_UA_POOL` 분리 + 회차별 UA 순환. ③ **trafilatura 부분 추출** — 짧으면 bs4/innerText 중 최장 채택 (311자 → 1180자 복구). ④ **슬러그 경로 합병 우회** — `find_global_by_slug` 히트가 모든 게이트를 건너뛰어 무관한 콘텐츠가 `untitled-skill` 하나로 합쳐졌다. `GENERIC_SLUGS` 영구 제외 + 슬러그 히트도 의미 게이트 통과 요구. ⑤ **합병 게이트 프롬프트** — 동일 문구만 맞추고 패러프레이즈를 놓쳤음 (실제 재수집은 항상 패러프레이즈). 재작성 후 동일 5/5 · 패러프레이즈 4/4 · 오합병 0/6. ⑥ **리터럴 개행** — LLM 이 개행을 `\n` 두 글자로 뱉어 본문이 한 줄이 되고 Notion 등록 전체가 400 (8/10 webswing 누락 원인). 원인 차단 + rich_text 100요소 가드. ⑦ **page_size 무페이지네이션 (영향 최대)** — 14개 스크립트가 DB 앞 50건만 보고 '전수 완료'로 출력, 69건 중 19건이 백업조차 없었다. `scripts/notion_paging.py` 단일 헬퍼로 통일 + 전량 재백업. **데이터 복구**: webswing 본문 복원 + Notion 재등록, `untitled-skill` 분해(주식 분석 스킬 복원 · Claude 60 노션 제목 오염 복구), origin/sources 누락 9건 백필, 오합병 3건 출처별 재수집 분리. |
+| 2026-08-09 | v4.4.5 | **중복/합병 파이프라인 전면 재점검 (v4.4.4 후속 — 놓친 구멍 4개 + 데이터 정리).** ① **Notion 중복 페이지 양산 버그** — `check_duplicate(url)` 이 새 URL 로만 조회해 합병(특히 의미 dedup)마다 새 페이지 생성 (실사고: 6개 스킬 × 2~6페이지, 교차 오염 1건 포함). collect.py 가 누적 출처 URL 전체 loop + 합병 케이스 한정 `find_by_title` 2차 안전망으로 조회. **기존 중복 10페이지 아카이브 + keeper 5페이지 로컬 최신본으로 재푸시** (77→67건, find-dupes 중복 0). ② **의미 dedup LLM 확인 게이트** — 전수 페어 계측에서 실질 동일(0.94+)과 같은 주제·다른 스킬(0.91~0.94)이 점수로 안 갈림 → 임계값 통과 후 `_confirm_semantic_merge` (로컬 Gemma yes/no) 확정, 실패 시 보수적 신규 등록. 검증: 진짜 중복 페어 True / 유사-다른 페어 False. ③ **슬러그 충돌 가드** — `~/.claude/skills/` 의 수동 설치(非 content-lab) 스킬과 슬러그 충돌 시 합병하면 그 스킬이 파괴됨 → frontmatter `origin: content-lab` 확인, 아니면 `-2` 접미사 신규 등록. 의미 dedup 후보 경로도 동일 가드. ④ **find_existing_by_url 을 sources 한정** — 본문 전체 URL 스캔이라 다른 스킬 본문의 참고 링크(github/nodejs 등)에 걸려 무관 스킬로 합병되던 false positive 차단. ⑤ merger 출처 누적을 정규화 URL 비교로 (fbclid 변형 중복 누적 방지). ⑥ **임베딩 캐시 전수 백필** 10→62건 — 의미 dedup 이 corpus 대부분을 못 보던 사각 해소. 부산물: 과거에 못 잡은 실중복 그룹 5개 발견 (meta-ads 2종 / context-prompting 3종 / claude-connectors 2종 / nvidia-api 2종 / claude-api 2종) — 자동 합병 보류, 사용자 승인 후 통폐합 예정. |
+| 2026-08-09 | v4.4.4 | **채팅 속도/품질 + 중복 오표시 일괄 수정.** ① `_loop_claude_cli` 에 `--setting-sources ""` — 글로벌 CLAUDE.md/rules/스킬 목록 로드 차단 (라운드당 74k→6k 토큰, 25s→2.7s, 사용 한도 잠식 해소). CLI 실패 시 stdout envelope 에서 실제 사유 추출 (구버전은 stderr 만 봐서 "종료 코드 1:" 빈 메시지) + 1회 재시도. ② ollama 폴백 기본 qwen3:4b→**qwen2.5:14b** (영어 reasoning dump 근절, `think` 파라미터는 qwen3/deepseek-r1 만 전송) + 한글 없는 응답 1회 재정리 가드 + Claude 실패 폴백 시 "로컬 모델 대체" 안내 프리픽스. ③ **skipped 배지 분리** — 사전 차단(blocked)이 '≡ 이미 등록됨'으로 오표시되던 버그: collect.py `skip_kind` 필드 + app.js 배지 분기 (`🚫 수집 불가`). ④ dedup threshold 0.88→**0.9** (사용자 3회 요청분 — PIN 세션 문제로 미적용 상태였음). collect.py 임베딩 캐시 갱신이 config `dedup.components` 를 따르게 (하드코딩 불일치 수정) + 캐시 10건 새 기준 재임베딩. ⑤ **PIN 세션 디스크 영속화** (`logs/chat_sessions.json`, 0600) — 재시작마다 재인증하던 문제 해소. chat.js PIN 인증 성공 시 직전 막힌 요청 자동 재전송. ⑥ **합병 출처 유실 백필** — v4.4.3 이전 merger 가 `sources:` 못 읽어 합병마다 출처가 최신 1개로 덮인 버그(로그 "출처 0→1")의 사후 복구: launchd 로그 순차 페어링으로 6개 스킬 출처 복원 (fast-content 1→4, claude-as-marketing 1→4, ai-company-building 1→3 등). |
+| 2026-08-01 | v4.4.3 | **채팅 CLI 프로토콜 정식 옵션화** — v4.4.2 의 `_loop_claude_cli` 가 `-p "긴 프롬프트"` 로 JSON 을 뱉게 유도만 하고 CLI 는 자체 built-in 도구(Read/Bash/etc)를 우선 쓰려 해 사용자에겐 "확인해볼게요" 만 도착하던 문제. Claude CLI 정식 옵션 조합으로 재작성: `--output-format json --json-schema --disable-slash-commands --append-system-prompt`. envelope 응답의 `structured_output` 필드를 파싱 (`_cli_parse_envelope`). `-p` 에는 사용자 턴만 넣고 이전 대화·도구 결과는 transcript 로 요약. `CLI_ROUND_TIMEOUT` 120→180초. 실패 hint 도 provider 별로 정확히 (Gemini quota 오해 문구 제거). 검증: 조회(recent_jobs) / 진단-우선(tail_log) / mutating PIN 게이트(write_config) 3 시나리오 모두 도구 정상 호출 + 자연스러운 한글 응답. 함정 발굴: `--bare` 는 OAuth 무시(#19), tool `input_schema` 는 top-level oneOf 미지원(#20). **embedder 헤더 이전** — `analyzer/embedder.py` 가 `?key=` URL query 로 Gemini embedContent 호출 → 404 실패 로그에 API 키 노출. `x-goog-api-key` 헤더로 이전(#22). dedup embedding 재작동 (3072차원, `gemini-embedding-001`). **scraper goto 3단 폴백** — `web.py` 의 `wait_until="networkidle"` 폴백을 `load(60s) → commit(45s)` 로 대체 (#21). Notion 같은 SPA 재시도 실패율 감소 기대. |
+| 2026-07-20 | v4.4.2 | **채팅 기본 = 본계정 구독 (claude CLI)** — 사용자 지시로 Gemini 를 자동 체인에서 제외. 새 1순위 `claude_cli` 프로바이더: `claude -p --model claude-sonnet-5` 를 라운드마다 호출, 도구는 JSON 프로토콜(`{"tool":…}` / `{"reply":…}`)로 기존 REGISTRY 화이트리스트 + PIN 게이트 유지, cwd 는 빈 샌드박스(`logs/chat_sandbox` — 코드/.env 접근 차단). 폴백은 로컬 qwen3 만. **보안**: Gemini 키를 URL 쿼리 → `x-goog-api-key` 헤더로 이동 (HTTPError 로그에 키 노출 차단) + `tail_log` 출력 시크릿 마스킹(`_redact_secrets`). IME 조합 Enter 이중 전송 가드(isComposing/229 + `_sending`). |
+| 2026-07-17 | v4.4.1 | **채팅 고도화** — ① 엔진 멀티 프로바이더: ANTHROPIC_API_KEY 없으면(현재 상태) **Gemini function calling 무료 체인** (2.5-flash → 2.5-flash-lite 별도 쿼터 → 2.0-flash) → **로컬 Ollama qwen3:4b 네이티브 tool calling** (`think:false`) 최후 폴백. 도구 실행 후 재시도 금지(중복 실행 방지). Gemini `thinkingBudget:0`+functionResponse 조합의 출력 0토큰 이슈 → 빈 응답 시 thinking 허용+tools 제거 마무리 호출 워크어라운드 (`_loop_gemini`). 진단-우선 프롬프트("확인해볼게요" 예고만 금지). ② 모바일 채팅 UX: visualViewport 로 키보드 높이만큼 바텀시트 리프트(`--kb`), 그립 핸들 + 스와이프 다운 닫기, 헤더 ✕ 44px, 모바일에서 FAB-✕ 숨김(폼 가림 방지), 채팅 열림 시 배경 스크롤 락 + PTR 오발동 가드, 모바일 자동 포커스 억제(diag 딥링크 제외). NL 실테스트 4종 통과 (잡 요약 / 설정 조회 / 진단-우선 / PIN 게이트). |
+| 2026-07-17 | v4.4 | **자연어 수정 에스컬레이션** — 채팅에 `escalate_fix`/`fix_status` 도구. 스크랩 실패 등 코드 수정을 로컬 `claude -p`(Max 플랜, API 과금 X)에 위임: 스냅샷 → 수정 → py_compile+재스크랩 검증 → 실패 시 자동 원복 / 성공 시 자동 재기동 + Web Push. 실패 푸시에 `/?diag=<job_id>` 딥링크 (채팅 자동 진단 프리필). `/healthz` 에 `last_failure` (외부 모니터용). `/api/fix/status`. **픽셀+디지털 UX 리스타일** — 본문 Pretendard(가독성), 라벨/뱃지만 Galmuri11, 도트그리드+스캔라인, 하드섀도 청키 버튼, 코너 브래킷, 모바일 채팅 바텀시트(88dvh) + iOS 포커스 줌 방지(입력 16px). |
 | 2026-03-22 | v1.0 | 최초 생성 |
 | 2026-03-22 | v2.0 | 콘텐츠 분석 전용 에이전트 |
 | 2026-03-29 | v3.0 | 품질 평가 매트릭스, 인사이트 누적 |

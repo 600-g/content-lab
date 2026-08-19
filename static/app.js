@@ -185,16 +185,21 @@ function humanStage(s) {
 function jobBadge(item) {
   const r = item.result || {};
   if (item.status === 'queued') {
-    return { cls: 'badge', text: item.queue_pos ? `⏳ 대기 ${item.queue_pos}번째` : '⏳ 대기 중' };
+    return { cls: 'badge', text: item.queue_pos ? `░ 대기 ${item.queue_pos}번째` : '░ 대기 중' };
   }
-  if (item.status === 'running') return { cls: 'badge warn', text: '🔄 ' + humanStage(item.stage) };
-  if (item.status === 'interrupted') return { cls: 'badge failed', text: '⏸ 중단됨' };
-  if (item.status === 'failed') return { cls: 'badge failed', text: '❌ 실패' };
+  if (item.status === 'running') return { cls: 'badge warn', text: '▶ ' + humanStage(item.stage) };
+  if (item.status === 'interrupted') return { cls: 'badge failed', text: '∎ 중단됨' };
+  if (item.status === 'failed') return { cls: 'badge failed', text: '✖ 실패' };
   // completed
-  if (r.partial_ok) return { cls: 'badge warn', text: '⚠️ 부분 성공' };
-  if (r.skipped) return { cls: 'badge', text: '⏭ 이미 등록됨' };
-  if (r.skill && r.skill.merged) return { cls: 'badge merged', text: '🔀 합병됨' };
-  return { cls: 'badge success', text: '✅ 완료' };
+  if (r.partial_ok) return { cls: 'badge warn', text: '△ 부분 성공' };
+  // skipped 는 2종: blocked(사전 차단 — 등록된 적 없음) / duplicate(중복 스킵).
+  // 구버전은 둘 다 '이미 등록됨'으로 떠서 차단 URL이 등록된 것처럼 오인됐음.
+  if (r.skipped) {
+    if (r.skip_kind === 'blocked') return { cls: 'badge warn', text: '🚫 수집 불가' };
+    return { cls: 'badge', text: '≡ 이미 등록됨' };
+  }
+  if (r.skill && r.skill.merged) return { cls: 'badge merged', text: '⇄ 합병됨' };
+  return { cls: 'badge success', text: '✔ 완료' };
 }
 
 function isTerminal(status) {
@@ -221,7 +226,8 @@ function renderJobCard(item) {
               ${r.message_ko ? `<span class="job-note">${escapeHtml(r.message_ko)}</span>` : ''}
               ${links}`;
   } else if (item.status === 'completed' && r.skipped) {
-    detail = `<span class="job-note">${escapeHtml(r.message_ko || '이미 등록된 스킬')}</span>`;
+    const fallbackNote = r.skip_kind === 'blocked' ? '수집할 수 없는 URL' : '이미 등록된 스킬';
+    detail = `<span class="job-note">${escapeHtml(r.message_ko || fallbackNote)}</span>`;
   } else {
     // failed / interrupted / partial
     const err = r.error_ko || item.error || '오류가 발생했어요';
@@ -602,6 +608,7 @@ notifBtn?.addEventListener('click', async () => {
 
   document.addEventListener('touchstart', (e) => {
     if (document.body.classList.contains('drawer-open')) return;
+    if (document.body.classList.contains('chat-open')) return;  // 채팅 시트 위에서 PTR 오발동 방지
     if (!settingsModal.classList.contains('hidden')) return;
     if (window.scrollY > 4) return;
     startY = e.touches[0].clientY; pulling = true; triggered = false;
@@ -653,4 +660,4 @@ document.addEventListener('visibilitychange', () => {
 attachNotionHandlers();
 registerServiceWorker().then(() => setupPush(false));  // 권한 이미 있으면 조용히 재구독
 startPolling();  // 즉시 1회 폴 + 활성 잡 있으면 2초 간격 유지 (없으면 pollJobs 가 자동 중단)
-console.log('[aiskillbox] v4.3 ready · Notification:', ('Notification' in window) ? Notification.permission : 'unsupported');
+console.log('[aiskillbox] v4.4 ready · Notification:', ('Notification' in window) ? Notification.permission : 'unsupported');

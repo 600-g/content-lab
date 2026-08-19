@@ -16,6 +16,7 @@ import time
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
+from scripts.notion_paging import query_all_pages
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -297,11 +298,9 @@ def replace_blocks(page_id: str, new_blocks: list[dict]) -> bool:
 
 def main(target_ids: list[str] | None = None) -> int:
     # 18건 조회
-    r = requests.post(f"{API}/databases/{DB_ID}/query", headers=H, json={
+    pages = query_all_pages(API, H, DB_ID, extra_body={
         "sorts": [{"property": "마지막 업데이트", "direction": "ascending"}],
-        "page_size": 50,
-    }).json()
-    pages = r.get("results", [])
+    })
     print(f"📡 총 {len(pages)}건 발견\n")
 
     fixed = 0

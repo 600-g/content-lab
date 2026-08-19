@@ -18,6 +18,7 @@ import time
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
+from scripts.notion_paging import query_all_pages
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -182,8 +183,7 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=0, help="처리 페이지 수 제한")
     args = parser.parse_args()
 
-    r = requests.post(f"{API}/databases/{DB_ID}/query", headers=H, json={"page_size": 50}).json()
-    pages = r.get("results", [])
+    pages = query_all_pages(API, H, DB_ID)
     if args.limit > 0:
         pages = pages[:args.limit]
     mode = "APPLY" if args.apply else "DRY-RUN (변경 없음)"

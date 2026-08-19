@@ -74,10 +74,32 @@ def slugify(s: str) -> str:
     return s[:60]
 
 
+def query_all_pages() -> list[dict]:
+    """DB 전체 row 를 커서로 끝까지 긁는다.
+
+    구버전은 page_size=50 단발 호출이라 **DB 가 50건을 넘는 순간 나머지가 조용히 빠졌다**
+    (2026-08-16 발견: 69건 중 19건이 한 번도 백업된 적 없음). 백업은 rebuild/restore 의
+    유일한 안전망이라 누락되면 복원 자체가 불가능해진다.
+    """
+    pages: list[dict] = []
+    cursor = None
+    while True:
+        body: dict = {"page_size": 100}
+        if cursor:
+            body["start_cursor"] = cursor
+        d = requests.post(f"{API}/databases/{DB_ID}/query", headers=H, json=body).json()
+        if "results" not in d:
+            raise RuntimeError(f"Notion query 실패: {d.get('message') or d}")
+        pages.extend(d["results"])
+        if not d.get("has_more"):
+            break
+        cursor = d.get("next_cursor")
+    return pages
+
+
 def main() -> int:
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    r = requests.post(f"{API}/databases/{DB_ID}/query", headers=H, json={"page_size": 50}).json()
-    pages = r.get("results", [])
+    pages = query_all_pages()
     print(f"📁 백업 디렉토리: {BACKUP_DIR}")
     print(f"📡 {len(pages)}건 백업\n")
 

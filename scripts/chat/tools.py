@@ -105,6 +105,21 @@ def _t_recent_jobs(limit: int = 10) -> dict:
     return {"ok": True, "jobs": out}
 
 
+_SECRET_RE = None
+
+
+def _redact_secrets(text: str) -> str:
+    """로그 속 API 키/토큰 마스킹 — 공개 채팅으로 로그가 노출되는 경로 방어."""
+    global _SECRET_RE  # noqa: PLW0603
+    import re
+    if _SECRET_RE is None:
+        _SECRET_RE = re.compile(
+            r"(AIza[0-9A-Za-z_\-]{20,}|sk-[A-Za-z0-9_\-]{16,}|key=[0-9A-Za-z_\-]{16,}"
+            r"|secret_[0-9A-Za-z]{16,}|ntn_[0-9A-Za-z]{16,})"
+        )
+    return _SECRET_RE.sub("[REDACTED]", text)
+
+
 def _t_tail_log(lines: int = 50) -> dict:
     log_file = PROJECT_ROOT / "logs" / "launchd_stderr.log"
     if not log_file.exists():
@@ -116,7 +131,7 @@ def _t_tail_log(lines: int = 50) -> dict:
             ["tail", "-n", str(n), str(log_file)],
             capture_output=True, text=True, timeout=5,
         )
-        out_lines = result.stdout.splitlines()
+        out_lines = [_redact_secrets(ln) for ln in result.stdout.splitlines()]
         return {"ok": True, "lines": out_lines}
     except Exception as e:  # noqa: BLE001
         return {"ok": False, "error": str(e)}
@@ -302,6 +317,21 @@ def _t_rebuild_embeddings(slugs: list[str] | None = None) -> dict:
             "hint": "다음 collect 호출 또는 scan_existing_dedup 실행 시 재계산됩니다."}
 
 
+def _t_escalate_fix(instruction: str, failed_url: str = "", job_id: str = "") -> dict:
+    """코드 수정을 로컬 Claude Code(Max 플랜)에 위임 — 백그라운드 fix 잡."""
+    from scripts.chat import fixer
+    return fixer.start_fix(
+        instruction,
+        failed_url=failed_url or None,
+        source_job_id=job_id or None,
+    )
+
+
+def _t_fix_status(limit: int = 5) -> dict:
+    from scripts.chat import fixer
+    return fixer.fix_status(limit=limit)
+
+
 def _t_scan_existing_dedup(threshold: float = 0.75) -> dict:
     """일괄 스캔 트리거. 실제 작업은 subprocess 로 (블로킹 회피 위해 백그라운드)."""
     cmd = [
@@ -466,6 +496,38 @@ def _register_all() -> None:
         },
         handler=_t_rebuild_embeddings,
         mutating=True,
+    ))
+    register(ToolSpec(
+        name="escalate_fix",
+        description=(
+            "코드 수정을 로컬 Claude Code(Max 플랜)에 위임합니다. 스크래퍼/파이프라인 버그 등 "
+            "코드 본체 수정이 필요할 때 사용. instruction 에 증상 + 의심 원인 + 검증 방법을 "
+            "한국어로 요약해 담으세요. 실패한 수집 잡이 있으면 job_id 를, 문제의 URL 이 있으면 "
+            "failed_url 을 함께 전달 (수정 후 자동 재스크랩 검증에 사용). "
+            "백그라운드 실행 (최대 15분), 동시 1건. 검증 실패 시 자동 원복, 성공 시 서비스 자동 재기동 + "
+            "Web Push 알림."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "instruction": {"type": "string", "description": "수정 지시 (증상+원인+검증법 요약)"},
+                "failed_url": {"type": "string", "description": "재스크랩 검증에 쓸 문제 URL (선택)"},
+                "job_id": {"type": "string", "description": "실패한 수집 잡 id (선택 — 에러 컨텍스트 자동 첨부)"},
+            },
+            "required": ["instruction"],
+        },
+        handler=_t_escalate_fix,
+        mutating=True,
+    ))
+    register(ToolSpec(
+        name="fix_status",
+        description="escalate_fix 로 시작한 자동수정 잡의 최근 상태를 반환합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 20}},
+            "required": [],
+        },
+        handler=_t_fix_status,
     ))
     register(ToolSpec(
         name="scan_existing_dedup",

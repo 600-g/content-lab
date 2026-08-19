@@ -151,7 +151,8 @@ def _push_for_job(job: dict) -> None:
         if job.get("status") == "failed":
             title = "aiskillbox · ❌ 실패"
             body = r.get("error_ko") or job.get("error") or "오류가 발생했어요"
-            url = "/"
+            # 알림 탭 → 채팅 자동 진단 딥링크 (chat.js 가 ?diag= 처리)
+            url = f"/?diag={job.get('id', '')}"
         elif r.get("partial_ok"):
             title = "aiskillbox · ⚠️ 부분 성공"
             body = name
@@ -463,12 +464,29 @@ def api_settings_post():
                     "rows": settings_store.settings_view()})
 
 
+def _last_failure() -> dict | None:
+    """가장 최근 실패/중단 잡 요약 — 외부 모니터(112 등)가 healthz 로 감지."""
+    with JOBS_LOCK:
+        failed = [j for j in JOBS.values() if j.get("status") in ("failed", "interrupted")]
+        if not failed:
+            return None
+        j = max(failed, key=lambda x: x.get("done_at") or 0)
+        r = j.get("result") or {}
+        return {
+            "job_id": j.get("id"),
+            "url": j.get("url"),
+            "error_ko": r.get("error_ko") or j.get("error") or "",
+            "at": j.get("done_at"),
+        }
+
+
 @app.get("/healthz")
 def healthz():
     return jsonify({
         "ok": True,
         "service": "aiskillbox",
-        "version": "4.3",
+        "version": "4.4",
+        "last_failure": _last_failure(),
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
         "notion_configured": bool(os.getenv("NOTION_API_KEY")),
         "push_configured": push_mod.push_configured(),

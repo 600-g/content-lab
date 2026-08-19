@@ -7,7 +7,7 @@ difficulty: 중급
 category: 기타
 ai_tools: []
 sources:
-  - (unknown)
+  - https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view?fbclid=PAVERFWARzvMlleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAac9ReryTj2M2HecWc75nuN_1QNHYVheaZ7NCDQG1DaCdbZawL3NQf2QoIPCVw_aem_PZS53-BUbxksGQHRXQziBw
 ---
 
 # 맥락 기반 프롬프트 엔지니어링 (상황, 독자, 제약 활용)

@@ -48,12 +48,16 @@ def _parse_existing_skill_md(path: Path) -> dict:
             meta["description"] = line.split(":", 1)[1].strip()
         elif line.startswith("- ") and "source_url" in fm_text:
             pass
-    # source_urls 다중 추출 (YAML 리스트 또는 단일)
-    urls_m = re.search(r"source_urls?:\s*(.+?)(?=\n\w|\n---|$)", fm_text, re.DOTALL)
+    # source_urls 다중 추출 — v2.4 md_generator 는 `sources:` 로 씀 (v1은 source_url/source_urls).
+    # 세 키 모두 매칭. 캡처 텍스트에서 http 로 시작하는 라인만 URL 로 채택.
+    urls_m = re.search(
+        r"^(?:sources|source_urls?):\s*(.+?)(?=\n\w|\n---|$)",
+        fm_text,
+        re.DOTALL | re.MULTILINE,
+    )
     urls: list[str] = []
     if urls_m:
         raw = urls_m.group(1)
-        # 리스트 형식 추출
         for ln in raw.splitlines():
             s = ln.strip().lstrip("-").strip().strip('"').strip("'")
             if s.startswith("http"):
@@ -102,9 +106,11 @@ def merge_with_existing(
 
     genai.configure(api_key=api_key)
 
-    # 출처 URL 누적
+    # 출처 URL 누적 — 정규화 비교 (fbclid/utm 만 다른 같은 URL 이 중복 누적되지 않게)
+    from scripts.skill_builder.installer import normalize_url
     existing_urls = existing.get("source_urls") or []
-    if new_source_url not in existing_urls:
+    seen_norm = {normalize_url(u) for u in existing_urls}
+    if normalize_url(new_source_url) not in seen_norm:
         merged_urls = existing_urls + [new_source_url]
     else:
         merged_urls = existing_urls

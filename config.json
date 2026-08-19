@@ -5,8 +5,8 @@
   },
   "dedup": {
     "enabled": true,
-    "threshold": 0.80,
-    "components": ["callout", "ai_tools", "category"],
+    "threshold": 0.9,
+    "components": ["skill_title_ko", "callout", "ai_tools", "category"],
     "top_k": 3,
     "cache_path": "scripts/skills/embeddings.json"
   },

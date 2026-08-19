@@ -27,6 +27,7 @@ from collections import Counter
 
 import requests
 from dotenv import load_dotenv
+from scripts.notion_paging import query_all_pages
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -759,8 +760,7 @@ def main() -> int:
         print(f"   먼저 실행: python -m scripts.backup_all")
         return 1
 
-    r = requests.post(f"{API}/databases/{DB_ID}/query", headers=H, json={"page_size": 50}).json()
-    pages = r.get("results", [])
+    pages = query_all_pages(API, H, DB_ID)
     if args.only:
         pages = [p for p in pages if args.only in "".join(t["plain_text"] for t in p["properties"]["스킬명"]["title"])]
     if args.limit > 0:

@@ -188,6 +188,26 @@ class AnalysisResult:
         }
 
 
+def _unescape_literal_newlines(s: str) -> str:
+    """LLM 이 개행을 역슬래시+n 두 글자로 뱉은 경우를 실제 개행으로 되돌린다.
+
+    JSON 파서는 진짜 이스케이프(\\n)만 풀어주므로, 모델이 한 번 더 이스케이프해서
+    (\\\\n) 넣으면 본문이 통째로 한 줄이 된다. 그러면 마크다운 구조가 전부 무너지고
+    Notion 등록 시 heading 하나에 rich_text 119개가 몰려 페이지 등록 전체가 실패한다
+    (실사고 2026-08-10 webswing-desktop-pet — 로컬엔 설치됐는데 Notion 에만 누락).
+
+    진짜 개행이 이미 충분하면 손대지 않는다 — 코드블록 안의 정상 '\\n' 문자열 보호.
+    """
+    if not s or "\\n" not in s:
+        return s
+    real = s.count("\n")
+    literal = s.count("\\n")
+    if literal < 3 or real >= literal:
+        return s
+    logger.warning("body_md 에 리터럴 개행 %d개 감지 → 실제 개행으로 복원", literal)
+    return s.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", "\t")
+
+
 def _compose_body(d: dict) -> str:
     """v2.3 minimal fallback — LLM 이 body_md 비워서 반환했을 때만 호출된다.
 
@@ -204,8 +224,56 @@ def _compose_body(d: dict) -> str:
     return "\n\n".join(parts).strip()
 
 
+_REPAIR_STRING_FIELDS = (
+    "skill_name", "skill_title_ko", "callout", "category", "grade",
+    "grade_reason", "summary", "when_to_use", "memo", "tldr",
+    "how_it_works", "steps", "examples", "doogeun", "caveats", "body_md",
+)
+_REPAIR_ARRAY_FIELDS = ("ai_tools", "tags", "targets", "sources")
+
+
+def _repair_partial_json(raw: str) -> dict:
+    """Gemma/Gemini 가 partial JSON 을 뱉었을 때 필드 단위로 복구.
+
+    응답이 잘려서 최상위 json.loads 는 실패하지만 앞부분에 완성된 필드는 남아있는
+    케이스가 잦다 (Gemma 4 partial output). 개별 필드 정규식으로 회수해서 필수
+    5필드 (skill_name/skill_title_ko/callout/category/grade) 가 채워지면 부분
+    성공으로 진행. 이후 _validate 의 소프트 디폴트가 나머지 커버.
+    """
+    result: dict = {}
+    for f in _REPAIR_STRING_FIELDS:
+        # 값 안에 escaped quote 허용, 다중 라인 지원
+        m = re.search(
+            rf'"{f}"\s*:\s*"((?:[^"\\]|\\.)*)"',
+            raw, re.DOTALL,
+        )
+        if m:
+            try:
+                # JSON escape (\n, \" 등) 해제
+                result[f] = json.loads('"' + m.group(1) + '"')
+            except Exception:  # noqa: BLE001
+                result[f] = m.group(1)
+    for f in _REPAIR_ARRAY_FIELDS:
+        m = re.search(rf'"{f}"\s*:\s*\[([^\]]*)\]', raw, re.DOTALL)
+        if m:
+            try:
+                result[f] = json.loads("[" + m.group(1) + "]")
+            except Exception:  # noqa: BLE001
+                # 콤마 스플릿 폴백
+                items = [
+                    x.strip().strip('"').strip("'")
+                    for x in m.group(1).split(",")
+                    if x.strip()
+                ]
+                result[f] = items
+    # 최소 요건: skill_name 또는 skill_title_ko 하나는 있어야
+    if not (result.get("skill_name") or result.get("skill_title_ko")):
+        raise ValueError("복구 불가 — 이름 필드 회수 실패")
+    return result
+
+
 def _extract_json(text: str) -> dict:
-    """Gemini 응답에서 JSON 블록 추출. 코드펜스 제거."""
+    """Gemini 응답에서 JSON 블록 추출. 코드펜스 제거 + partial 자동 복구."""
     s = text.strip()
     # 코드펜스 제거
     s = re.sub(r"^```(?:json)?\s*", "", s)
@@ -213,9 +281,19 @@ def _extract_json(text: str) -> dict:
     # 첫 { 부터 마지막 } 까지
     start = s.find("{")
     end = s.rfind("}")
-    if start < 0 or end < 0:
-        raise ValueError(f"JSON 블록 없음: {s[:200]}")
-    return json.loads(s[start : end + 1])
+    if start < 0:
+        # 정상 JSON 블록 시작조차 없음 → 원문 그대로 복구 시도
+        try:
+            return _repair_partial_json(s)
+        except Exception:  # noqa: BLE001
+            raise ValueError(f"JSON 블록 없음: {s[:200]}")
+    # 온전한 종결 없어도 일단 시도
+    payload = s[start : end + 1] if end > start else s[start:]
+    try:
+        return json.loads(payload)
+    except json.JSONDecodeError:
+        # partial → 필드 단위 복구
+        return _repair_partial_json(payload)
 
 
 def _validate(d: dict) -> dict:
@@ -268,6 +346,7 @@ def _validate(d: dict) -> dict:
     # v2.4: body_md 가 본문 단일 소스 — LLM 이 자유 형식으로 작성
     if not d.get("body_md"):
         d["body_md"] = ""
+    d["body_md"] = _unescape_literal_newlines(d["body_md"])
     # body_content (legacy) 동기화 — merger/legacy 소비처 호환
     if not d.get("body_content"):
         d["body_content"] = d["body_md"] or _compose_body(d)

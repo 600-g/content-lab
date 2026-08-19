@@ -176,6 +176,33 @@ def check_duplicate(source_url: str) -> Optional[str]:
     return None
 
 
+def find_by_title(title: str) -> Optional[str]:
+    """스킬명 완전 일치로 기존 페이지 검색.
+
+    합병된 스킬인데 URL 매칭이 전부 실패한 경우의 2차 안전망 (v4.4.5).
+    신규 스킬에는 쓰지 말 것 — 우연한 제목 일치로 남의 페이지를 덮을 수 있음.
+    """
+    if not _api_key() or not _db_id() or not title:
+        return None
+    clean = _clean_title(title)
+    try:
+        data = _request(
+            "POST",
+            f"databases/{_db_id()}/query",
+            {
+                "filter": {"property": "스킬명", "title": {"equals": clean}},
+                "page_size": 1,
+            },
+            context="제목 중복 체크",
+        )
+        results = data.get("results", [])
+        if results:
+            return results[0].get("id")
+    except NotionError as e:
+        logger.info("제목 중복 체크 스킵: %s", e)
+    return None
+
+
 def _strip_for_notion(md: str) -> str:
     """SKILL.md 본문에서 YAML 프론트매터 + 최상위 H1(제목, Notion property에 이미 있음) 제거.
 
@@ -368,11 +395,32 @@ def _rich_text(s: str) -> list[dict]:
     return result or [{"type": "text", "text": {"content": s}}]
 
 
+# Notion API: 블록 하나의 rich_text 배열은 최대 100개 요소.
+# 인라인 서식(**굵게**/`코드`)이 많은 긴 문단은 이 한도를 쉽게 넘고, 넘으면 그 블록만이 아니라
+# 페이지 등록 요청 전체가 400 으로 죽는다 (실사고 2026-08-10: heading_2 에 119개 → 노션 누락).
+NOTION_RICH_TEXT_MAX = 100
+# 헤딩은 길어질 이유가 없다. 본문이 통째로 헤딩에 들어온 이상 케이스를 여기서 끊는다.
+NOTION_HEADING_MAX_CHARS = 200
+
+
 def _block(btype: str, text: str) -> dict:
+    if btype.startswith("heading_") and len(text) > NOTION_HEADING_MAX_CHARS:
+        logger.warning(
+            "%s 텍스트 %d자 → %d자로 절단 (본문이 헤딩으로 붙은 이상 케이스)",
+            btype, len(text), NOTION_HEADING_MAX_CHARS,
+        )
+        text = text[:NOTION_HEADING_MAX_CHARS].rstrip() + "…"
+    rt = _rich_text(text)
+    if len(rt) > NOTION_RICH_TEXT_MAX:
+        logger.warning("%s rich_text %d개 → %d개로 병합", btype, len(rt), NOTION_RICH_TEXT_MAX)
+        keep = rt[: NOTION_RICH_TEXT_MAX - 1]
+        tail = "".join(r.get("text", {}).get("content", "") for r in rt[NOTION_RICH_TEXT_MAX - 1:])
+        keep.append({"type": "text", "text": {"content": tail[:1900]}})
+        rt = keep
     return {
         "object": "block",
         "type": btype,
-        btype: {"rich_text": _rich_text(text)},
+        btype: {"rich_text": rt},
     }
 
 
@@ -437,9 +485,19 @@ CATEGORY_ICON = {
 }
 
 # 제목 시작 이모지 자동 제거용
+# 주의: 이전 정규식의 ` -⁯` 는 U+0020~U+206F 로 파싱돼 ASCII 알파벳까지 삼키는 버그가 있었음
+# (예: "AI 활용..." → "I 활용..."). 이모지 유니코드 블록만 명시적으로 나열.
 import re as _re
 _TITLE_EMOJI_RE = _re.compile(
-    r'^([\U0001F000-\U0001FFFF☀-➿⌀-⏿ -⁯⬀-⯿])\s*'
+    r'^(?:'
+    r'[\U0001F300-\U0001FAFF]'       # main emoji planes (symbols/pictographs/faces)
+    r'|[☀-➿]'              # misc symbols + dingbats
+    r'|[⌀-⏿]'              # misc technical
+    r'|[⬀-⯿]'              # misc symbols and arrows
+    r'|[←-⇿]'              # arrows
+    r'|[︀-️]'              # variation selectors
+    r'|\U0001F1E6-\U0001F1FF'        # regional indicators (flags)
+    r')\s*'
 )
 
 

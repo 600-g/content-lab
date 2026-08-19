@@ -13,10 +13,12 @@ logger = logging.getLogger(__name__)
 def register_chat_routes(app) -> None:
     @app.route("/api/chat/status", methods=["GET"])
     def chat_status():
+        prov = engine.provider()
         return jsonify({
             "ok": True,
             "configured": safety.is_configured(),
-            "key_present": bool(_anthropic_key_present()),
+            "provider": prov,                       # anthropic | gemini | none
+            "key_present": prov != "none",
         })
 
     @app.route("/api/chat/pin", methods=["POST"])
@@ -41,6 +43,14 @@ def register_chat_routes(app) -> None:
 
     @app.route("/api/chat/history", methods=["GET"])
     def chat_history():
+        # PIN 세션 게이트 — 헤더 또는 쿼리로 토큰 전달. 미인증 시 401.
+        token = (
+            request.headers.get("X-Session-Token")
+            or request.args.get("session_token")
+            or ""
+        )
+        if not safety.check_session(token):
+            return jsonify({"ok": False, "error": "PIN 세션 필요"}), 401
         try:
             limit = int(request.args.get("limit", 50))
         except Exception:
@@ -54,6 +64,15 @@ def register_chat_routes(app) -> None:
         except Exception:
             limit = 50
         return jsonify({"ok": True, "items": history.tail_audit(limit)})
+
+    @app.route("/api/fix/status", methods=["GET"])
+    def fix_status():
+        try:
+            from scripts.chat import fixer
+            return jsonify(fixer.fix_status(limit=5))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("fix_status 실패: %s", e)
+            return jsonify({"ok": False, "error": str(e)}), 500
 
 
 def _anthropic_key_present() -> bool:

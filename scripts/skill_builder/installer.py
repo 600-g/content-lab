@@ -99,17 +99,39 @@ def mirror_skill(
     return mirror_path
 
 
+def _frontmatter_sources(text: str) -> list[str]:
+    """SKILL.md frontmatter 의 sources / source_url(s) 값만 추출."""
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
+    if not m:
+        return []
+    fm = m.group(1) + "\n"
+    urls: list[str] = []
+    lm = re.search(r"^(?:sources|source_urls?):\n((?:\s+-\s+\S+\n)+)", fm, re.MULTILINE)
+    if lm:
+        for ln in lm.group(1).splitlines():
+            u = ln.strip().lstrip("-").strip().strip('"').strip("'")
+            if u.startswith("http"):
+                urls.append(u)
+    im = re.search(r"^(?:sources|source_urls?):\s*(https?://\S+)", fm, re.MULTILINE)
+    if im:
+        urls.append(im.group(1).strip().strip('"').strip("'"))
+    return urls
+
+
 def find_existing_by_url(source_url: str) -> Path | None:
-    """이미 같은 URL이 source_urls에 포함된 스킬 찾기 (정규화 URL 비교)."""
+    """이미 같은 URL이 **출처(sources)** 에 포함된 스킬 찾기 (정규화 URL 비교).
+
+    v4.4.5: 본문 전체 URL 스캔 → frontmatter sources 한정. 본문의 참고 링크
+    (예: 다른 스킬 예시 속 github/nodejs 링크)에 걸려 무관한 스킬로 합병되던
+    false positive 차단.
+    """
     if not LOCAL_MIRROR_DIR.exists():
         return None
     target = normalize_url(source_url)
     for skill_md in LOCAL_MIRROR_DIR.glob("*/SKILL.md"):
         try:
-            txt = skill_md.read_text(encoding="utf-8")
-            # 본문 안의 모든 URL 후보 추출해서 정규화 비교
-            for m in re.finditer(r"https?://[^\s\"<>)\\]+", txt):
-                if normalize_url(m.group(0)) == target:
+            for u in _frontmatter_sources(skill_md.read_text(encoding="utf-8")):
+                if normalize_url(u) == target:
                     return skill_md
         except Exception:  # noqa: BLE001
             continue
