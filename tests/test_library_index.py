@@ -25,6 +25,12 @@ class FrontmatterParseTest(unittest.TestCase):
         self.assertEqual(meta["sources"], ["https://a.example/1", "https://b.example/2"])
         self.assertTrue(body.startswith("# 제목"))
 
+    def test_inline_list_with_commas_inside_quotes(self):
+        meta, _ = lib_index.parse_frontmatter(
+            '---\nname: x\nai_tools: ["LLM (Claude Max, Gemini 등)", "Notion DB (데이터 구조화)", Ollama]\n---\n본문'
+        )
+        self.assertEqual(meta["ai_tools"], ["LLM (Claude Max, Gemini 등)", "Notion DB (데이터 구조화)", "Ollama"])
+
     def test_no_frontmatter_returns_empty_meta(self):
         meta, body = lib_index.parse_frontmatter("# 그냥 본문\n\n내용")
         self.assertEqual(meta, {})

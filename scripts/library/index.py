@@ -119,12 +119,15 @@ class LibraryIndex:
 
 # ── frontmatter 파서 ─────────────────────────────────────────────
 
+_INLINE_ITEM_RE = re.compile(r'\s*(?:"([^"]*)"|\'([^\']*)\'|([^,\[\]]+))')
+
+
 def _parse_inline_list(value: str) -> list[str]:
-    """`["a", "b"]` / `[a, b]` → ["a","b"]."""
+    """`["a", "b"]` / `[a, b]` → ["a","b"]. 따옴표 안 쉼표(`"LLM (Claude Max, Gemini 등)"`)는 분리 안 함."""
     inner = value.strip()[1:-1]
     items = []
-    for part in inner.split(","):
-        p = part.strip().strip('"').strip("'").strip()
+    for m in _INLINE_ITEM_RE.finditer(inner):
+        p = (m.group(1) if m.group(1) is not None else m.group(2) if m.group(2) is not None else m.group(3) or "").strip()
         if p:
             items.append(p)
     return items
