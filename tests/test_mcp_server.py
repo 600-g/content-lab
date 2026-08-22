@@ -1,14 +1,19 @@
-"""scripts/library/mcp_server.py — stdio JSON-RPC 왕복 검증 (subprocess, 네트워크 0).
+"""scripts/library/mcp_server.py — stdio JSON-RPC 왕복 검증 (subprocess, 외부 네트워크 0).
 
-HTTP 백엔드를 닫힌 포트로 강제 실패시켜 로컬 인덱스 폴백 경로를 탄다.
+두 폴백 경로를 모두 실측한다:
+- 닫힌 포트 (연결 실패) → 로컬 인덱스 폴백
+- 라이브러리 API 미배포 서버 (Flask 식 HTML 404) → 로컬 인덱스 폴백 (실사고: 구버전
+  aiskillbox 가 5050 에 떠 있으면 모든 tools/call 이 '백엔드 오류: HTTP 404' 로 죽던 버그)
 """
 from __future__ import annotations
 
+import http.server
 import json
 import os
 import shutil
 import subprocess
 import sys
+import threading
 import unittest
 from pathlib import Path
 
@@ -17,13 +22,15 @@ from tests.fixtures import SKILLS, make_mirror
 SERVER = Path(__file__).resolve().parents[1] / "scripts" / "library" / "mcp_server.py"
 
 
-class McpServerTest(unittest.TestCase):
-    def setUp(self):
+class _McpHarness(unittest.TestCase):
+    """서버 subprocess 기동 + JSON-RPC 왕복 헬퍼 (테스트 메서드 없음 — 상속 전용)."""
+
+    def _start(self, base_url: str) -> None:
         self.root = make_mirror()
         env = dict(os.environ)
         env.update({
-            "AISKILLBOX_URL": "http://127.0.0.1:9",   # 닫힌 포트 → 즉시 실패 → 로컬 폴백
-            "AISKILLBOX_TIMEOUT": "1",
+            "AISKILLBOX_URL": base_url,
+            "AISKILLBOX_TIMEOUT": "2",
             "SKILL_LIBRARY_ROOT": str(self.root),
             "GEMINI_API_KEY": "",                        # 의미 검색 비활성 (네트워크 0)
         })
@@ -67,16 +74,25 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(resp.get("id"), self._id)
         return resp
 
-    def test_handshake_list_and_call(self):
+    def _init(self, protocol: str = "2025-06-18") -> dict:
         init = self._send("initialize", {
-            "protocolVersion": "2025-06-18", "capabilities": {},
+            "protocolVersion": protocol, "capabilities": {},
             "clientInfo": {"name": "test", "version": "0"},
         })
+        self._send("notifications/initialized", {}, notify=True)
+        return init
+
+
+class McpServerTest(_McpHarness):
+    def setUp(self):
+        self._start("http://127.0.0.1:9")   # 닫힌 포트 → 즉시 실패 → 로컬 폴백
+
+    def test_handshake_list_and_call(self):
+        init = self._init()
         self.assertIn("result", init)
         self.assertEqual(init["result"]["protocolVersion"], "2025-06-18")
         self.assertIn("tools", init["result"]["capabilities"])
         self.assertEqual(init["result"]["serverInfo"]["name"], "skill-library")
-        self._send("notifications/initialized", {}, notify=True)
 
         ping = self._send("ping")
         self.assertEqual(ping["result"], {})
@@ -124,6 +140,51 @@ class McpServerTest(unittest.TestCase):
         line = json.loads(self.proc.stdout.readline())
         self.assertEqual(line["error"]["code"], -32700)
         self.assertEqual(self._send("ping")["result"], {})
+
+
+class _Html404Handler(http.server.BaseHTTPRequestHandler):
+    """구버전 aiskillbox 흉내 — 서버는 떠 있지만 라이브러리 라우트가 없어 HTML 404."""
+
+    def do_GET(self):  # noqa: N802
+        body = b"<!doctype html><html><body><h1>404 Not Found</h1></body></html>"
+        self.send_response(404)
+        self.send_header("Content-Type", "text/html")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):  # noqa: D102
+        pass
+
+
+class McpOldServerFallbackTest(_McpHarness):
+    def setUp(self):
+        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Html404Handler)
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self._start(f"http://127.0.0.1:{self.httpd.server_address[1]}")
+
+    def tearDown(self):
+        super().tearDown()
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    def test_html_404_falls_back_to_local(self):
+        self._init()
+
+        srch = self._send("tools/call", {"name": "search_skills", "arguments": {"query": "인스타 대본", "k": 2}})
+        self.assertFalse(srch["result"].get("isError"))
+        stext = srch["result"]["content"][0]["text"]
+        self.assertIn("instagram-reels-script-automation", stext)
+        self.assertIn("(로컬", stext)
+
+        lst = self._send("tools/call", {"name": "list_skills", "arguments": {}})
+        self.assertFalse(lst["result"].get("isError"))
+        for slug in SKILLS:
+            self.assertIn(slug, lst["result"]["content"][0]["text"])
+
+        got = self._send("tools/call", {"name": "get_skill", "arguments": {"slug": "notion-mcp-setup"}})
+        self.assertFalse(got["result"].get("isError"))
+        self.assertIn("name: notion-mcp-setup", got["result"]["content"][0]["text"])
 
 
 if __name__ == "__main__":

@@ -9,8 +9,9 @@ Claude Code · Cursor · Codex · 다른 클로드 계정 등 MCP 클라이언�
 외부 기기:
   AISKILLBOX_URL=https://aiskillbox.600g.net 환경변수 추가 (claude mcp add -e AISKILLBOX_URL=...)
 
-백엔드: AISKILLBOX_URL (기본 http://localhost:5050) HTTP → 연결 실패 시 같은 repo 의 scripts.library
-직접 import (로컬 Mac 에서 서버가 내려가도 키워드 검색은 동작). 둘 다 실패 → isError.
+백엔드: AISKILLBOX_URL (기본 http://localhost:5050) HTTP → 연결 실패 **또는 라이브러리 API 미배포
+서버(비 JSON 404 — 구버전 aiskillbox 의 Flask HTML 404)** 시 같은 repo 의 scripts.library 직접
+import (로컬 Mac 에서 서버가 내려가도 키워드 검색은 동작). 둘 다 실패 → isError.
 
 stdout 은 JSON-RPC 전용 — 로그는 전부 stderr.
 """
@@ -116,27 +117,50 @@ def _local():
     return _LOCAL["mod"]
 
 
-def _is_conn_error(e: Exception) -> bool:
-    if isinstance(e, urllib.error.HTTPError):
-        return False  # 서버는 떠 있음 — 응답 오류는 그대로 전달
-    return True
+def _http_error_json(e: urllib.error.HTTPError) -> Optional[dict]:
+    """HTTPError 본문이 라이브러리 API 의 JSON envelope 면 dict, 아니면 None.
+
+    None = 라이브러리 라우트가 없는 서버 (구버전 aiskillbox 의 Flask HTML 404 등)
+    → 호출부가 로컬 인덱스 폴백을 탄다. JSON 으로 응답했다면 API 는 배포돼 있는 것.
+    """
+    try:
+        data = json.loads(e.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _local_search(query: str, k: int, category: str) -> dict:
+    lib_index, lib_search = _local()
+    idx = lib_index.get_index(LOCAL_ROOT)
+    return lib_search.search(query, k=k, category=category or None, index=idx)
+
+
+def _local_get_raw(slug: str) -> Optional[str]:
+    lib_index, _ = _local()
+    rec = lib_index.get_index(LOCAL_ROOT).get(slug)
+    return rec.raw_md if rec else None
+
+
+def _local_list(category: str, grade: str) -> list[dict]:
+    lib_index, _ = _local()
+    idx = lib_index.get_index(LOCAL_ROOT)
+    items = idx.filter(category=category or None, grade=(grade or "").upper() or None)
+    return [r.meta() for r in items]
 
 
 def backend_search(query: str, k: int, category: str) -> tuple[dict, str]:
     try:
         return _http_get("/api/library/search", {"q": query, "k": k, "category": category}), "http"
     except urllib.error.HTTPError as e:
-        try:
-            return json.loads(e.read().decode("utf-8")), "http"
-        except Exception:  # noqa: BLE001
-            raise BackendError(f"HTTP {e.code}") from e
+        data = _http_error_json(e)
+        if data is not None:
+            return data, "http"
+        _log(f"HTTP {e.code} 비 JSON 응답 (라이브러리 API 미배포 서버) → 로컬 인덱스 폴백")
+        return _local_search(query, k, category), "local"
     except Exception as e:  # noqa: BLE001
-        if not _is_conn_error(e):
-            raise
         _log(f"HTTP 실패({e.__class__.__name__}) → 로컬 인덱스 폴백")
-        lib_index, lib_search = _local()
-        idx = lib_index.get_index(LOCAL_ROOT)
-        return lib_search.search(query, k=k, category=category or None, index=idx), "local"
+        return _local_search(query, k, category), "local"
 
 
 def backend_get(slug: str) -> tuple[Optional[str], str]:
@@ -144,15 +168,16 @@ def backend_get(slug: str) -> tuple[Optional[str], str]:
         data = _http_get(f"/api/library/skills/{urllib.parse.quote(slug)}")
         return data.get("raw_md"), "http"
     except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None, "http"
-        raise BackendError(f"HTTP {e.code}") from e
+        data = _http_error_json(e)
+        if data is not None:
+            if e.code == 404:
+                return None, "http"  # 라이브러리 API 의 정상 404 — 스킬 없음
+            raise BackendError(f"HTTP {e.code}: {data.get('error') or ''}".rstrip(": ")) from e
+        _log(f"HTTP {e.code} 비 JSON 응답 (라이브러리 API 미배포 서버) → 로컬 인덱스 폴백")
+        return _local_get_raw(slug), "local"
     except Exception as e:  # noqa: BLE001
-        if not _is_conn_error(e):
-            raise
-        lib_index, _ = _local()
-        rec = lib_index.get_index(LOCAL_ROOT).get(slug)
-        return (rec.raw_md if rec else None), "local"
+        _log(f"HTTP 실패({e.__class__.__name__}) → 로컬 인덱스 폴백")
+        return _local_get_raw(slug), "local"
 
 
 def backend_list(category: str, grade: str) -> tuple[list[dict], str]:
@@ -160,14 +185,14 @@ def backend_list(category: str, grade: str) -> tuple[list[dict], str]:
         data = _http_get("/api/library/skills", {"category": category, "grade": grade})
         return data.get("items", []), "http"
     except urllib.error.HTTPError as e:
-        raise BackendError(f"HTTP {e.code}") from e
+        data = _http_error_json(e)
+        if data is not None:
+            raise BackendError(f"HTTP {e.code}: {data.get('error') or ''}".rstrip(": ")) from e
+        _log(f"HTTP {e.code} 비 JSON 응답 (라이브러리 API 미배포 서버) → 로컬 인덱스 폴백")
+        return _local_list(category, grade), "local"
     except Exception as e:  # noqa: BLE001
-        if not _is_conn_error(e):
-            raise
-        lib_index, _ = _local()
-        idx = lib_index.get_index(LOCAL_ROOT)
-        items = idx.filter(category=category or None, grade=(grade or "").upper() or None)
-        return [r.meta() for r in items], "local"
+        _log(f"HTTP 실패({e.__class__.__name__}) → 로컬 인덱스 폴백")
+        return _local_list(category, grade), "local"
 
 
 # ── 포맷 ────────────────────────────────────────────────────────
