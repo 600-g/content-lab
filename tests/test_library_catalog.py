@@ -1,4 +1,4 @@
-"""scripts.library.catalog 테스트 — 카드/섹션/XSS/CSP/딥링크."""
+"""scripts.library.catalog 테스트 — 게시판 카탈로그 / 상세 페이지 / XSS / CSP / 딥링크."""
 from __future__ import annotations
 
 import re
@@ -63,6 +63,42 @@ class RenderCatalogTest(unittest.TestCase):
         for slug in SKILLS:
             self.assertIn(f'id="{slug}"', self.html)
 
+    def test_title_links_to_internal_post_not_external(self):
+        """제목 = 우리 게시글 (사이트 이탈 없음). 외부 원본은 별도 [원본] 버튼."""
+        m = re.search(r'<h3><a class="tlink" href="([^"]+)"[^>]*>인스타 릴스 대본 자동 생성</a></h3>', self.html)
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group(1), "/skill/instagram-reels-script-automation")
+        self.assertNotIn('target="_blank"', m.group(0))
+
+    def test_original_link_button_goes_external(self):
+        card = re.search(
+            r'<article class="card"[^>]*id="instagram-reels-script-automation".*?</article>',
+            self.html, re.S).group(0)
+        ext = re.search(r'<a class="btn ext" href="([^"]+)"[^>]*>([^<]*)</a>', card)
+        self.assertIsNotNone(ext)
+        self.assertEqual(ext.group(1), "https://www.youtube.com/watch?v=abc123")
+        self.assertIn("원본", ext.group(2))
+        self.assertIn('target="_blank"', ext.group(0))
+        self.assertIn('rel="noopener', ext.group(0))
+        # 읽기 버튼은 내부 페이지
+        self.assertIn('href="/skill/instagram-reels-script-automation"', card)
+
+    def test_no_source_means_no_external_button(self):
+        cards = re.findall(r'<article class="card".*?</article>', self.html, re.S)
+        self.assertTrue(cards)
+        for c in cards:  # 픽스처는 전부 출처가 있으므로 버튼도 전부 있어야 함
+            self.assertIn('class="btn ext"', c)
+
+    def test_body_not_embedded_in_catalog(self):
+        """본문은 상세 페이지에서만 — 카탈로그는 가볍게 (모달/템플릿 제거)."""
+        self.assertNotIn("<template>", self.html)
+        self.assertNotIn("후킹 → 본문 → CTA", self.html)   # 본문 문장이 카드에 없음
+        self.assertNotIn("data-cmd=", self.html)
+
+    def test_view_toggle_present(self):
+        self.assertIn('data-view="card"', self.html)
+        self.assertIn('data-view="list"', self.html)
+
     def test_sections_follow_category_order(self):
         pos = {c: self.html.find(f'<section class="domain" data-group="{cat.category_key(c)}"') for c in ("콘텐츠", "개발", "업무", "기타")}
         self.assertTrue(all(p > 0 for p in pos.values()), pos)
@@ -82,10 +118,7 @@ class RenderCatalogTest(unittest.TestCase):
         self.assertIn("인스타", tag)           # data-text (소문자 검색 인덱스)
         self.assertIn("릴스", tag)
 
-    def test_xss_body_is_neutralized(self):
-        self.assertNotIn("<script>alert('xss')</script>", self.html)
-        self.assertNotIn("<script>alert(&#x27;xss&#x27;)</script>", self.html)
-        # 엔진 스크립트 1개 (nonce 달린 것) 만 존재
+    def test_no_inline_script_besides_engine(self):
         scripts = re.findall(r"<script[^>]*>", self.html)
         self.assertEqual(len(scripts), 1, scripts)
         self.assertIn('nonce="testnonce123"', scripts[0])
@@ -93,13 +126,10 @@ class RenderCatalogTest(unittest.TestCase):
     def test_csp_nonce_matches_script(self):
         m = re.search(r'<meta http-equiv="Content-Security-Policy" content="([^"]+)"', self.html)
         self.assertIsNotNone(m)
-        self.assertIn("script-src 'nonce-testnonce123'", m.group(1))
-        self.assertIn("default-src 'none'", m.group(1))
-
-    def test_copy_button_carries_full_skill_md(self):
-        # data-cmd 에 frontmatter 포함 전문 (속성 이스케이프 상태)
-        self.assertIn("name: instagram-reels-script-automation", self.html)
-        self.assertIn("SKILL.md 복사", self.html)
+        csp = m.group(1)
+        self.assertIn("script-src 'nonce-testnonce123'", csp)
+        self.assertIn("default-src 'none'", csp)
+        self.assertIn("font-src", csp)   # 픽셀/본문 폰트 CDN 허용
 
     def test_metrics_and_filter_chips(self):
         self.assertIn(f'<div class="v">{len(SKILLS)}</div>', self.html)
@@ -113,6 +143,64 @@ class RenderCatalogTest(unittest.TestCase):
         self.assertIn('id="legacy-no-meta"', self.html)
         m = re.search(r'<article class="card"[^>]*id="legacy-no-meta"[^>]*>', self.html)
         self.assertIn('data-grade=""', m.group(0))
+
+
+class RenderSkillPageTest(unittest.TestCase):
+    """게시글 상세 페이지 — 본문·복사·출처가 여기 있고, 이탈 링크는 [원본] 뿐."""
+
+    def setUp(self):
+        self.root = make_mirror()
+        self.idx = lib_index.load_index(self.root)
+        self.rec = self.idx.get("instagram-reels-script-automation")
+        self.html = cat.render_skill_page(self.rec, self.idx, nonce="pagenonce9")
+
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def test_title_and_body_rendered(self):
+        self.assertIn("<title>인스타 릴스 대본 자동 생성", self.html)
+        self.assertIn("<h1>인스타 릴스 대본 자동 생성</h1>", self.html)
+        self.assertIn("어떻게 작동하나요?", self.html)
+        self.assertIn("<strong>릴스</strong>", self.html)   # markdown 렌더됨
+
+    def test_back_link_to_board(self):
+        self.assertIn('href="/catalog"', self.html)
+
+    def test_meta_chips(self):
+        self.assertIn("S", self.html)
+        self.assertIn("콘텐츠", self.html)
+        self.assertIn("ChatGPT", self.html)
+
+    def test_copy_button_carries_full_skill_md(self):
+        self.assertIn("SKILL.md 복사", self.html)
+        self.assertIn("name: instagram-reels-script-automation", self.html)
+
+    def test_sources_listed_and_external_only_there(self):
+        self.assertIn("https://www.youtube.com/watch?v=abc123", self.html)
+        externals = re.findall(r'<a[^>]*target="_blank"[^>]*href="(https?://[^"]+)"', self.html) + \
+                    re.findall(r'<a[^>]*href="(https?://[^"]+)"[^>]*target="_blank"', self.html)
+        for url in externals:
+            self.assertTrue(url.startswith("http"), url)
+
+    def test_same_category_related_list(self):
+        """이탈 방지 — 같은 카테고리 다른 글로 이어지게."""
+        idx = self.idx
+        page = cat.render_skill_page(idx.get("notion-mcp-setup"), idx, nonce="n")
+        self.assertIn("같은 카테고리", page)
+
+    def test_xss_body_is_neutralized(self):
+        page = cat.render_skill_page(self.idx.get("notion-mcp-setup"), self.idx, nonce="n1")
+        self.assertNotIn("<script>alert('xss')</script>", page)
+        self.assertNotIn("<script>alert(&#x27;xss&#x27;)</script>", page)
+        scripts = re.findall(r"<script[^>]*>", page)
+        self.assertEqual(len(scripts), 1, scripts)
+        self.assertIn('nonce="n1"', scripts[0])
+
+    def test_csp_present(self):
+        m = re.search(r'<meta http-equiv="Content-Security-Policy" content="([^"]+)"', self.html)
+        self.assertIsNotNone(m)
+        self.assertIn("default-src 'none'", m.group(1))
+        self.assertIn("script-src 'nonce-pagenonce9'", m.group(1))
 
 
 class BuildCatalogFileTest(unittest.TestCase):

@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 
 _CATALOG_CACHE: dict = {"version": None, "html": "", "etag": ""}
 _CATALOG_LOCK = threading.Lock()
+# 게시글 상세 — 인덱스 버전이 바뀌면 통째로 버린다 (슬러그별 렌더 캐시)
+_PAGE_CACHE: dict = {"version": None, "pages": {}}
+_PAGE_LOCK = threading.Lock()
 
 
 def _json_error(message: str, status: int) -> tuple[Response, int]:
@@ -79,7 +82,7 @@ def register_library_routes(
             "ok": True,
             "total": len(items),
             "index_version": idx.version,
-            "items": [r.meta() for r in items],
+            "items": [{**r.meta(), "page_url": lib_catalog.post_url(r.slug)} for r in items],
         })
 
     @app.get("/api/library/skills/<path:slug>")
@@ -98,7 +101,8 @@ def register_library_routes(
             "body_md": rec.body_md,
             "raw_md": rec.raw_md,
             "path": f"~/.claude/skills/{rec.slug}/SKILL.md",
-            "catalog_url": f"/catalog#{rec.slug}",
+            "page_url": lib_catalog.post_url(rec.slug),   # 사람이 읽는 게시글
+            "catalog_url": f"/catalog#{rec.slug}",         # 구버전 링크 호환
         })
 
     @app.get("/api/library/stats")
@@ -132,3 +136,28 @@ def register_library_routes(
     @app.get("/catalog.html")
     def catalog_page_html():
         return _catalog_response()
+
+    @app.get("/skill/<path:slug>")
+    def skill_post(slug: str):
+        """게시글 상세 — 사이트 안에서 본문을 읽는 페이지 (외부 이탈은 [원본 ↗] 뿐)."""
+        if not is_valid_slug(slug):
+            return _json_error("잘못된 슬러그", 400)
+        idx = _index()
+        rec = idx.get(slug)
+        if rec is None:
+            return _json_error(f"스킬 없음: {slug}", 404)
+        with _PAGE_LOCK:
+            if _PAGE_CACHE["version"] != idx.version:
+                _PAGE_CACHE.update({"version": idx.version, "pages": {}})
+            cached = _PAGE_CACHE["pages"].get(slug)
+            if cached is None:
+                cached = lib_catalog.render_skill_page(rec, idx)
+                _PAGE_CACHE["pages"][slug] = cached
+        etag = '"' + hashlib.sha1(f"{idx.version}:{slug}".encode("utf-8")).hexdigest()[:20] + '"'
+        if request.headers.get("If-None-Match") == etag:
+            resp = Response(status=304)
+        else:
+            resp = Response(cached, mimetype="text/html")
+        resp.headers["ETag"] = etag
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp

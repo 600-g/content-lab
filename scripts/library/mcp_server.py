@@ -225,7 +225,7 @@ def fmt_search(res: dict, mode: str) -> str:
             f"   등급 {r.get('grade') or '-'} · {r.get('category')} · {', '.join(r.get('ai_tools') or []) or '도구 미지정'}\n"
             f"   {r.get('description', '')}\n"
             + (f"   ↳ {r.get('snippet')}\n" if r.get("snippet") else "")
-            + f"   get_skill(\"{r.get('slug')}\") 로 본문 · 카탈로그 {BASE_URL}/catalog#{r.get('slug')}"
+            + f"   get_skill(\"{r.get('slug')}\") 로 본문 · 사람용 게시글 {BASE_URL}/skill/{r.get('slug')}"
         )
     if not res.get("results"):
         lines.append("\n결과 없음 — 다른 표현으로 다시 검색하거나 list_skills 로 목록을 보세요.")

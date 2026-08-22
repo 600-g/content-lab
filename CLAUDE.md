@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**aiskillbox** (콘텐츠랩 v4.6) — URL 한 줄 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
+**aiskillbox** (콘텐츠랩 v4.7) — URL 한 줄 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
 
 - **v4.6 전체 잠금**: 사이트 전체(수집 UI·카탈로그·라이브러리 API)가 초대코드 로그인 필요. 예외는 `/login`·`/healthz`(112 모니터)·`/static/*`·`/sw.js` 뿐. 첫 진입/복구는 `/login` 의 "관리자 첫 등록(PIN)". 설계: `docs/superpowers/specs/2026-08-22-invite-auth-design.md`
-- 카탈로그: https://aiskillbox.600g.net/catalog (`#<slug>` 딥링크) · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
+- 게시판(도서관): https://aiskillbox.600g.net/catalog — 카테고리 섹션 + 칩 필터 + 카드/목록 전환. **제목 클릭 = 사이트 안 게시글** `/skill/<slug>` (본문 전문·SKILL.md 복사·같은 카테고리 글), 외부로 나가는 링크는 [원본 ↗] 하나뿐 · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
 - 설계: `docs/superpowers/specs/2026-08-20-skill-library-design.md`
 
 좋은 콘텐츠를 한 번 보고 끝내지 않고 **스킬 자산**으로 영구 활용 가능한 형태로 보관. 두근컴퍼니의 모든 다른 AI 에이전트가 이 DB와 글로벌 `~/.claude/skills/` 에서 자동으로 활용.
@@ -199,9 +199,11 @@ scripts/
                                           (파일수·mtime·crc32) 버전으로 2초 스로틀 재빌드, 서빙 전 시크릿 패턴 마스킹
     search.py                       ──   한글 2-gram 토크나이저 + 필드 가중 BM25 (title×3/desc×2/meta×1.5/body×1) + embeddings.json
                                           코사인 + RRF 융합. 질의 임베딩 실패 시 키워드만 (응답 semantic_used 로 표시), 예외 불출
-    catalog.py / catalog_template.py ──  킷(스킬박스고도화.zip) 템플릿 이식 단일 HTML. markdown 렌더 후 allowlist sanitize + CSP nonce.
-                                          CLI: python -m scripts.library build-catalog|search|stats
-    routes.py                       ──   Flask GET /api/library/search|skills|skills/<slug>(?format=raw)|stats, /catalog(+.html, 버전 캐시+ETag), CORS *
+    catalog.py / catalog_template.py ──  게시판(/catalog) + 게시글 상세(/skill/<slug>) 렌더. 킷 구조 이식 + 메인 사이트
+                                          픽셀 레트로 테마 통일(본문 Pretendard, 라벨만 Galmuri). markdown 렌더 후 allowlist
+                                          sanitize + CSP nonce. 카드에는 본문 미포함(1.49MB→358KB). CLI: build-catalog|search|stats
+    routes.py                       ──   Flask GET /api/library/search|skills|skills/<slug>(?format=raw)|stats,
+                                          /catalog(+.html) · /skill/<slug> (둘 다 인덱스 버전 캐시+ETag), CORS *
     mcp_server.py                   ──   stdio MCP (표준 라이브러리만). search_skills/get_skill/list_skills. AISKILLBOX_URL HTTP → 로컬 인덱스 폴백
   auth_store.py                     ── v4.6 초대코드/기기토큰 저장소 (logs/auth.json 0600 — 코드 평문·토큰 해시,
                                         cascade 회수, CLI create|list|delete)
@@ -326,6 +328,8 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 31. **카탈로그/라이브러리는 LLM 산출물을 공개 도메인에 HTML 로 렌더한다 — XSS 면을 스스로 막아야 한다** (v4.5) — SKILL.md 본문은 스크랩한 웹페이지를 LLM 이 요약한 것이라 악성 페이지가 `<script>`/`onerror` 를 심을 수 있고, 같은 origin localStorage 에 채팅 PIN 세션 토큰이 있다. `catalog.py` 는 markdown 렌더 결과를 HTMLParser allowlist 로 sanitize (script/style/iframe 은 내용까지 제거, href 는 http(s)/# 만), 모든 속성은 `html.escape`, 엔진 `<script>` 만 CSP nonce 로 허용 (`default-src 'none'`). **카탈로그에 태그/속성을 새로 허용할 때는 `_ALLOWED_TAGS/_ALLOWED_ATTRS` 에만 추가하고 테스트 `test_xss_body_is_neutralized` 를 유지할 것.** API 쪽은 `index.redact_secrets` 가 키 모양 문자열을 인덱스 단계에서 마스킹한다 (API/카탈로그/MCP 공통).
 
+32-b. **사람 링크와 AI 링크를 섞지 말 것** (v4.7) — 같은 SKILL.md 를 세 경로로 낸다: 사람은 `/skill/<slug>`(게시글 HTML), AI 는 `/api/library/skills/<slug>`(JSON) 또는 `?format=raw`(마크다운 전문), MCP 는 `get_skill`. 검색 응답은 셋을 각각 `page_url` / `detail_url` / slug 로 내려주므로 **UI 는 page_url, 도구는 detail_url** 을 쓴다. 카드 제목이 외부 원본을 가리키면 게시판에서 이탈하므로 금지 — 외부 링크는 [원본 ↗] 버튼과 상세 페이지의 출처 목록에만 둔다.
+
 32-a. **전체 잠금(v4.6) allowlist 를 함부로 늘리지 말 것** — 게이트 예외는 `/login` · `/api/auth/redeem|bootstrap` · `/healthz` · `/static/*` · `/sw.js` · OPTIONS 뿐이다 (`scripts/auth_routes.py:_ALLOW_EXACT/_ALLOW_PREFIX`). 새 공개 엔드포인트가 필요하면 진짜 비밀이 없는지 확인 후 여기에만 추가. `register_auth` 는 **의도적으로 try/except 없이** 등록 — 게이트 실패 시 무보호로 뜨는 대신 기동 실패(healthz 죽음 → 112 감지). MCP/에이전트는 `AISKILLBOX_TOKEN` env (401 이면 MCP 는 로컬 인덱스 폴백). 전 기기 로그아웃 사고 복구 = `/login` 관리자 첫 등록(PIN) 또는 `python -m scripts.auth_store create`.
 
 32. **라이브러리 인덱스는 mirror(`skills/`)만 본다** — `~/.claude/skills/` 는 수동 설치 스킬 112건이 섞여 있어 검색 corpus 로 부적합 (origin 이 content-lab 인 79건만이 라이브러리). 수집 파이프라인은 두 곳에 동시에 쓰므로 mirror 만 읽어도 같은 내용. 손으로 `~/.claude/skills/<slug>/SKILL.md` 만 고치면 라이브러리엔 반영 안 됨 — mirror 도 같이 고치거나 채팅 `edit_skill_md` 사용.
@@ -372,6 +376,7 @@ URL 하나만 던지면:
 
 | 날짜 | 버전 | 변경 |
 |------|------|----------|
+| 2026-08-23 | v4.7 | **카탈로그 → 게시판(도서관) 전환 + 레트로 테마 통일.** ① **이탈 없는 구조** — 카드 제목이 외부 원본으로 나가던 것을 뒤집어, **제목 = 사이트 안 게시글**(`/skill/<slug>` 전용 페이지: 본문 전문·💡 콜아웃·SKILL.md 복사·링크 복사·출처 목록·**같은 카테고리 다른 글**), **외부는 [원본 ↗] 버튼 하나**. 모달 제거. ② **카드/목록 보기 전환** (기기에 기억, 목록 모드는 게시판식 한 줄). ③ **레트로 테마** — 메인 사이트의 픽셀+디지털 토큰 이식(도트그리드·스캔라인·하드섀도·네온 시안/마젠타, 커서 블링크), 본문은 Pretendard 유지하고 Galmuri11 은 뱃지·라벨·숫자만 (가독성 우선). ④ **경량화** — 카드에서 본문/템플릿 제거로 1.49MB → 358KB(84건). ⑤ 링크 정리: 잡 완료 카드·최근 목록·채팅이 `📖 읽기`(`/skill/<slug>`)로, API/검색/MCP 응답에 `page_url` 추가 (gotcha 32-b). 실측: 헤드리스에서 로그인→카드/목록/검색/상세/뒤로가기 + 모바일 폭, 콘솔 에러 0. 테스트 86건. |
 | 2026-08-22 | v4.6 | **초대코드 전체 잠금 + 노션 '링크 복사' 오탐 근절.** ① 사이트 전체(수집 UI·카탈로그·라이브러리 API) 로그인 필요 — 두근컴퍼니 초대 패턴 축소판: 코드→기기 영구 토큰(계정 없음), 쿠키 자동로그인, 코드 삭제 = cascade 로그아웃. `auth_store.py`(코드 평문·토큰 해시, 0600) + `auth_routes.py`(게이트 allowlist, redeem 5회/5분 잠금, PIN bootstrap 으로 닭-달걀 해소). 설정창 초대코드 관리 UI, `/login` 픽셀 페이지. 무인증 공개였던 `/api/collect` 구멍 봉쇄. MCP `AISKILLBOX_TOKEN` + 401→로컬 폴백, CORS X-Auth-Token. 테스트 +23 (전체 71). ② **노션 오탐** — '링크 복사'가 발급하는 `app.notion.com/p/<id>` 공개 공유 링크가 도메인 가드에 차단되던 실사고(8/19, 3건) 수정: `/p/` 경로만 가드 예외, 비로그인 렌더 실측(블록 57/5개) + 실패 링크 2건 재스크랩 성공(1,786/1,800자) 검증. ③ MCP 가 구버전 서버(HTML 404)를 만나면 로컬 인덱스 폴백 (JSON envelope 판별). |
 | 2026-08-20 | v4.5 | **스킬 라이브러리(도서관) — SKILL.md 단일 원본, 노션 옵션 강등.** 바탕화면 `스킬박스고도화.zip`(두근 스킬카탈로그 킷) 설계를 이식해 "노션 말고 페이지 자체로 관리하고 필요할 때 꺼내 쓰는" 구조로 전환. ① `scripts/library/index.py` — `skills/*/SKILL.md` 79건을 frozen 레코드로 인덱스 (mtime 변경 자동 감지, 재인덱스 명령 불필요, 누락 frontmatter 11건 보정). ② `search.py` — 한글 2-gram BM25(필드 가중) + 기존 dedup 임베딩 캐시 77건 재활용 코사인 + RRF 융합. 실측 8/8 질의 1위 정답, 키워드 30ms / 하이브리드 ~500ms(Gemini 호출), 키 없으면 자동 키워드 폴백. ③ `routes.py` — `GET /api/library/search|skills|skills/<slug>|stats`, `/catalog` (두근컴퍼니 에이전트·외부 도구용, CORS *). ④ `mcp_server.py` — 표준 라이브러리만 쓰는 stdio MCP (Claude Code·Cursor·Codex·다른 계정), HTTP → 로컬 인덱스 폴백, 시스템 python3.9 검증. ⑤ `catalog.py` — 킷 단일 HTML 템플릿 이식: 출처/카테고리/등급/AI도구 칩, SKILL.md 복사, 상세 모달, `#slug` 딥링크, allowlist sanitizer + CSP nonce (#31). 79건 1.49MB, 헤드리스 크로미움 검증. ⑥ 채팅 `search_library` 도구 + 시스템 프롬프트. ⑦ **Notion 등록 기본 off** — `config.json notion.register_on_collect=false` (app 워커·CLI 기본값, `--notion`/`--no-notion` 우선, 채팅 `write_config` 로 토글). UI: 📚 카탈로그 칩/드로어/완료 카드 링크, Notion 칩·섹션·헬스는 `notion_enabled` 일 때만. `/healthz` `library{total,embedded}`. 테스트 47건 (unittest, 네트워크 0). 설계 스펙 `docs/superpowers/specs/2026-08-20-skill-library-design.md`. 보류: `~/.claude/skills/` 전부 설치 → MCP 검색만으로 전환 (별건). |
 | 2026-08-16 | v4.4.6 | **비공개 오탐 · 슬러그 오합병 · 조용한 데이터 누락 3종 근절.** ① **노션 비공개 오탐** — 판별 마커가 공개 페이지 렌더 결과에도 들어있어 실질 기준이 '텍스트 짧으면 비공개' 뿐이었고, `skip_reason` 이 재시도까지 차단해 렌더 지연 한 번에 공개 페이지가 영구 차단됐다 (실사고 8/11). 렌더 DOM 실측(`[data-block-id]` 0개 + '페이지 찾지 못함' 문구)으로 교체 — 4케이스 검증 통과. ② **UA 룰렛** — notion.site 는 Chrome UA 2종으로 goto 60s 타임아웃 + html=0, WebKit 2종만 정상. `NOTION_UA_POOL` 분리 + 회차별 UA 순환. ③ **trafilatura 부분 추출** — 짧으면 bs4/innerText 중 최장 채택 (311자 → 1180자 복구). ④ **슬러그 경로 합병 우회** — `find_global_by_slug` 히트가 모든 게이트를 건너뛰어 무관한 콘텐츠가 `untitled-skill` 하나로 합쳐졌다. `GENERIC_SLUGS` 영구 제외 + 슬러그 히트도 의미 게이트 통과 요구. ⑤ **합병 게이트 프롬프트** — 동일 문구만 맞추고 패러프레이즈를 놓쳤음 (실제 재수집은 항상 패러프레이즈). 재작성 후 동일 5/5 · 패러프레이즈 4/4 · 오합병 0/6. ⑥ **리터럴 개행** — LLM 이 개행을 `\n` 두 글자로 뱉어 본문이 한 줄이 되고 Notion 등록 전체가 400 (8/10 webswing 누락 원인). 원인 차단 + rich_text 100요소 가드. ⑦ **page_size 무페이지네이션 (영향 최대)** — 14개 스크립트가 DB 앞 50건만 보고 '전수 완료'로 출력, 69건 중 19건이 백업조차 없었다. `scripts/notion_paging.py` 단일 헬퍼로 통일 + 전량 재백업. **데이터 복구**: webswing 본문 복원 + Notion 재등록, `untitled-skill` 분해(주식 분석 스킬 복원 · Claude 60 노션 제목 오염 복구), origin/sources 누락 9건 백필, 오합병 3건 출처별 재수집 분리. |

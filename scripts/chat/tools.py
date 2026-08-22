@@ -177,7 +177,8 @@ def _t_search_library(query: str, k: int = 5, category: str = "") -> dict:
         {
             "slug": r["slug"], "title": r["title"], "description": r["description"][:200],
             "category": r["category"], "grade": r["grade"], "snippet": r["snippet"],
-            "catalog_url": r["catalog_url"],
+            "page_url": r["page_url"],       # 사람에게 안내할 게시글 링크
+            "detail_url": r["detail_url"],   # 본문 전문 (read_skill_md 로도 가능)
         }
         for r in res["results"]
     ]

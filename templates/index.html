@@ -35,9 +35,9 @@
     <span class="brand-name">aiskillbox</span>
   </div>
   <div class="topbar-actions">
-    <a id="catalog-chip" class="chip" href="{{ catalog_url }}" target="_blank" rel="noopener"
-       title="스킬 카탈로그 (SKILL.md 도서관)">
-      <span>📚</span><span class="chip-label">카탈로그</span>
+    <a id="catalog-chip" class="chip" href="{{ catalog_url }}"
+       title="스킬 도서관 — 수집한 스킬 게시판">
+      <span>📚</span><span class="chip-label">도서관</span>
     </a>
     {% if notion_enabled and notion.db_web %}
     <a id="db-chip" class="chip" href="{{ notion.db_web }}"
@@ -158,11 +158,11 @@
     <section class="drawer-section">
       <h4>스킬 라이브러리</h4>
       <div class="link-grid">
-        <a class="link-card" href="{{ catalog_url }}" target="_blank" rel="noopener">
+        <a class="link-card" href="{{ catalog_url }}">
           <span class="link-icon">📚</span>
           <span class="link-text">
-            <b>스킬 카탈로그</b>
-            <small>SKILL.md 도서관 — 검색·필터·복사</small>
+            <b>스킬 도서관</b>
+            <small>게시판 — 카테고리·검색·본문 읽기</small>
           </span>
           <span class="link-chev">→</span>
         </a>

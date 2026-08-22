@@ -339,8 +339,9 @@ def search(
             "sem_rank": sem_rank.get(slug),
             "sem_score": round(sem_score[slug], 4) if slug in sem_score else None,
             "snippet": make_snippet(rec, q),
-            "detail_url": f"/api/library/skills/{slug}",
-            "catalog_url": f"/catalog#{slug}",
+            "detail_url": f"/api/library/skills/{slug}",   # AI — SKILL.md 본문 (JSON/raw)
+            "page_url": f"/skill/{slug}",                  # 사람 — 게시글 상세
+            "catalog_url": f"/catalog#{slug}",             # 구버전 링크 호환
         })
         results.append(item)
         if len(results) >= k:

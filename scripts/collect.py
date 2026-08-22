@@ -463,8 +463,9 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
         "merged": bool(analysis.raw.get("_is_merged")),
         "source_count": len(analysis.raw.get("_merged_source_urls") or [url]),
     }
-    # v4.5 스킬 라이브러리 — 카탈로그 딥링크 (mirror 에 저장된 순간부터 /api/library, /catalog 에서 검색 가능)
-    summary["catalog_url"] = f"/catalog#{analysis.skill_name}"
+    # 스킬 라이브러리 — mirror 에 저장된 순간부터 게시판/검색/MCP 에 잡힌다.
+    summary["post_url"] = f"/skill/{analysis.skill_name}"          # 사람이 읽는 게시글
+    summary["catalog_url"] = f"/catalog#{analysis.skill_name}"     # 구버전 링크 호환
 
     # Hub 상단 카테고리별 목록 자동 동기화 (best-effort, 실패해도 잡은 성공 처리)
     if register_notion and notion_ok:

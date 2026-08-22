@@ -1,4 +1,4 @@
-# 두근컴퍼니 콘텐츠랩 v4.6
+# 두근컴퍼니 콘텐츠랩 v4.7
 
 URL → 스크래핑 → AI 분석 → ECC 표준 SKILL.md 생성 → 글로벌 설치 → **스킬 라이브러리(검색 API · MCP · 카탈로그)** 에 즉시 등재. (Notion DB 등록은 v4.5 부터 옵션)
 
@@ -92,9 +92,10 @@ python -m scripts.auth_store delete DGN-....  # 삭제 = 그 코드 기기 전�
 SKILL.md 가 유일한 원본. 노션 없이 "검색해서 꺼내 쓰는" 세 가지 입구:
 
 ```bash
-# 1) 사람 — 카탈로그 (서버가 자동 생성, 정적 파일로도 뽑기 가능)
-open https://aiskillbox.600g.net/catalog            # 또는 http://localhost:5050/catalog
-python -m scripts.library build-catalog --out logs/catalog.html   # 단일 HTML 1.5MB, 어디서든 열림
+# 1) 사람 — 게시판 (카테고리·검색·카드/목록 전환). 제목 클릭 = 사이트 안 게시글
+open https://aiskillbox.600g.net/catalog            # 목록
+open https://aiskillbox.600g.net/skill/<슬러그>      # 게시글 상세 (본문 전문 + SKILL.md 복사)
+python -m scripts.library build-catalog --out logs/catalog.html   # 정적 목록 단일 HTML (~360KB)
 
 # 2) 에이전트 — HTTP (키워드 BM25 + Gemini 임베딩 코사인 → RRF 융합)
 curl -s "http://localhost:5050/api/library/search?q=인스타+릴스+대본&k=5" | python3 -m json.tool

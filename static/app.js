@@ -219,9 +219,9 @@ function renderJobCard(item) {
   } else if (item.status === 'completed' && !r.skipped) {
     const web = r.notion_web_url || '';
     const app = web ? web.replace('https://', 'notion://') : '';
-    const catalogUrl = r.catalog_url || (skill.name ? `/catalog#${encodeURIComponent(skill.name)}` : '');
-    const catalogLink = catalogUrl
-      ? `<a class="job-link" href="${escapeHtml(catalogUrl)}" target="_blank" rel="noopener">📚 카탈로그</a>` : '';
+    const postUrl = r.post_url || (skill.name ? `/skill/${encodeURIComponent(skill.name)}` : '');
+    const catalogLink = postUrl
+      ? `<a class="job-link" href="${escapeHtml(postUrl)}">📖 읽기</a>` : '';
     const notionLink = web
       ? `<a class="job-link" data-app="${escapeHtml(app)}" data-web="${escapeHtml(web)}"
             href="${escapeHtml(web)}" target="_blank" rel="noopener">📝 Notion</a>` : '';
@@ -448,9 +448,9 @@ function _renderRecentItem(item) {
   const notionLink = notionWeb
     ? `<a class="notion notion-deeplink" data-app="${escapeHtml(notionApp)}" data-web="${escapeHtml(notionWeb)}" href="${escapeHtml(notionWeb)}" target="_blank" rel="noopener">📝 Notion</a>`
     : '';
-  const catalogUrl = item.catalog_url || (item.skill_name ? `/catalog#${encodeURIComponent(item.skill_name)}` : '');
-  const catalogLink = catalogUrl
-    ? `<a href="${escapeHtml(catalogUrl)}" target="_blank" rel="noopener">📚 카탈로그</a>` : '';
+  const postUrl = item.post_url || (item.skill_name ? `/skill/${encodeURIComponent(item.skill_name)}` : '');
+  const catalogLink = postUrl
+    ? `<a href="${escapeHtml(postUrl)}">📖 읽기</a>` : '';
   const originLink = item.url
     ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🔗 원본</a>` : '';
   return `<li>

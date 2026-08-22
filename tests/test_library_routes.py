@@ -99,6 +99,33 @@ class LibraryRoutesTest(unittest.TestCase):
         self.assertEqual(r2.status_code, 304)
         self.assertEqual(self.client.get("/catalog.html").status_code, 200)
 
+    def test_skill_page_renders(self):
+        r = self.client.get("/skill/instagram-reels-script-automation")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.content_type.startswith("text/html"))
+        body = r.get_data(as_text=True)
+        self.assertIn("<h1>인스타 릴스 대본 자동 생성</h1>", body)
+        self.assertIn('href="/catalog"', body)          # 목록으로 돌아가기
+        self.assertIn("원본 ↗", body)                    # 유일한 외부 링크
+        etag = r.headers.get("ETag")
+        self.assertTrue(etag)
+        self.assertEqual(
+            self.client.get("/skill/instagram-reels-script-automation",
+                            headers={"If-None-Match": etag}).status_code, 304)
+
+    def test_skill_page_404_and_bad_slug(self):
+        self.assertEqual(self.client.get("/skill/nope-not-here").status_code, 404)
+        self.assertIn(self.client.get("/skill/..%2F..%2Fetc").status_code, (400, 404))
+
+    def test_api_exposes_page_url(self):
+        d = self.client.get("/api/library/skills/notion-mcp-setup").get_json()
+        self.assertEqual(d["page_url"], "/skill/notion-mcp-setup")
+        s = self.client.get("/api/library/search?q=notion mcp&mode=keyword").get_json()
+        self.assertTrue(s["results"])
+        self.assertEqual(s["results"][0]["page_url"], "/skill/" + s["results"][0]["slug"])
+        lst = self.client.get("/api/library/skills").get_json()
+        self.assertIn("page_url", lst["items"][0])
+
     def test_secret_like_strings_are_redacted_in_bodies(self):
         # 본문에 키 모양 문자열이 섞여 들어간 경우 서빙 전 마스킹
         p = self.root / "legacy-no-meta" / "SKILL.md"

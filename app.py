@@ -214,7 +214,7 @@ def _run_job(job_id: str) -> None:
                 "notion_page": summary.get("stages", {}).get("notion", ""),
                 "notion_app_url": app_url,
                 "notion_web_url": web,
-                "catalog_url": f"/catalog#{skill.get('name', '')}" if skill.get("name") else "",
+                "post_url": f"/skill/{skill.get('name', '')}" if skill.get("name") else "",
             })
     except Exception as e:  # noqa: BLE001
         log.exception("job failed: %s", e)
@@ -510,7 +510,7 @@ def healthz():
     return jsonify({
         "ok": True,
         "service": "aiskillbox",
-        "version": "4.6",
+        "version": "4.7",
         "library": _library_health(),
         "notion_enabled": _notion_enabled(),
         "last_failure": _last_failure(),

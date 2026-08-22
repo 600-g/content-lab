@@ -1,9 +1,11 @@
-"""사람용 단일 HTML 카탈로그 생성 — 킷(두근_스킬카탈로그_킷) 템플릿에 SKILL.md 인덱스를 채운다.
+"""사람용 게시판(카탈로그) + 게시글 상세 페이지 렌더링 — SKILL.md 인덱스가 원본.
 
-- 서버 없이도 열리는 자체완결 HTML (정적 파일 빌드 = /catalog 응답과 같은 함수).
-- XSS 방어: 본문은 LLM 이 스크랩 결과로 만든 것 → markdown 렌더 후 allowlist sanitize,
-  모든 속성 html.escape, 엔진 스크립트만 CSP nonce 로 허용.
-- 카드 = 스킬 1건. data-* 는 킷 스펙 §2 (검색 인덱스 data-text 는 소문자 통합 텍스트).
+- `/catalog` : 카테고리 섹션 + 칩 필터 + 검색, 카드/목록 보기 전환. 제목 클릭 = 사이트 안 게시글.
+- `/skill/<slug>` : 게시글 상세 — 본문 전문·SKILL.md 복사·출처·같은 카테고리 글.
+  **외부로 나가는 링크는 [원본 ↗] 하나뿐** (사이트 이탈 최소화).
+- XSS 방어 (gotcha #31): 본문은 LLM 이 스크랩 결과로 만든 것 → markdown 렌더 후 allowlist
+  sanitize, 모든 속성 html.escape, 엔진 스크립트만 CSP nonce.
+- 정적 빌드(`build-catalog`)와 서버 응답이 같은 함수를 쓴다.
 """
 from __future__ import annotations
 
@@ -18,7 +20,7 @@ import sys
 import time
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
 from scripts.library import catalog_template as T
 from scripts.library.index import (
@@ -34,9 +36,10 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT = PROJECT_ROOT / "logs" / "catalog.html"
-PAGE_TITLE = "두근 스킬 카탈로그"
+PAGE_TITLE = "두근 스킬 도서관"
 DATA_TEXT_BODY_CHARS = 1500
 TOOL_CHIP_MAX = 10
+RELATED_MAX = 6
 
 CATEGORY_KEYS = {
     "프롬프트": "prompt", "자동화": "automation", "콘텐츠": "content", "디자인": "design",
@@ -53,7 +56,7 @@ CATEGORY_BLURB = {
 }
 SOURCE_LABEL = {
     "youtube": "유튜브", "notion": "노션", "github": "깃허브", "instagram": "인스타그램",
-    "tiktok": "틱톡", "twitter": "X/트위터", "web": "웹",
+    "tiktok": "틱톡", "twitter": "X", "web": "웹",
 }
 GRADE_LABEL = {"S": "S · 필수", "A": "A · 추천", "B": "B · 참고", "C": "C · 보류", "": "미평가"}
 
@@ -162,11 +165,16 @@ def tool_key(tool: str) -> str:
     return "".join(ch if (ch.isalnum() or ch in "._") else "_" for ch in tool.strip().lower()) or "etc"
 
 
+def post_url(slug: str) -> str:
+    return f"/skill/{slug}"
+
+
 def _esc(s: str) -> str:
     return html.escape(s or "", quote=True)
 
 
 _MD_MARK_RE = re.compile(r"\*\*|__|`")
+_CALLOUT_RE = re.compile(r"^💡\s*(.+?)\s*$", re.M)
 
 
 def plain_text(s: str) -> str:
@@ -175,62 +183,63 @@ def plain_text(s: str) -> str:
 
 
 def _data_text(r: SkillRecord) -> str:
-    parts = [r.title, r.slug, r.slug.replace("-", " "), plain_text(r.description), r.category, r.grade, r.difficulty,
-             " ".join(r.ai_tools), r.body_md[:DATA_TEXT_BODY_CHARS]]
+    parts = [r.title, r.slug, r.slug.replace("-", " "), plain_text(r.description), r.category, r.grade,
+             r.difficulty, " ".join(r.ai_tools), r.body_md[:DATA_TEXT_BODY_CHARS]]
     text = " ".join(p for p in parts if p).lower()
     return " ".join(text.split())
 
 
-def _body_without_title(r: SkillRecord) -> str:
-    """모달 본문 — H1 은 따로 찍으니 제거."""
+def _grade_badge(grade: str) -> str:
+    return f'<span class="grade g-{_esc(grade)}">{_esc(grade or "—")}</span>'
+
+
+def _source_badge(src_type: str) -> str:
+    return f'<span class="src s-{_esc(src_type)}">{_esc(SOURCE_LABEL.get(src_type, src_type))}</span>'
+
+
+def _origin_button(r: SkillRecord, cls: str = "btn ext") -> str:
+    """유일한 외부 이탈 링크 — 출처가 없으면 버튼 자체를 안 만든다."""
+    if not r.sources:
+        return ""
+    return (f'<a class="{cls}" href="{_esc(r.sources[0])}" target="_blank" '
+            f'rel="noopener noreferrer">원본 ↗</a>')
+
+
+def _body_without_title(r: SkillRecord) -> tuple[str, str]:
+    """(callout 한 줄, H1·callout 제거한 본문) — 상세 페이지에서 callout 은 따로 강조."""
     lines = r.body_md.splitlines()
     if lines and lines[0].startswith("# "):
         lines = lines[1:]
-    return "\n".join(lines).strip("\n")
+    body = "\n".join(lines).strip("\n")
+    m = _CALLOUT_RE.search(body)
+    callout = ""
+    if m:
+        callout = m.group(1).strip()
+        body = body[:m.start()] + body[m.end():]
+    return callout, body.strip("\n")
 
+
+# ── 카탈로그(게시판 목록) ────────────────────────────────────────
 
 def _render_card(r: SkillRecord, i: int) -> str:
     src_type = r.source_types[0] if r.source_types else "web"
-    first_url = r.sources[0] if r.sources else ""
-    title_html = (
-        f'<a href="{_esc(first_url)}" target="_blank" rel="noopener noreferrer">{_esc(r.title)}</a>'
-        if first_url else _esc(r.title)
-    )
     tools_s = " · ".join(r.ai_tools) if r.ai_tools else "도구 미지정"
-    orig = f"{r.difficulty + ' · ' if r.difficulty else ''}{tools_s}"
-    grade_lbl = f"등급 {r.grade}" if r.grade else "미평가"
-    body_html = render_markdown(_body_without_title(r))
-    src_links = "".join(
-        f'<div><a href="{_esc(u)}" target="_blank" rel="noopener noreferrer">{_esc(u)}</a></div>' for u in r.sources
-    ) or "<div>출처 없음</div>"
+    meta_line = f"{r.difficulty + ' · ' if r.difficulty else ''}{tools_s}"
+    url = post_url(r.slug)
     return (
         f'<article class="card" style="--i:{i}" id="{_esc(r.slug)}" data-group="{category_key(r.category)}" '
         f'data-grade="{_esc(r.grade)}" data-source="{_esc(src_type)}" '
         f'data-tools="{_esc(" ".join(tool_key(t) for t in r.ai_tools))}" '
-        f'data-text="{_esc(_data_text(r))}">\n'
-        f'  <div class="chead"><span class="src s-{_esc(src_type)}">{_esc(SOURCE_LABEL.get(src_type, src_type))}</span>'
+        f'data-date="{_esc(r.updated_date)}" data-text="{_esc(_data_text(r))}">\n'
+        f'  <div class="chead">{_grade_badge(r.grade)}{_source_badge(src_type)}'
         f'<span class="date">{_esc(r.updated_date)}</span></div>\n'
-        f'  <h3>{title_html}</h3>\n'
-        f'  <code class="cmd">{_esc(r.slug)}</code>\n'
+        f'  <h3><a class="tlink" href="{_esc(url)}">{_esc(r.title)}</a></h3>\n'
         f'  <p class="desc">{_esc(plain_text(r.description))}</p>\n'
-        f'  <p class="orig">{_esc(orig)}</p>\n'
-        f'  <div class="who"><span class="au">{_esc(grade_lbl)}</span><span class="tm">{_esc(r.category)}</span>'
-        f'<span>{len(r.sources)} 출처</span></div>\n'
+        f'  <p class="cmeta">{_esc(meta_line)}</p>\n'
         f'  <div class="acts">\n'
-        f'    <button class="btn primary copy" data-cmd="{_esc(r.raw_md)}">SKILL.md 복사</button>\n'
-        f'    <button class="btn detail">자세히</button>\n'
+        f'    <a class="btn primary" href="{_esc(url)}">읽기</a>\n'
+        f'    {_origin_button(r)}\n'
         f'  </div>\n'
-        f'  <template>\n'
-        f'    <button class="mclose" aria-label="닫기">✕</button>\n'
-        f'    <h3>{_esc(r.title)}</h3>\n'
-        f'    <code class="mcmd">~/.claude/skills/{_esc(r.slug)}/SKILL.md</code>\n'
-        f'    <p>{_esc(plain_text(r.description))}</p>\n'
-        f'    <div class="macts"><button class="btn primary copy" data-copy-of="{_esc(r.slug)}">SKILL.md 복사</button>'
-        f'<button class="btn linkcopy" data-slug="{_esc(r.slug)}">링크 복사</button></div>\n'
-        f'    <h4>메타</h4><p>{_esc(grade_lbl)} · {_esc(r.category)} · {_esc(orig)} · 갱신 {_esc(r.updated_date)}</p>\n'
-        f'    <h4>본문</h4><div class="md">{body_html}</div>\n'
-        f'    <h4>출처</h4><div class="srcs">{src_links}</div>\n'
-        f'  </template>\n'
         f'</article>\n'
     )
 
@@ -259,7 +268,8 @@ def _render_sections(records: Iterable[SkillRecord]) -> str:
             )
         out.append(
             f'<section class="domain" data-group="{category_key(cat)}">\n'
-            f'  <div class="dhead"><span class="num">{n:02d}</span><h2>{_esc(cat)}</h2><span class="cnt">{len(recs)}</span></div>\n'
+            f'  <div class="dhead"><span class="num">{n:02d}</span><h2>{_esc(cat)}</h2>'
+            f'<span class="cnt">{len(recs)}</span></div>\n'
             f'  <p class="dblurb">{_esc(CATEGORY_BLURB.get(cat, ""))}</p>\n'
             + "\n".join(sub_html) + "\n</section>\n"
         )
@@ -271,7 +281,7 @@ def _chips(items: Iterable[tuple[str, str]], cls: str, attr: str) -> str:
 
 
 def render_catalog(index: LibraryIndex, *, nonce: str | None = None) -> str:
-    """인덱스 → 자체완결 HTML 문자열."""
+    """인덱스 → 게시판 HTML (자체완결)."""
     nonce = nonce or secrets.token_urlsafe(16)
     recs = index.records
     stats = index.stats()
@@ -290,11 +300,13 @@ def render_catalog(index: LibraryIndex, *, nonce: str | None = None) -> str:
     )
     last = stats["last_updated"]
     last_short = f"{last[5:7]}.{last[8:10]}" if len(last) >= 10 else "-"
-    return T.PAGE.format(
+    return T.CATALOG_PAGE.format(
+        csp=T.CSP.format(nonce=nonce),
+        fonts=T.FONT_LINKS,
         nonce=nonce,
         title=_esc(PAGE_TITLE),
-        css=T.CSS,
-        js=T.JS,
+        css=T.BASE_CSS + T.CATALOG_CSS,
+        js=T.CATALOG_JS,
         generated_kst=time.strftime("%Y-%m-%d %H:%M"),
         total=len(recs),
         n_categories=len(cats_present),
@@ -306,6 +318,61 @@ def render_catalog(index: LibraryIndex, *, nonce: str | None = None) -> str:
         sections=_render_sections(recs),
     )
 
+
+# ── 게시글 상세 ─────────────────────────────────────────────────
+
+def _related_html(rec: SkillRecord, index: LibraryIndex) -> str:
+    siblings = [
+        r for r in index.filter(category=rec.category)
+        if r.slug != rec.slug
+    ]
+    siblings.sort(key=lambda r: (_grade_sort_key(r.grade), r.title))
+    items = siblings[:RELATED_MAX]
+    rows = "".join(
+        f'<li><a href="{_esc(post_url(r.slug))}">{_grade_badge(r.grade)}'
+        f'<span class="rt">{_esc(r.title)}</span></a></li>'
+        for r in items
+    ) or ('<li><a href="/catalog"><span class="rt">이 카테고리엔 아직 다른 글이 없어요 — '
+          '전체 목록 보기</span></a></li>')
+    return (
+        f'<section class="psec"><h2>같은 카테고리 · {_esc(rec.category)}</h2>'
+        f'<ul class="related">{rows}</ul></section>'
+    )
+
+
+def render_skill_page(rec: SkillRecord, index: LibraryIndex, *, nonce: str | None = None) -> str:
+    """게시글 상세 HTML. 외부 링크는 [원본 ↗] 과 출처 목록뿐."""
+    nonce = nonce or secrets.token_urlsafe(16)
+    callout, body = _body_without_title(rec)
+    src_type = rec.source_types[0] if rec.source_types else "web"
+    chips = [_grade_badge(rec.grade), _source_badge(src_type),
+             f'<span class="tag">{_esc(rec.category)}</span>']
+    if rec.difficulty:
+        chips.append(f'<span class="tag">{_esc(rec.difficulty)}</span>')
+    chips += [f'<span class="tag">{_esc(t)}</span>' for t in rec.ai_tools]
+    chips.append(f'<span class="date">{_esc(rec.updated_date)}</span>')
+    sources_html = "".join(
+        f'<a href="{_esc(u)}" target="_blank" rel="noopener noreferrer">{_esc(u)}</a>' for u in rec.sources
+    ) or '<span class="tag">출처 정보 없음</span>'
+    return T.SKILL_PAGE.format(
+        csp=T.CSP.format(nonce=nonce),
+        fonts=T.FONT_LINKS,
+        nonce=nonce,
+        title=_esc(rec.title),
+        slug=_esc(rec.slug),
+        meta_chips="".join(chips),
+        origin_button=_origin_button(rec, cls="btn"),
+        callout=(f'<div class="callout">{_esc(plain_text(callout))}</div>' if callout else ""),
+        body_html=render_markdown(body),
+        sources_html=sources_html,
+        related_html=_related_html(rec, index),
+        raw_md=_esc(rec.raw_md),
+        css=T.BASE_CSS + T.PAGE_CSS,
+        js=T.PAGE_JS,
+    )
+
+
+# ── 정적 빌드 / CLI ─────────────────────────────────────────────
 
 def build_catalog_file(out: Path | str = DEFAULT_OUT, *, root: Path | str | None = None) -> dict:
     """정적 catalog.html 생성. {ok, path, count, bytes}."""
