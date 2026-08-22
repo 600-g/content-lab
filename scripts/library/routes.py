@@ -45,9 +45,11 @@ def register_library_routes(
 
     @app.after_request
     def _library_cors(resp: Response) -> Response:
-        if request.path.startswith("/api/library/") and request.method == "GET":
+        if request.path.startswith("/api/library/") and request.method in ("GET", "OPTIONS"):
             resp.headers["Access-Control-Allow-Origin"] = "*"
             resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            # v4.6 전체 잠금 — 브라우저 cross-origin 호출은 X-Auth-Token 헤더로 인증
+            resp.headers["Access-Control-Allow-Headers"] = "X-Auth-Token"
         return resp
 
     @app.get("/api/library/search")

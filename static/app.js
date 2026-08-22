@@ -537,6 +537,7 @@ async function doPinAuth() {
     pinView.classList.add('hidden');
     fieldsView.classList.remove('hidden');
     renderSettingsFields(d.rows || []);
+    loadInviteCodes();
   } catch (e) {
     pinError.textContent = '네트워크 오류';
   } finally {
@@ -545,6 +546,70 @@ async function doPinAuth() {
 }
 pinSubmit?.addEventListener('click', doPinAuth);
 pinInput?.addEventListener('keydown', e => { if (e.key === 'Enter') doPinAuth(); });
+
+// ── 초대코드 관리 (v4.6 — 로그인 + PIN 이중 게이트) ─────────
+const inviteList = document.getElementById('invite-list');
+
+function renderInviteCodes(rows) {
+  if (!inviteList) return;
+  if (!rows.length) {
+    inviteList.innerHTML = '<li class="mini muted">발급된 코드가 없어요 — [+ 새 코드]로 만들어보세요.</li>';
+    return;
+  }
+  inviteList.innerHTML = rows.map(r => `<li class="invite-row" data-code="${escapeHtml(r.code)}">
+    <code class="invite-code">${escapeHtml(r.code)}</code>
+    <span class="invite-meta">${escapeHtml(r.label || '')} · 기기 ${r.sessions}대</span>
+    <span class="invite-acts">
+      <button class="btn-secondary invite-copy" title="복사">복사</button>
+      <button class="btn-secondary invite-del" title="삭제">삭제</button>
+    </span>
+  </li>`).join('');
+}
+
+async function loadInviteCodes() {
+  if (!inviteList || !_pin) return;
+  try {
+    const d = await (await fetch('/api/auth/codes', { headers: { 'X-Admin-Pin': _pin } })).json();
+    if (d.ok) renderInviteCodes(d.codes || []);
+  } catch {}
+}
+
+document.getElementById('invite-new')?.addEventListener('click', async () => {
+  if (!_pin) return;
+  const label = prompt('코드 라벨 (예: 폰, 가족) — 비워도 돼요') ?? '';
+  try {
+    const d = await (await fetch('/api/auth/codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Pin': _pin },
+      body: JSON.stringify({ label }),
+    })).json();
+    if (d.ok) loadInviteCodes();
+    else settingsMsg.textContent = d.error || '코드 발급 실패';
+  } catch { settingsMsg.textContent = '네트워크 오류'; }
+});
+
+inviteList?.addEventListener('click', async (e) => {
+  const row = e.target.closest('.invite-row');
+  if (!row) return;
+  const code = row.dataset.code;
+  if (e.target.closest('.invite-copy')) {
+    try { await navigator.clipboard.writeText(code); e.target.textContent = '복사됨'; }
+    catch {}
+    setTimeout(() => { e.target.textContent = '복사'; }, 1500);
+    return;
+  }
+  if (e.target.closest('.invite-del')) {
+    const n = (row.querySelector('.invite-meta')?.textContent.match(/기기 (\d+)대/) || [])[1] || '0';
+    if (!confirm(`${code} 삭제할까요?\n이 코드로 로그인한 기기 ${n}대가 로그아웃됩니다.`)) return;
+    try {
+      const d = await (await fetch(`/api/auth/codes/${encodeURIComponent(code)}`, {
+        method: 'DELETE', headers: { 'X-Admin-Pin': _pin },
+      })).json();
+      if (d.ok) loadInviteCodes();
+      else settingsMsg.textContent = d.error || '삭제 실패';
+    } catch { settingsMsg.textContent = '네트워크 오류'; }
+  }
+});
 
 async function doSettingsSave() {
   const updates = {};

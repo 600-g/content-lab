@@ -94,7 +94,12 @@ class BackendError(Exception):
 
 def _http_get(path: str, params: dict | None = None) -> dict:
     qs = ("?" + urllib.parse.urlencode({k: v for k, v in (params or {}).items() if v not in (None, "")})) if params else ""
-    req = urllib.request.Request(BASE_URL + path + qs, headers={"Accept": "application/json", "User-Agent": "skill-library-mcp/1.0"})
+    headers = {"Accept": "application/json", "User-Agent": "skill-library-mcp/1.0"}
+    # v4.6 전체 잠금 — 초대코드로 발급받은 기기 토큰을 env 로 전달
+    token = os.environ.get("AISKILLBOX_TOKEN", "").strip()
+    if token:
+        headers["X-Auth-Token"] = token
+    req = urllib.request.Request(BASE_URL + path + qs, headers=headers)
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as r:
         return json.loads(r.read().decode("utf-8"))
 
@@ -122,7 +127,13 @@ def _http_error_json(e: urllib.error.HTTPError) -> Optional[dict]:
 
     None = 라이브러리 라우트가 없는 서버 (구버전 aiskillbox 의 Flask HTML 404 등)
     → 호출부가 로컬 인덱스 폴백을 탄다. JSON 으로 응답했다면 API 는 배포돼 있는 것.
+
+    예외: 401(로그인 필요) 은 JSON 이어도 None — AISKILLBOX_TOKEN 미설정/회수 기기는
+    이 Mac 의 로컬 인덱스 폴백으로 계속 동작한다 (v4.6 전체 잠금).
     """
+    if e.code == 401:
+        _log("HTTP 401 (초대코드 토큰 필요 — AISKILLBOX_TOKEN env) → 로컬 인덱스 폴백")
+        return None
     try:
         data = json.loads(e.read().decode("utf-8"))
     except Exception:  # noqa: BLE001

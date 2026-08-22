@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<meta name="robots" content="noindex">
+<title>aiskillbox · 입장</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.login-wrap { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.login-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; }
+.login-card .brand { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 6px; }
+.login-hint { font-size: 13px; color: var(--dim, #8b95a6); text-align: center; margin: 0; line-height: 1.6; }
+.login-code { text-align: center; letter-spacing: 0.12em; font-family: ui-monospace, Menlo, monospace;
+  text-transform: uppercase; font-size: 16px; }
+.login-admin { margin-top: 10px; text-align: center; }
+.login-admin > button.linklike { background: none; border: 0; color: var(--dim, #8b95a6);
+  font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+.login-admin .pin-row { display: none; margin-top: 10px; flex-direction: column; gap: 8px; }
+.login-admin.open .pin-row { display: flex; }
+.issued-code { display: none; margin-top: 8px; padding: 12px; border: 1px dashed var(--cyan, #6fe3ff);
+  font-family: ui-monospace, Menlo, monospace; font-size: 15px; letter-spacing: 0.1em; text-align: center;
+  color: var(--cyan, #6fe3ff); user-select: all; }
+</style>
+</head>
+<body>
+<div class="bg-fx" aria-hidden="true"></div>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <span class="brand-logo">🧠</span>
+      <span class="brand-name">aiskillbox</span>
+    </div>
+    <p class="login-hint">두근컴퍼니 스킬 도서관 — <b>초대코드</b>가 있어야 입장할 수 있어요.<br>
+      한 번 입력하면 이 기기는 자동으로 로그인돼요.</p>
+    <input id="code-input" class="search-input login-code" placeholder="DGN-XXXX-XXXX"
+           autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+    <p id="login-error" class="set-error" role="alert"></p>
+    <button id="enter-btn" class="btn-primary-full">입장</button>
+
+    <div id="admin-box" class="login-admin">
+      <button type="button" class="linklike" id="admin-toggle">관리자 첫 등록 (PIN)</button>
+      <div class="pin-row">
+        <input id="pin-input" class="search-input" type="password" placeholder="관리자 PIN"
+               autocomplete="off" inputmode="numeric">
+        <p id="pin-error" class="set-error" role="alert"></p>
+        <button id="bootstrap-btn" class="btn-primary-full">PIN 으로 등록 + 첫 코드 발급</button>
+        <div id="issued-code" class="issued-code"></div>
+        <p class="login-hint" id="issued-hint" style="display:none">
+          ↑ 다른 기기용 초대코드예요. 지금 복사해 두세요 (설정창에서도 다시 볼 수 있어요). 잠시 후 이동합니다…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var codeEl = document.getElementById('code-input');
+  var errEl = document.getElementById('login-error');
+  var pinEl = document.getElementById('pin-input');
+  var pinErrEl = document.getElementById('pin-error');
+  var sending = false;
+
+  function nextUrl() {
+    var next = new URLSearchParams(location.search).get('next') || '/';
+    // open redirect 방지 — 같은 사이트 경로만
+    if (next.charAt(0) !== '/' || next.indexOf('//') === 0) next = '/';
+    return next + location.hash;
+  }
+
+  async function post(url, body) {
+    var r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    var data = null;
+    try { data = await r.json(); } catch (_) {}
+    return { ok: r.ok && data && data.ok, data: data || {}, status: r.status };
+  }
+
+  async function redeem() {
+    if (sending) return;
+    var code = codeEl.value.trim().toUpperCase();
+    if (!code) { errEl.textContent = '초대코드를 입력해주세요'; return; }
+    sending = true; errEl.textContent = '';
+    var res = await post('/api/auth/redeem', { code: code });
+    sending = false;
+    if (res.ok) { location.replace(nextUrl()); return; }
+    errEl.textContent = (res.data && res.data.error) || '입장 실패 — 잠시 후 다시 시도해주세요';
+  }
+
+  async function bootstrap() {
+    if (sending) return;
+    var pin = pinEl.value.trim();
+    if (!pin) { pinErrEl.textContent = 'PIN 을 입력해주세요'; return; }
+    sending = true; pinErrEl.textContent = '';
+    var res = await post('/api/auth/bootstrap', { pin: pin });
+    sending = false;
+    if (!res.ok) {
+      pinErrEl.textContent = (res.data && res.data.error) || '등록 실패';
+      return;
+    }
+    var codeBox = document.getElementById('issued-code');
+    codeBox.textContent = res.data.code || '';
+    codeBox.style.display = 'block';
+    document.getElementById('issued-hint').style.display = 'block';
+    setTimeout(function () { location.replace(nextUrl()); }, 6000);
+  }
+
+  document.getElementById('enter-btn').addEventListener('click', redeem);
+  document.getElementById('bootstrap-btn').addEventListener('click', bootstrap);
+  document.getElementById('admin-toggle').addEventListener('click', function () {
+    document.getElementById('admin-box').classList.toggle('open');
+    if (document.getElementById('admin-box').classList.contains('open')) pinEl.focus();
+  });
+  // IME 조합 중 Enter 이중 전송 가드 (chat.js 패턴)
+  function enterGuard(el, fn) {
+    el.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+      e.preventDefault(); fn();
+    });
+  }
+  enterGuard(codeEl, redeem);
+  enterGuard(pinEl, bootstrap);
+  codeEl.focus();
+})();
+</script>
+</body>
+</html>

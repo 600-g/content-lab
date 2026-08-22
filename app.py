@@ -542,6 +542,14 @@ except Exception as _lib_err:  # noqa: BLE001
     log.warning("라이브러리 라우트 등록 실패 — 검색/카탈로그 비활성: %s", _lib_err)
 
 
+# ── 초대코드 인증 — v4.6 전체 잠금 ─────────────────────────
+# 의도적으로 try/except 없음: 게이트 등록이 실패하면 사이트가 무보호로 뜨는 것보다
+# 서버 기동 실패(healthz 죽음 → 112 모니터 감지)가 낫다.
+from scripts.auth_routes import register_auth  # noqa: E402
+
+register_auth(app, pin_ok=_pin_ok)
+
+
 # ── 시작 ─────────────────────────────────────────────────
 _load_jobs()
 _worker_thread = threading.Thread(target=_worker_loop, daemon=True, name="job-worker")
