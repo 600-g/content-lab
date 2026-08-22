@@ -16,4 +16,7 @@ logs/
 *.webm
 *.wav
 *.m4a
+
+# 스킬 임베딩 캐시 (재생성 가능)
+scripts/skills/embeddings.json
 .claude/worktrees/

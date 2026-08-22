@@ -219,12 +219,15 @@ function renderJobCard(item) {
   } else if (item.status === 'completed' && !r.skipped) {
     const web = r.notion_web_url || '';
     const app = web ? web.replace('https://', 'notion://') : '';
-    const links = web
+    const catalogUrl = r.catalog_url || (skill.name ? `/catalog#${encodeURIComponent(skill.name)}` : '');
+    const catalogLink = catalogUrl
+      ? `<a class="job-link" href="${escapeHtml(catalogUrl)}" target="_blank" rel="noopener">📚 카탈로그</a>` : '';
+    const notionLink = web
       ? `<a class="job-link" data-app="${escapeHtml(app)}" data-web="${escapeHtml(web)}"
             href="${escapeHtml(web)}" target="_blank" rel="noopener">📝 Notion</a>` : '';
     detail = `${title ? `<span class="job-title">${escapeHtml(title)}</span>` : ''}
               ${r.message_ko ? `<span class="job-note">${escapeHtml(r.message_ko)}</span>` : ''}
-              ${links}`;
+              ${catalogLink}${notionLink}`;
   } else if (item.status === 'completed' && r.skipped) {
     const fallbackNote = r.skip_kind === 'blocked' ? '수집할 수 없는 URL' : '이미 등록된 스킬';
     detail = `<span class="job-note">${escapeHtml(r.message_ko || fallbackNote)}</span>`;
@@ -368,6 +371,12 @@ async function loadHealth() {
     const pushEl = document.getElementById('health-push');
     if (pushEl) pushEl.textContent = d.push_configured
       ? `구독 ${d.push_subscriptions || 0}` : '미설정';
+    const libEl = document.getElementById('health-library');
+    if (libEl) {
+      const lib = d.library || {};
+      libEl.textContent = lib.total != null
+        ? `${lib.total}건 · 임베딩 ${lib.embedded ?? '-'}` : '비활성';
+    }
   } catch {}
 }
 document.getElementById('health-refresh')?.addEventListener('click', loadHealth);
@@ -439,6 +448,9 @@ function _renderRecentItem(item) {
   const notionLink = notionWeb
     ? `<a class="notion notion-deeplink" data-app="${escapeHtml(notionApp)}" data-web="${escapeHtml(notionWeb)}" href="${escapeHtml(notionWeb)}" target="_blank" rel="noopener">📝 Notion</a>`
     : '';
+  const catalogUrl = item.catalog_url || (item.skill_name ? `/catalog#${encodeURIComponent(item.skill_name)}` : '');
+  const catalogLink = catalogUrl
+    ? `<a href="${escapeHtml(catalogUrl)}" target="_blank" rel="noopener">📚 카탈로그</a>` : '';
   const originLink = item.url
     ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🔗 원본</a>` : '';
   return `<li>
@@ -448,7 +460,7 @@ function _renderRecentItem(item) {
       ${mergePill}
     </div>
     <div class="meta">${escapeHtml(cat)}${escapeHtml(item.ts || '')}</div>
-    <div class="actions">${notionLink}${originLink}</div>
+    <div class="actions">${catalogLink}${notionLink}${originLink}</div>
   </li>`;
 }
 
@@ -525,6 +537,7 @@ async function doPinAuth() {
     pinView.classList.add('hidden');
     fieldsView.classList.remove('hidden');
     renderSettingsFields(d.rows || []);
+    loadInviteCodes();
   } catch (e) {
     pinError.textContent = '네트워크 오류';
   } finally {
@@ -533,6 +546,70 @@ async function doPinAuth() {
 }
 pinSubmit?.addEventListener('click', doPinAuth);
 pinInput?.addEventListener('keydown', e => { if (e.key === 'Enter') doPinAuth(); });
+
+// ── 초대코드 관리 (v4.6 — 로그인 + PIN 이중 게이트) ─────────
+const inviteList = document.getElementById('invite-list');
+
+function renderInviteCodes(rows) {
+  if (!inviteList) return;
+  if (!rows.length) {
+    inviteList.innerHTML = '<li class="mini muted">발급된 코드가 없어요 — [+ 새 코드]로 만들어보세요.</li>';
+    return;
+  }
+  inviteList.innerHTML = rows.map(r => `<li class="invite-row" data-code="${escapeHtml(r.code)}">
+    <code class="invite-code">${escapeHtml(r.code)}</code>
+    <span class="invite-meta">${escapeHtml(r.label || '')} · 기기 ${r.sessions}대</span>
+    <span class="invite-acts">
+      <button class="btn-secondary invite-copy" title="복사">복사</button>
+      <button class="btn-secondary invite-del" title="삭제">삭제</button>
+    </span>
+  </li>`).join('');
+}
+
+async function loadInviteCodes() {
+  if (!inviteList || !_pin) return;
+  try {
+    const d = await (await fetch('/api/auth/codes', { headers: { 'X-Admin-Pin': _pin } })).json();
+    if (d.ok) renderInviteCodes(d.codes || []);
+  } catch {}
+}
+
+document.getElementById('invite-new')?.addEventListener('click', async () => {
+  if (!_pin) return;
+  const label = prompt('코드 라벨 (예: 폰, 가족) — 비워도 돼요') ?? '';
+  try {
+    const d = await (await fetch('/api/auth/codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Pin': _pin },
+      body: JSON.stringify({ label }),
+    })).json();
+    if (d.ok) loadInviteCodes();
+    else settingsMsg.textContent = d.error || '코드 발급 실패';
+  } catch { settingsMsg.textContent = '네트워크 오류'; }
+});
+
+inviteList?.addEventListener('click', async (e) => {
+  const row = e.target.closest('.invite-row');
+  if (!row) return;
+  const code = row.dataset.code;
+  if (e.target.closest('.invite-copy')) {
+    try { await navigator.clipboard.writeText(code); e.target.textContent = '복사됨'; }
+    catch {}
+    setTimeout(() => { e.target.textContent = '복사'; }, 1500);
+    return;
+  }
+  if (e.target.closest('.invite-del')) {
+    const n = (row.querySelector('.invite-meta')?.textContent.match(/기기 (\d+)대/) || [])[1] || '0';
+    if (!confirm(`${code} 삭제할까요?\n이 코드로 로그인한 기기 ${n}대가 로그아웃됩니다.`)) return;
+    try {
+      const d = await (await fetch(`/api/auth/codes/${encodeURIComponent(code)}`, {
+        method: 'DELETE', headers: { 'X-Admin-Pin': _pin },
+      })).json();
+      if (d.ok) loadInviteCodes();
+      else settingsMsg.textContent = d.error || '삭제 실패';
+    } catch { settingsMsg.textContent = '네트워크 오류'; }
+  }
+});
 
 async function doSettingsSave() {
   const updates = {};

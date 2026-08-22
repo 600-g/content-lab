@@ -1,0 +1,2 @@
+# 개발/테스트 전용 (운영 venv 에 없어도 됨 — tests/ 는 unittest 기반이라 `python -m unittest discover -s tests -t .` 로도 돈다)
+pytest>=8.0

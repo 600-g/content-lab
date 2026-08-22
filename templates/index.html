@@ -35,11 +35,15 @@
     <span class="brand-name">aiskillbox</span>
   </div>
   <div class="topbar-actions">
-    {% if notion.db_web %}
+    <a id="catalog-chip" class="chip" href="{{ catalog_url }}" target="_blank" rel="noopener"
+       title="스킬 카탈로그 (SKILL.md 도서관)">
+      <span>📚</span><span class="chip-label">카탈로그</span>
+    </a>
+    {% if notion_enabled and notion.db_web %}
     <a id="db-chip" class="chip" href="{{ notion.db_web }}"
        data-app="{{ notion.db_app }}" data-web="{{ notion.db_web }}"
-       target="_blank" rel="noopener" title="두근 스킬 DB">
-      <span>📚</span><span class="chip-label">DB</span>
+       target="_blank" rel="noopener" title="두근 스킬 DB (Notion)">
+      <span>📝</span><span class="chip-label">DB</span>
     </a>
     {% endif %}
     <button id="settings-toggle" class="icon-btn" aria-label="설정" title="설정">⚙️</button>
@@ -114,6 +118,15 @@
     <p id="settings-msg" class="set-msg"></p>
     <button id="settings-save" class="btn-primary-full">저장</button>
     <p class="mini muted">저장 즉시 적용돼요. 빈 칸은 기존 값을 유지해요.</p>
+
+    <div class="invite-box">
+      <div class="invite-head">
+        <b>🎟 초대코드</b>
+        <button id="invite-new" class="btn-secondary">+ 새 코드</button>
+      </div>
+      <ul id="invite-list" class="invite-list"></ul>
+      <p class="mini muted">코드 하나로 여러 기기를 등록할 수 있어요. 코드를 삭제하면 그 코드로 로그인한 기기가 전부 로그아웃돼요.</p>
+    </div>
   </div>
 </div>
 
@@ -142,7 +155,30 @@
       <p id="recent-empty" class="empty hidden">검색 결과 없음 또는 아직 수집된 스킬이 없어요.</p>
     </section>
 
-    {% if notion.db_app or notion.hub_app %}
+    <section class="drawer-section">
+      <h4>스킬 라이브러리</h4>
+      <div class="link-grid">
+        <a class="link-card" href="{{ catalog_url }}" target="_blank" rel="noopener">
+          <span class="link-icon">📚</span>
+          <span class="link-text">
+            <b>스킬 카탈로그</b>
+            <small>SKILL.md 도서관 — 검색·필터·복사</small>
+          </span>
+          <span class="link-chev">→</span>
+        </a>
+        <a class="link-card" href="/api/library/search?q=" target="_blank" rel="noopener"
+           id="library-api-link" title="에이전트용 검색 API">
+          <span class="link-icon">🔎</span>
+          <span class="link-text">
+            <b>검색 API / MCP</b>
+            <small>/api/library/search?q=… · MCP search_skills</small>
+          </span>
+          <span class="link-chev">→</span>
+        </a>
+      </div>
+    </section>
+
+    {% if notion_enabled and (notion.db_app or notion.hub_app) %}
     <section class="drawer-section">
       <h4>통합 Notion 페이지</h4>
       <div class="link-grid">
@@ -178,7 +214,10 @@
       <h4>시스템 상태</h4>
       <div class="health-grid">
         <div class="health-row"><span>Gemini API</span><span id="health-gemini" class="dot">⏳</span></div>
+        {% if notion_enabled %}
         <div class="health-row"><span>Notion API</span><span id="health-notion" class="dot">⏳</span></div>
+        {% endif %}
+        <div class="health-row"><span>라이브러리 인덱스</span><span id="health-library" class="muted">-</span></div>
         <div class="health-row"><span>잡 (처리/대기)</span><span id="health-jobs" class="muted">-</span></div>
         <div class="health-row"><span>알림 구독</span><span id="health-push" class="muted">-</span></div>
         <div class="health-row"><span>누적 수집</span><span id="health-recent" class="muted">-</span></div>

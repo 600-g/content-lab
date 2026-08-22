@@ -463,6 +463,8 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
         "merged": bool(analysis.raw.get("_is_merged")),
         "source_count": len(analysis.raw.get("_merged_source_urls") or [url]),
     }
+    # v4.5 스킬 라이브러리 — 카탈로그 딥링크 (mirror 에 저장된 순간부터 /api/library, /catalog 에서 검색 가능)
+    summary["catalog_url"] = f"/catalog#{analysis.skill_name}"
 
     # Hub 상단 카테고리별 목록 자동 동기화 (best-effort, 실패해도 잡은 성공 처리)
     if register_notion and notion_ok:
@@ -483,13 +485,26 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
 def main() -> int:
     parser = argparse.ArgumentParser(description="콘텐츠랩 v4.0 — URL → 스킬 자산화 (자동 합병)")
     parser.add_argument("url")
-    parser.add_argument("--no-notion", action="store_true")
+    notion_grp = parser.add_mutually_exclusive_group()
+    notion_grp.add_argument("--notion", action="store_true", help="Notion 등록 강제 (config 무관)")
+    notion_grp.add_argument("--no-notion", action="store_true", help="Notion 등록 생략 (config 무관)")
     parser.add_argument("--skip-duplicate", action="store_true")
     parser.add_argument("--log-level", default=os.getenv("LOG_LEVEL", "INFO"))
     args = parser.parse_args()
 
     setup_logging(args.log_level)
-    result = collect(args.url, register_notion=not args.no_notion, skip_duplicate=args.skip_duplicate)
+    # v4.5: 기본값은 config.json notion.register_on_collect (기본 False — SKILL.md 가 유일한 원본)
+    if args.notion:
+        register_notion = True
+    elif args.no_notion:
+        register_notion = False
+    else:
+        try:
+            from scripts import config_store
+            register_notion = bool(config_store.get("notion.register_on_collect", False))
+        except Exception:  # noqa: BLE001
+            register_notion = False
+    result = collect(args.url, register_notion=register_notion, skip_duplicate=args.skip_duplicate)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["ok"] else 1
 

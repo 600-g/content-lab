@@ -1,6 +1,6 @@
-# 두근컴퍼니 콘텐츠랩 v4.0
+# 두근컴퍼니 콘텐츠랩 v4.6
 
-URL → 스크래핑 → AI 분석 → ECC 표준 SKILL.md 생성 → 글로벌 설치 + Notion DB 등록.
+URL → 스크래핑 → AI 분석 → ECC 표준 SKILL.md 생성 → 글로벌 설치 → **스킬 라이브러리(검색 API · MCP · 카탈로그)** 에 즉시 등재. (Notion DB 등록은 v4.5 부터 옵션)
 
 좋은 콘텐츠를 한 번 보고 끝내지 않고, **스킬 자산**으로 영구 활용 가능한 형태로 보관한다.
 
@@ -25,7 +25,7 @@ cp .env.example .env
 python -m scripts.collect "https://youtu.be/<영상ID>"
 ```
 
-JSON 결과가 stdout에 출력되고, 글로벌 `~/.claude/skills/<slug>/SKILL.md` 생성 + Notion DB에 새 페이지 등록됨.
+JSON 결과가 stdout에 출력되고, 글로벌 `~/.claude/skills/<slug>/SKILL.md` + mirror `skills/<slug>/SKILL.md` 생성. mirror 에 저장되는 순간 라이브러리 검색/카탈로그에 잡힌다 (재인덱스 불필요).
 
 ---
 
@@ -44,7 +44,8 @@ python -m scripts.collect "https://example.notion.site/skill-doc"
 # GitHub 레포
 python -m scripts.collect "https://github.com/user/repo"
 
-# Notion 등록 없이 로컬만
+# Notion 등록 (v4.5 기본 off — config.json notion.register_on_collect) 강제 on/off
+python -m scripts.collect "<URL>" --notion
 python -m scripts.collect "<URL>" --no-notion
 
 # 기존 슬러그 덮어쓰기
@@ -58,8 +59,63 @@ python -m scripts.collect "<URL>" --overwrite
 | 위치 | 용도 |
 |------|------|
 | `~/.claude/skills/<slug>/SKILL.md` | 모든 Claude Code 세션이 자동 활성화 후보로 인식 |
-| `content-lab/skills/<slug>/SKILL.md` | Git 추적용 mirror (백업 + 협업) |
-| Notion DB | 모바일에서도 조회, 마스터 카탈로그 |
+| `content-lab/skills/<slug>/SKILL.md` | Git 추적용 mirror — **라이브러리 원본** (검색 인덱스·카탈로그·MCP 가 여기서 읽음) |
+| `https://aiskillbox.600g.net/catalog` | 사람용 카탈로그 (검색·출처/카테고리/등급/AI도구 필터·SKILL.md 복사·상세 모달). `#<slug>` 딥링크 |
+| `GET /api/library/search?q=…` | 에이전트용 하이브리드 검색 API (두근컴퍼니 FastAPI, aiskillbox 채팅 `search_library`) |
+| MCP `skill-library` | Claude Code · Cursor · Codex · 다른 클로드 계정 — 아래 "스킬 라이브러리" 참고 |
+| Notion DB | (옵션) `config.json` `notion.register_on_collect: true` 일 때만 등록 |
+
+---
+
+## 로그인 (v4.6 — 초대코드 전체 잠금)
+
+사이트 전체가 초대코드 로그인 필요 (`/login`, `/healthz` 만 공개). 코드 한 번 입력하면 그 기기는 영구 자동로그인.
+
+```bash
+# 첫 진입 (또는 전 기기 로그아웃 복구): 브라우저 /login → "관리자 첫 등록" 에 ADMIN_PIN
+# → 자동 로그인 + 첫 초대코드 발급 (다른 기기용으로 복사)
+
+# 터미널에서 코드 관리
+python -m scripts.auth_store create "폰"     # 발급
+python -m scripts.auth_store list             # 목록 (기기 수 포함)
+python -m scripts.auth_store delete DGN-....  # 삭제 = 그 코드 기기 전부 로그아웃
+
+# 에이전트/외부 MCP: redeem 응답의 token 을 env 로
+#   claude mcp add ... -e AISKILLBOX_URL=https://aiskillbox.600g.net -e AISKILLBOX_TOKEN=<token>
+# (이 Mac 의 MCP 는 토큰 없어도 로컬 인덱스 폴백으로 검색 동작)
+```
+
+설정창(⚙️, PIN)에도 초대코드 발급/삭제 UI 가 있어요.
+
+## 스킬 라이브러리 (도서관) — v4.5
+
+SKILL.md 가 유일한 원본. 노션 없이 "검색해서 꺼내 쓰는" 세 가지 입구:
+
+```bash
+# 1) 사람 — 카탈로그 (서버가 자동 생성, 정적 파일로도 뽑기 가능)
+open https://aiskillbox.600g.net/catalog            # 또는 http://localhost:5050/catalog
+python -m scripts.library build-catalog --out logs/catalog.html   # 단일 HTML 1.5MB, 어디서든 열림
+
+# 2) 에이전트 — HTTP (키워드 BM25 + Gemini 임베딩 코사인 → RRF 융합)
+curl -s "http://localhost:5050/api/library/search?q=인스타+릴스+대본&k=5" | python3 -m json.tool
+curl -s "http://localhost:5050/api/library/skills/<slug>?format=raw"      # SKILL.md 전문
+curl -s "http://localhost:5050/api/library/skills?category=자동화&grade=S"  # 목록(메타)
+curl -s "http://localhost:5050/api/library/stats"
+
+# 3) MCP — Claude Code (이 Mac)
+claude mcp add --scope user skill-library -- python3 /Users/600mac/Developer/my-company/content-lab/scripts/library/mcp_server.py
+#    외부 기기/다른 계정 (HTTP 만 사용, 표준 라이브러리라 venv 불필요)
+claude mcp add --scope user skill-library -e AISKILLBOX_URL=https://aiskillbox.600g.net -- python3 /path/to/mcp_server.py
+#    도구: search_skills(query,k,category) · get_skill(slug) · list_skills(category,grade)
+
+# 터미널 검색
+python -m scripts.library search "토큰 절약" -k 5
+python -m scripts.library stats
+```
+
+- 의미 검색은 `scripts/skills/embeddings.json`(dedup 용 캐시) 를 재활용. Gemini 키/쿼터가 없으면 자동으로 키워드만 (`semantic_used:false`).
+- aiskillbox 채팅에 "OO 스킬 있어?" 라고 물으면 `search_library` 도구가 먼저 돈다.
+- Notion 등록을 다시 켜려면 `config.json` → `"notion": {"register_on_collect": true}` (채팅 `write_config` 로도 가능).
 
 ---
 

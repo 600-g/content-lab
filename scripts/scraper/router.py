@@ -115,10 +115,19 @@ def _notion_auth_guard(url: str) -> Optional[ScrapeResult]:
     이 도메인의 페이지는 노션 계정 로그인 + 워크스페이스 멤버 권한이 있어야만 본문 접근 가능.
     Playwright 로 받혀도 generic landing HTML 만 떨어짐 → quota·시간 낭비 + 잡 실패.
     공개 share URL (`<slug>.notion.site/...`) 로 다시 받아오라고 안내.
+
+    예외 (2026-08-22, 실사고 8/19): `/p/<id>` 경로는 노션 '링크 복사'가 발급하는 **공개 공유
+    링크** — 비로그인 렌더 실측으로 본문이 정상 노출됨을 확인. 차단하지 않고 일반 스크랩
+    경로로 보낸다 (진짜 비공개는 web.py 의 DOM 실측 판별이 잡음, gotcha #24).
     """
     lower = url.lower()
     if "app.notion.com" not in lower and "www.notion.com" not in lower:
         return None
+    try:
+        if urlparse(url).path.startswith("/p/"):
+            return None
+    except Exception:  # noqa: BLE001
+        pass  # 파싱 실패 시 안전 디폴트는 차단
     return ScrapeResult(
         url=url,
         source_type="notion",
