@@ -1,4 +1,4 @@
-# 두근컴퍼니 콘텐츠랩 v4.5
+# 두근컴퍼니 콘텐츠랩 v4.6
 
 URL → 스크래핑 → AI 분석 → ECC 표준 SKILL.md 생성 → 글로벌 설치 → **스킬 라이브러리(검색 API · MCP · 카탈로그)** 에 즉시 등재. (Notion DB 등록은 v4.5 부터 옵션)
 
@@ -66,6 +66,26 @@ python -m scripts.collect "<URL>" --overwrite
 | Notion DB | (옵션) `config.json` `notion.register_on_collect: true` 일 때만 등록 |
 
 ---
+
+## 로그인 (v4.6 — 초대코드 전체 잠금)
+
+사이트 전체가 초대코드 로그인 필요 (`/login`, `/healthz` 만 공개). 코드 한 번 입력하면 그 기기는 영구 자동로그인.
+
+```bash
+# 첫 진입 (또는 전 기기 로그아웃 복구): 브라우저 /login → "관리자 첫 등록" 에 ADMIN_PIN
+# → 자동 로그인 + 첫 초대코드 발급 (다른 기기용으로 복사)
+
+# 터미널에서 코드 관리
+python -m scripts.auth_store create "폰"     # 발급
+python -m scripts.auth_store list             # 목록 (기기 수 포함)
+python -m scripts.auth_store delete DGN-....  # 삭제 = 그 코드 기기 전부 로그아웃
+
+# 에이전트/외부 MCP: redeem 응답의 token 을 env 로
+#   claude mcp add ... -e AISKILLBOX_URL=https://aiskillbox.600g.net -e AISKILLBOX_TOKEN=<token>
+# (이 Mac 의 MCP 는 토큰 없어도 로컬 인덱스 폴백으로 검색 동작)
+```
+
+설정창(⚙️, PIN)에도 초대코드 발급/삭제 UI 가 있어요.
 
 ## 스킬 라이브러리 (도서관) — v4.5
 

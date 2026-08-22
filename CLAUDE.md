@@ -4,8 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**aiskillbox** (콘텐츠랩 v4.5) — URL 한 줄 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
+**aiskillbox** (콘텐츠랩 v4.6) — URL 한 줄 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
 
+- **v4.6 전체 잠금**: 사이트 전체(수집 UI·카탈로그·라이브러리 API)가 초대코드 로그인 필요. 예외는 `/login`·`/healthz`(112 모니터)·`/static/*`·`/sw.js` 뿐. 첫 진입/복구는 `/login` 의 "관리자 첫 등록(PIN)". 설계: `docs/superpowers/specs/2026-08-22-invite-auth-design.md`
 - 카탈로그: https://aiskillbox.600g.net/catalog (`#<slug>` 딥링크) · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
 - 설계: `docs/superpowers/specs/2026-08-20-skill-library-design.md`
 
@@ -34,6 +35,11 @@ python -m py_compile app.py scripts/**/*.py
 launchctl kickstart -k "gui/$(id -u)/com.doogeun.aiskillbox"
 launchctl load -w ~/Library/LaunchAgents/com.doogeun.aiskillbox.plist
 tail -f logs/launchd_stdout.log
+
+# 초대코드 (v4.6 전체 잠금) — 발급/목록/삭제(삭제 = 그 코드 기기 전부 로그아웃)
+python -m scripts.auth_store create "폰" && python -m scripts.auth_store list
+# 첫 진입/전기기 로그아웃 복구: /login → "관리자 첫 등록" 에 ADMIN_PIN
+# 에이전트/외부 MCP 는 redeem 응답의 token 을 AISKILLBOX_TOKEN env 로
 
 # 스킬 라이브러리 (v4.5) — 검색 / 카탈로그 / MCP
 python -m scripts.library search "토큰 절약" -k 5          # 터미널 하이브리드 검색 (키 없으면 키워드만)
@@ -197,6 +203,9 @@ scripts/
                                           CLI: python -m scripts.library build-catalog|search|stats
     routes.py                       ──   Flask GET /api/library/search|skills|skills/<slug>(?format=raw)|stats, /catalog(+.html, 버전 캐시+ETag), CORS *
     mcp_server.py                   ──   stdio MCP (표준 라이브러리만). search_skills/get_skill/list_skills. AISKILLBOX_URL HTTP → 로컬 인덱스 폴백
+  auth_store.py                     ── v4.6 초대코드/기기토큰 저장소 (logs/auth.json 0600 — 코드 평문·토큰 해시,
+                                        cascade 회수, CLI create|list|delete)
+  auth_routes.py                    ── v4.6 전체 잠금 게이트(before_request, allowlist) + /login + /api/auth/redeem|bootstrap|codes
   chat/fixer.py                     ── v4.4 escalate_fix — fix 잡 생성/조회 (logs/fix_jobs.json), 러너 detached spawn
   chat/fix_runner.py                ── v4.4 fix 러너 (서버와 분리 프로세스). 스냅샷 → claude -p (기본 claude-sonnet-5,
                                         .env FIX_CLAUDE_MODEL override · ~/.claude-aibox 폴더 존재 시 CLAUDE_CONFIG_DIR
@@ -317,6 +326,8 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 31. **카탈로그/라이브러리는 LLM 산출물을 공개 도메인에 HTML 로 렌더한다 — XSS 면을 스스로 막아야 한다** (v4.5) — SKILL.md 본문은 스크랩한 웹페이지를 LLM 이 요약한 것이라 악성 페이지가 `<script>`/`onerror` 를 심을 수 있고, 같은 origin localStorage 에 채팅 PIN 세션 토큰이 있다. `catalog.py` 는 markdown 렌더 결과를 HTMLParser allowlist 로 sanitize (script/style/iframe 은 내용까지 제거, href 는 http(s)/# 만), 모든 속성은 `html.escape`, 엔진 `<script>` 만 CSP nonce 로 허용 (`default-src 'none'`). **카탈로그에 태그/속성을 새로 허용할 때는 `_ALLOWED_TAGS/_ALLOWED_ATTRS` 에만 추가하고 테스트 `test_xss_body_is_neutralized` 를 유지할 것.** API 쪽은 `index.redact_secrets` 가 키 모양 문자열을 인덱스 단계에서 마스킹한다 (API/카탈로그/MCP 공통).
 
+32-a. **전체 잠금(v4.6) allowlist 를 함부로 늘리지 말 것** — 게이트 예외는 `/login` · `/api/auth/redeem|bootstrap` · `/healthz` · `/static/*` · `/sw.js` · OPTIONS 뿐이다 (`scripts/auth_routes.py:_ALLOW_EXACT/_ALLOW_PREFIX`). 새 공개 엔드포인트가 필요하면 진짜 비밀이 없는지 확인 후 여기에만 추가. `register_auth` 는 **의도적으로 try/except 없이** 등록 — 게이트 실패 시 무보호로 뜨는 대신 기동 실패(healthz 죽음 → 112 감지). MCP/에이전트는 `AISKILLBOX_TOKEN` env (401 이면 MCP 는 로컬 인덱스 폴백). 전 기기 로그아웃 사고 복구 = `/login` 관리자 첫 등록(PIN) 또는 `python -m scripts.auth_store create`.
+
 32. **라이브러리 인덱스는 mirror(`skills/`)만 본다** — `~/.claude/skills/` 는 수동 설치 스킬 112건이 섞여 있어 검색 corpus 로 부적합 (origin 이 content-lab 인 79건만이 라이브러리). 수집 파이프라인은 두 곳에 동시에 쓰므로 mirror 만 읽어도 같은 내용. 손으로 `~/.claude/skills/<slug>/SKILL.md` 만 고치면 라이브러리엔 반영 안 됨 — mirror 도 같이 고치거나 채팅 `edit_skill_md` 사용.
 
 ## Related docs in this repo
@@ -361,6 +372,7 @@ URL 하나만 던지면:
 
 | 날짜 | 버전 | 변경 |
 |------|------|----------|
+| 2026-08-22 | v4.6 | **초대코드 전체 잠금 + 노션 '링크 복사' 오탐 근절.** ① 사이트 전체(수집 UI·카탈로그·라이브러리 API) 로그인 필요 — 두근컴퍼니 초대 패턴 축소판: 코드→기기 영구 토큰(계정 없음), 쿠키 자동로그인, 코드 삭제 = cascade 로그아웃. `auth_store.py`(코드 평문·토큰 해시, 0600) + `auth_routes.py`(게이트 allowlist, redeem 5회/5분 잠금, PIN bootstrap 으로 닭-달걀 해소). 설정창 초대코드 관리 UI, `/login` 픽셀 페이지. 무인증 공개였던 `/api/collect` 구멍 봉쇄. MCP `AISKILLBOX_TOKEN` + 401→로컬 폴백, CORS X-Auth-Token. 테스트 +23 (전체 71). ② **노션 오탐** — '링크 복사'가 발급하는 `app.notion.com/p/<id>` 공개 공유 링크가 도메인 가드에 차단되던 실사고(8/19, 3건) 수정: `/p/` 경로만 가드 예외, 비로그인 렌더 실측(블록 57/5개) + 실패 링크 2건 재스크랩 성공(1,786/1,800자) 검증. ③ MCP 가 구버전 서버(HTML 404)를 만나면 로컬 인덱스 폴백 (JSON envelope 판별). |
 | 2026-08-20 | v4.5 | **스킬 라이브러리(도서관) — SKILL.md 단일 원본, 노션 옵션 강등.** 바탕화면 `스킬박스고도화.zip`(두근 스킬카탈로그 킷) 설계를 이식해 "노션 말고 페이지 자체로 관리하고 필요할 때 꺼내 쓰는" 구조로 전환. ① `scripts/library/index.py` — `skills/*/SKILL.md` 79건을 frozen 레코드로 인덱스 (mtime 변경 자동 감지, 재인덱스 명령 불필요, 누락 frontmatter 11건 보정). ② `search.py` — 한글 2-gram BM25(필드 가중) + 기존 dedup 임베딩 캐시 77건 재활용 코사인 + RRF 융합. 실측 8/8 질의 1위 정답, 키워드 30ms / 하이브리드 ~500ms(Gemini 호출), 키 없으면 자동 키워드 폴백. ③ `routes.py` — `GET /api/library/search|skills|skills/<slug>|stats`, `/catalog` (두근컴퍼니 에이전트·외부 도구용, CORS *). ④ `mcp_server.py` — 표준 라이브러리만 쓰는 stdio MCP (Claude Code·Cursor·Codex·다른 계정), HTTP → 로컬 인덱스 폴백, 시스템 python3.9 검증. ⑤ `catalog.py` — 킷 단일 HTML 템플릿 이식: 출처/카테고리/등급/AI도구 칩, SKILL.md 복사, 상세 모달, `#slug` 딥링크, allowlist sanitizer + CSP nonce (#31). 79건 1.49MB, 헤드리스 크로미움 검증. ⑥ 채팅 `search_library` 도구 + 시스템 프롬프트. ⑦ **Notion 등록 기본 off** — `config.json notion.register_on_collect=false` (app 워커·CLI 기본값, `--notion`/`--no-notion` 우선, 채팅 `write_config` 로 토글). UI: 📚 카탈로그 칩/드로어/완료 카드 링크, Notion 칩·섹션·헬스는 `notion_enabled` 일 때만. `/healthz` `library{total,embedded}`. 테스트 47건 (unittest, 네트워크 0). 설계 스펙 `docs/superpowers/specs/2026-08-20-skill-library-design.md`. 보류: `~/.claude/skills/` 전부 설치 → MCP 검색만으로 전환 (별건). |
 | 2026-08-16 | v4.4.6 | **비공개 오탐 · 슬러그 오합병 · 조용한 데이터 누락 3종 근절.** ① **노션 비공개 오탐** — 판별 마커가 공개 페이지 렌더 결과에도 들어있어 실질 기준이 '텍스트 짧으면 비공개' 뿐이었고, `skip_reason` 이 재시도까지 차단해 렌더 지연 한 번에 공개 페이지가 영구 차단됐다 (실사고 8/11). 렌더 DOM 실측(`[data-block-id]` 0개 + '페이지 찾지 못함' 문구)으로 교체 — 4케이스 검증 통과. ② **UA 룰렛** — notion.site 는 Chrome UA 2종으로 goto 60s 타임아웃 + html=0, WebKit 2종만 정상. `NOTION_UA_POOL` 분리 + 회차별 UA 순환. ③ **trafilatura 부분 추출** — 짧으면 bs4/innerText 중 최장 채택 (311자 → 1180자 복구). ④ **슬러그 경로 합병 우회** — `find_global_by_slug` 히트가 모든 게이트를 건너뛰어 무관한 콘텐츠가 `untitled-skill` 하나로 합쳐졌다. `GENERIC_SLUGS` 영구 제외 + 슬러그 히트도 의미 게이트 통과 요구. ⑤ **합병 게이트 프롬프트** — 동일 문구만 맞추고 패러프레이즈를 놓쳤음 (실제 재수집은 항상 패러프레이즈). 재작성 후 동일 5/5 · 패러프레이즈 4/4 · 오합병 0/6. ⑥ **리터럴 개행** — LLM 이 개행을 `\n` 두 글자로 뱉어 본문이 한 줄이 되고 Notion 등록 전체가 400 (8/10 webswing 누락 원인). 원인 차단 + rich_text 100요소 가드. ⑦ **page_size 무페이지네이션 (영향 최대)** — 14개 스크립트가 DB 앞 50건만 보고 '전수 완료'로 출력, 69건 중 19건이 백업조차 없었다. `scripts/notion_paging.py` 단일 헬퍼로 통일 + 전량 재백업. **데이터 복구**: webswing 본문 복원 + Notion 재등록, `untitled-skill` 분해(주식 분석 스킬 복원 · Claude 60 노션 제목 오염 복구), origin/sources 누락 9건 백필, 오합병 3건 출처별 재수집 분리. |
 | 2026-08-09 | v4.4.5 | **중복/합병 파이프라인 전면 재점검 (v4.4.4 후속 — 놓친 구멍 4개 + 데이터 정리).** ① **Notion 중복 페이지 양산 버그** — `check_duplicate(url)` 이 새 URL 로만 조회해 합병(특히 의미 dedup)마다 새 페이지 생성 (실사고: 6개 스킬 × 2~6페이지, 교차 오염 1건 포함). collect.py 가 누적 출처 URL 전체 loop + 합병 케이스 한정 `find_by_title` 2차 안전망으로 조회. **기존 중복 10페이지 아카이브 + keeper 5페이지 로컬 최신본으로 재푸시** (77→67건, find-dupes 중복 0). ② **의미 dedup LLM 확인 게이트** — 전수 페어 계측에서 실질 동일(0.94+)과 같은 주제·다른 스킬(0.91~0.94)이 점수로 안 갈림 → 임계값 통과 후 `_confirm_semantic_merge` (로컬 Gemma yes/no) 확정, 실패 시 보수적 신규 등록. 검증: 진짜 중복 페어 True / 유사-다른 페어 False. ③ **슬러그 충돌 가드** — `~/.claude/skills/` 의 수동 설치(非 content-lab) 스킬과 슬러그 충돌 시 합병하면 그 스킬이 파괴됨 → frontmatter `origin: content-lab` 확인, 아니면 `-2` 접미사 신규 등록. 의미 dedup 후보 경로도 동일 가드. ④ **find_existing_by_url 을 sources 한정** — 본문 전체 URL 스캔이라 다른 스킬 본문의 참고 링크(github/nodejs 등)에 걸려 무관 스킬로 합병되던 false positive 차단. ⑤ merger 출처 누적을 정규화 URL 비교로 (fbclid 변형 중복 누적 방지). ⑥ **임베딩 캐시 전수 백필** 10→62건 — 의미 dedup 이 corpus 대부분을 못 보던 사각 해소. 부산물: 과거에 못 잡은 실중복 그룹 5개 발견 (meta-ads 2종 / context-prompting 3종 / claude-connectors 2종 / nvidia-api 2종 / claude-api 2종) — 자동 합병 보류, 사용자 승인 후 통폐합 예정. |
