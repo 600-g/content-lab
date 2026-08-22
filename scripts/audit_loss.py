@@ -16,6 +16,7 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from scripts.notion_paging import query_all_pages
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -79,8 +80,7 @@ def count_patterns(text: str) -> dict[str, int]:
 
 
 def main() -> int:
-    r = requests.post(f"{API}/databases/{DB_ID}/query", headers=H, json={"page_size": 50}).json()
-    pages = r.get("results", [])
+    pages = query_all_pages(API, H, DB_ID)
     print(f"📡 {len(pages)}건 점검\n")
     print(f"{'페이지':<46} | 코드블록 | 인라인 | 단축키 | 명령어 | URL")
     print("─" * 100)

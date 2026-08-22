@@ -18,6 +18,7 @@ import sys
 import requests
 from dotenv import load_dotenv
 from pathlib import Path
+from scripts.notion_paging import query_all_pages
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -174,8 +175,7 @@ def audit_page(p: dict) -> dict:
 
 
 def main() -> int:
-    r = requests.post(f"{API}/databases/{DB_ID}/query", headers=H, json={"page_size": 50}).json()
-    pages = r.get("results", [])
+    pages = query_all_pages(API, H, DB_ID)
     print(f"📡 {len(pages)}건 전수 검사\n")
 
     perfect = 0

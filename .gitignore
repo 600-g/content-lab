@@ -16,3 +16,4 @@ logs/
 *.webm
 *.wav
 *.m4a
+.claude/worktrees/
