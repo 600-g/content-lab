@@ -1,9 +1,10 @@
 """채팅용 Flask 엔드포인트. app.py 가 register_chat_routes(app) 으로 등록."""
 from __future__ import annotations
 
+import json
 import logging
 
-from flask import jsonify, request
+from flask import Response, jsonify, request, stream_with_context
 
 from scripts.chat import engine, history, safety
 
@@ -17,8 +18,10 @@ def register_chat_routes(app) -> None:
         return jsonify({
             "ok": True,
             "configured": safety.is_configured(),
-            "provider": prov,                       # anthropic | gemini | none
+            "provider": prov,                       # claude_cli | anthropic | gemini | ollama | none
             "key_present": prov != "none",
+            "model_label": engine.model_label(prov),
+            "streaming": True,
         })
 
     @app.route("/api/chat/pin", methods=["POST"])
@@ -35,11 +38,55 @@ def register_chat_routes(app) -> None:
         data = request.get_json(silent=True) or {}
         text = str(data.get("text", "")).strip()
         token = data.get("session_token") or None
+        conv_id = str(data.get("conv_id") or "") or None
         if not text:
             return jsonify({"ok": False, "error": "빈 메시지"}), 400
-        result = engine.chat_turn(text, session_token=token)
+        result = engine.chat_turn(text, session_token=token, conv_id=conv_id)
         status = 200 if result.get("ok") else 500
         return jsonify(result), status
+
+    @app.route("/api/chat/stream", methods=["POST"])
+    def chat_stream_route():
+        """실시간 채팅 — SSE. 한 줄씩 흘려서 '생각 중 → 도구 → 답변'이 즉시 보인다.
+
+        일반 fetch(POST) + ReadableStream 으로 읽는다 (EventSource 는 GET 전용이라 못 씀).
+        """
+        data = request.get_json(silent=True) or {}
+        text = str(data.get("text", "")).strip()
+        token = data.get("session_token") or None
+        conv_id = str(data.get("conv_id") or "") or None
+        if not text:
+            return jsonify({"ok": False, "error": "빈 메시지"}), 400
+
+        def gen():
+            # 프록시(CF 터널) 가 첫 바이트를 기다리며 버퍼링하지 않게 즉시 한 줄.
+            yield ": open\n\n"
+            try:
+                for ev in engine.chat_stream(text, session_token=token, conv_id=conv_id):
+                    yield "data: " + json.dumps(ev, ensure_ascii=False) + "\n\n"
+            except GeneratorExit:      # 클라이언트가 [중지] — 조용히 종료
+                raise
+            except Exception as e:     # noqa: BLE001
+                logger.exception("chat stream 실패")
+                yield "data: " + json.dumps(
+                    {"type": "error", "message": str(e)}, ensure_ascii=False) + "\n\n"
+
+        return Response(
+            stream_with_context(gen()),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
+    @app.route("/api/chat/reset", methods=["POST"])
+    def chat_reset():
+        """'새 대화' — CLI 세션을 끊어 다음 턴부터 맥락을 새로 시작."""
+        data = request.get_json(silent=True) or {}
+        conv_id = str(data.get("conv_id") or "") or None
+        return jsonify({"ok": True, "cleared": engine.forget_conversation(conv_id)})
 
     @app.route("/api/chat/history", methods=["GET"])
     def chat_history():

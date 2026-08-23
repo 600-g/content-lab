@@ -1,4 +1,4 @@
-# 두근컴퍼니 콘텐츠랩 v4.7
+# 두근컴퍼니 콘텐츠랩 v4.8
 
 URL → 스크래핑 → AI 분석 → ECC 표준 SKILL.md 생성 → 글로벌 설치 → **스킬 라이브러리(검색 API · MCP · 카탈로그)** 에 즉시 등재. (Notion DB 등록은 v4.5 부터 옵션)
 
@@ -60,7 +60,7 @@ python -m scripts.collect "<URL>" --overwrite
 |------|------|
 | `~/.claude/skills/<slug>/SKILL.md` | 모든 Claude Code 세션이 자동 활성화 후보로 인식 |
 | `content-lab/skills/<slug>/SKILL.md` | Git 추적용 mirror — **라이브러리 원본** (검색 인덱스·카탈로그·MCP 가 여기서 읽음) |
-| `https://aiskillbox.600g.net/catalog` | 사람용 카탈로그 (검색·출처/카테고리/등급/AI도구 필터·SKILL.md 복사·상세 모달). `#<slug>` 딥링크 |
+| `https://aiskillbox.600g.net/catalog` | 사람용 게시판 (검색·필터·카드/목록 전환). 제목 클릭 = 사이트 안 게시글 `/skill/<slug>` |
 | `GET /api/library/search?q=…` | 에이전트용 하이브리드 검색 API (두근컴퍼니 FastAPI, aiskillbox 채팅 `search_library`) |
 | MCP `skill-library` | Claude Code · Cursor · Codex · 다른 클로드 계정 — 아래 "스킬 라이브러리" 참고 |
 | Notion DB | (옵션) `config.json` `notion.register_on_collect: true` 일 때만 등록 |
@@ -86,6 +86,20 @@ python -m scripts.auth_store delete DGN-....  # 삭제 = 그 코드 기기 전�
 ```
 
 설정창(⚙️, PIN)에도 초대코드 발급/삭제 UI 가 있어요.
+
+## 운영 채팅 — v4.8 (Opus 5 · 실시간)
+
+우측 하단 💬 버튼. 자연어로 운영 상태 조회·설정 편집·SKILL.md 수정·코드 수정 위임까지 폰에서 끝낸다.
+
+- **실시간 스트리밍** — 답이 토큰 단위로 흐르고, 도구 실행(`recent_jobs` 등)이 진행 중에 그대로 보인다. [중지] 로 언제든 끊기.
+- **대화를 기억한다** — "아까 그거 다시", "그럼 그건 왜 실패했어?" 처럼 이어 말해도 된다. 맥락을 비우려면 [새 대화].
+- **모델** — 본계정 구독(claude CLI)의 **Opus 5**. 한도에 걸리면 CLI 가 Sonnet 5 로 자동 강등, 그마저 안 되면 로컬 Ollama.
+- **쓰기 명령은 PIN 1회** — 설정 변경·스킬 수정·코드 위임 등 mutating 도구만 해당. 30분 세션.
+
+```bash
+# 모델 바꾸기 (config.json)
+"chat": { "claude_model": "claude-opus-5", "claude_fallback_model": "claude-sonnet-5" }
+```
 
 ## 스킬 라이브러리 (도서관) — v4.5
 

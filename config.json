@@ -6,13 +6,20 @@
   "dedup": {
     "enabled": true,
     "threshold": 0.9,
-    "components": ["skill_title_ko", "callout", "ai_tools", "category"],
+    "components": [
+      "skill_title_ko",
+      "callout",
+      "ai_tools",
+      "category"
+    ],
     "top_k": 3,
     "cache_path": "scripts/skills/embeddings.json"
   },
   "ig_block": {
     "enabled": true,
-    "patterns": ["instagram.com/p/"]
+    "patterns": [
+      "instagram.com/p/"
+    ]
   },
   "notion": {
     "register_on_collect": false,
@@ -28,6 +35,9 @@
     "history_path": "inbox/chat_history.jsonl",
     "audit_path": "inbox/chat_audit.jsonl",
     "session_minutes": 30,
-    "max_input_chars": 12000
+    "max_input_chars": 12000,
+    "claude_model": "claude-opus-5",
+    "claude_fallback_model": "claude-sonnet-5",
+    "_note": "claude_model = 구독(claude CLI) 으로 쓰는 채팅 모델. 한도 도달 시 CLI 가 claude_fallback_model 로 자동 강등. model 은 ANTHROPIC_API_KEY 직결 경로 전용."
   }
 }

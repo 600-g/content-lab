@@ -257,8 +257,9 @@
 
   <div id="chat-log" class="chat-log" aria-live="polite">
     <div class="chat-msg system">
-      운영 채팅. 예: "최근 잡 보여줘", "dedup 임계값 0.85 로 올려줘",
+      운영 채팅 (Opus 5 · 실시간). 예: "최근 잡 보여줘", "dedup 임계값 0.85 로 올려줘",
       "스킬 중복 스캔 돌려줘", "인스타 스크랩 깨졌어 — 고쳐줘" (Claude Code 위임).
+      앞 대화를 기억하니 "아까 그거 다시" 처럼 이어 말해도 됩니다.
       쓰기 명령에는 [PIN 입력] 1회 인증.
     </div>
   </div>
@@ -269,7 +270,9 @@
               maxlength="12000"></textarea>
     <div class="chat-form-row">
       <button id="chat-send" type="submit">전송</button>
+      <button id="chat-stop" type="button" class="chat-secondary" hidden>■ 중지</button>
       <button id="chat-pin-btn" type="button" class="chat-secondary">PIN 입력</button>
+      <button id="chat-new" type="button" class="chat-secondary" title="맥락을 비우고 새로 시작">새 대화</button>
       <button id="chat-close-bottom" type="button" class="chat-secondary">나가기</button>
       <span id="chat-session-tag" class="chat-session-tag" hidden>🔓 세션 활성</span>
     </div>

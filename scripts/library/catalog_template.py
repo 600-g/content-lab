@@ -17,7 +17,8 @@ CSP = (
     "default-src 'none'; "
     "style-src 'unsafe-inline' https://cdn.jsdelivr.net; "
     "font-src https://cdn.jsdelivr.net; "
-    "img-src data:; "
+    "img-src 'self' data:; "
+    "manifest-src 'self'; "
     "script-src 'nonce-{nonce}'; "
     "base-uri 'none'; form-action 'none'"
 )
@@ -37,13 +38,19 @@ BASE_CSS = r"""
   --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --shadow-hard:4px 4px 0 rgba(0,0,0,.45); --shadow-hard-sm:3px 3px 0 rgba(0,0,0,.4);
   --glow-cyan:0 0 18px rgba(62,230,255,.22);
+  /* 노치/홈인디케이터 — viewport-fit=cover 를 쓰므로 필수 (메인 style.css 와 동일 규약) */
+  --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px); --safe-right:env(safe-area-inset-right,0px);
+  /* 스티키 스택 높이 — JS 가 실측해서 덮어쓴다 (필터바 top / 카드 scroll-margin) */
+  --topbar-h:52px; --bar-h:0px;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
 body{
   margin:0; font-family:var(--font-body); background:var(--bg); color:var(--text);
   min-height:100dvh; -webkit-font-smoothing:antialiased; letter-spacing:-.01em;
-  font-size:15px; line-height:1.65; position:relative; padding-bottom:60px;
+  font-size:15px; line-height:1.65; position:relative;
+  padding-bottom:calc(60px + var(--safe-bottom));
 }
 a{color:inherit}
 .bg-fx{
@@ -61,7 +68,9 @@ a{color:inherit}
 /* 톱바 */
 .topbar{
   position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between;
-  gap:12px; padding:10px 16px; background:rgba(5,7,13,.9);
+  gap:10px; min-height:52px; background:rgba(5,7,13,.9);
+  /* 노치/상태바 아래로 — standalone PWA 에서 톱바(= 유일한 뒤로가기)가 잘리던 문제 */
+  padding:calc(10px + var(--safe-top)) calc(16px + var(--safe-right)) 10px calc(16px + var(--safe-left));
   backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid var(--line);
 }
 .topbar::after{
@@ -77,9 +86,10 @@ a{color:inherit}
 }
 .topbar-actions{display:flex; align-items:center; gap:8px}
 .chip-link{
-  display:inline-flex; align-items:center; gap:6px; padding:6px 11px;
-  background:rgba(62,230,255,.08); border:1px solid rgba(62,230,255,.45); border-radius:var(--r-sm);
-  color:var(--cyan); text-decoration:none; font-size:12px; font-family:var(--font-pixel); letter-spacing:.06em;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:9px 13px;
+  min-height:40px; background:rgba(62,230,255,.08); border:1px solid rgba(62,230,255,.45);
+  border-radius:var(--r-sm); color:var(--cyan); text-decoration:none; font-size:12px;
+  font-family:var(--font-pixel); letter-spacing:.06em; touch-action:manipulation;
 }
 .chip-link:hover{background:rgba(62,230,255,.16); box-shadow:var(--glow-cyan)}
 .chip-link:active{transform:translate(1px,1px)}
@@ -97,6 +107,11 @@ a{color:inherit}
 .btn.primary:hover{filter:brightness(1.06)}
 .btn.primary:active{box-shadow:1px 1px 0 var(--cyan-deep)}
 .btn.done{background:var(--magenta); color:#2a0723; border-color:var(--magenta); box-shadow:3px 3px 0 #7a1668}
+.btn{touch-action:manipulation}
+@media(max-width:720px){
+  /* 손가락 탭 타겟 — 최소 40px (Apple HIG 44 에 근접) */
+  .btn{padding:10px 14px; font-size:13px; min-height:40px}
+}
 
 /* 등급/출처 뱃지 */
 .grade{
@@ -165,7 +180,7 @@ h1 .cursor{
 
 /* 필터바 */
 .bar{
-  position:sticky; top:52px; z-index:40; background:rgba(5,7,13,.92);
+  position:sticky; top:var(--topbar-h); z-index:40; background:rgba(5,7,13,.92);
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line); margin:0 0 22px; padding:10px 0;
 }
@@ -178,6 +193,16 @@ h1 .cursor{
 #q:focus{border-color:var(--cyan); box-shadow:var(--glow-cyan)}
 .count{font-family:var(--font-pixel); font-size:11.5px; color:var(--muted); white-space:nowrap}
 .count b{color:var(--cyan)}
+/* 필터 접기 — 모바일에서 칩 4줄이 첫 화면을 다 먹던 문제 */
+.fbtn{
+  display:none; align-items:center; gap:5px; padding:9px 11px; min-height:40px;
+  background:var(--surface-2); border:1px solid var(--line-strong); color:var(--text-soft);
+  border-radius:var(--r-sm); font-family:var(--font-pixel); font-size:11px; cursor:pointer;
+  touch-action:manipulation; white-space:nowrap;
+}
+.fbtn.active{background:var(--cyan); color:#04202b; border-color:var(--cyan)}
+.fbtn .fnum{font-family:var(--font-mono); font-size:10.5px}
+.filters{display:flex; flex-direction:column; gap:8px}
 .views{display:flex; gap:0}
 .vbtn{
   padding:8px 10px; background:var(--surface-2); border:1px solid var(--line-strong); color:var(--muted);
@@ -220,7 +245,7 @@ h1 .cursor{
 .card{
   background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
   padding:14px; display:flex; flex-direction:column; gap:7px; position:relative;
-  box-shadow:var(--shadow-hard-sm); scroll-margin-top:190px;
+  box-shadow:var(--shadow-hard-sm); scroll-margin-top:calc(var(--topbar-h) + var(--bar-h) + 14px);
   animation:rise .35s both; animation-delay:calc(var(--i,0)*14ms);
 }
 @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
@@ -263,7 +288,18 @@ body.view-list .sub .shead{margin-bottom:6px}
 .empty h3{color:var(--text); font-size:17px}
 @media(max-width:720px){
   .grid{grid-template-columns:1fr}
-  .bar{top:48px}
+  .hero{padding:18px 0 14px}
+  .tagline{font-size:13px}
+  .fbtn{display:inline-flex}
+  /* 기본은 접힘 — [필터] 로 펼친다 */
+  .filters{display:none}
+  .filters.open{display:flex}
+  .vbtn{padding:10px 12px; min-height:40px}
+  .schip,.chip,.gchip,.tchip{padding:8px 12px; font-size:12px; min-height:36px}
+  /* 목록 모드: 제목 줄 자체가 넉넉한 탭 영역이 되게 */
+  body.view-list .card{padding:12px 8px}
+  body.view-list .card h3{font-size:14px}
+  body.view-list .card h3 .tlink{display:block; padding:3px 0}
 }
 @media(max-width:560px){
   /* 검색창이 눌리지 않게 — 보기 전환/카운트는 아랫줄로 */
@@ -275,12 +311,38 @@ body.view-list .sub .shead{margin-bottom:6px}
 
 # ── 게시글 상세 ─────────────────────────────────────────────────
 PAGE_CSS = r"""
-.post{max-width:820px; margin:0 auto; padding:22px 16px 60px}
-.back{
-  display:inline-flex; align-items:center; gap:6px; font-family:var(--font-pixel); font-size:11px;
-  color:var(--muted); text-decoration:none; letter-spacing:.06em; margin-bottom:14px;
+.post{
+  max-width:820px; margin:0 auto;
+  padding:18px calc(16px + var(--safe-right)) calc(96px + var(--safe-bottom)) calc(16px + var(--safe-left));
 }
-.back:hover{color:var(--cyan)}
+/* 톱바 왼쪽 = 뒤로가기 (standalone PWA 는 브라우저 뒤로가기 버튼이 없다) */
+.back-chip{
+  background:var(--cyan); color:#04202b; border-color:var(--cyan);
+  box-shadow:3px 3px 0 var(--cyan-deep); font-weight:700;
+}
+.back-chip:hover{background:var(--cyan); filter:brightness(1.06); box-shadow:3px 3px 0 var(--cyan-deep)}
+.back-chip:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--cyan-deep)}
+.topbar .brand-name{font-size:12px}
+/* 스크롤 내려가면 뜨는 플로팅 뒤로가기 — 긴 글 끝에서 위로 안 올라가도 된다 */
+.fabs{
+  position:fixed; z-index:60; left:calc(14px + var(--safe-left)); right:calc(14px + var(--safe-right));
+  bottom:calc(14px + var(--safe-bottom)); display:flex; justify-content:space-between;
+  pointer-events:none; opacity:0; transform:translateY(14px); transition:opacity .18s, transform .18s;
+}
+.fabs.on{opacity:1; transform:none}
+.fabs.on > *{pointer-events:auto}
+.fab{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:46px;
+  padding:11px 16px; border-radius:999px; text-decoration:none; cursor:pointer;
+  font-family:var(--font-pixel); font-size:11.5px; letter-spacing:.06em;
+  background:var(--cyan); color:#04202b; border:1px solid var(--cyan);
+  box-shadow:var(--shadow-hard); touch-action:manipulation;
+}
+.fab.ghost{background:var(--surface-2); color:var(--text-soft); border-color:var(--line-strong)}
+.fab:active{transform:translate(2px,2px); box-shadow:1px 1px 0 rgba(0,0,0,.4)}
+/* 글 끝 — 다음 행동(목록/맨 위)을 손 닿는 곳에 */
+.post-end{display:flex; gap:8px; margin-top:30px; padding-top:18px; border-top:1px solid var(--line)}
+.post-end .btn{flex:1; justify-content:center; min-height:46px}
 .post h1{
   font-size:clamp(22px,4vw,32px); line-height:1.28; margin:0 0 10px; font-weight:800; letter-spacing:-.03em;
 }
@@ -368,6 +430,7 @@ function apply() {
   }
   cnt.textContent = n + '개';
   empty.classList.toggle('hidden', n > 0);
+  if (typeof refreshFbtn === 'function') refreshFbtn();
 }
 
 const qi = document.getElementById('q');
@@ -404,6 +467,91 @@ let saved = 'card';
 try { saved = localStorage.getItem(VIEW_KEY) || 'card'; } catch (_) {}
 setView(saved);
 
+/* 스티키 스택 실측 — 톱바/필터바 높이를 CSS 변수로 (하드코딩 52/48px 제거) */
+const topbarEl = document.querySelector('.topbar');
+const barEl = document.querySelector('.bar');
+function measureSticky() {
+  const r = document.documentElement.style;
+  if (topbarEl) r.setProperty('--topbar-h', Math.round(topbarEl.getBoundingClientRect().height) + 'px');
+  if (barEl) r.setProperty('--bar-h', Math.round(barEl.getBoundingClientRect().height) + 'px');
+}
+measureSticky();
+addEventListener('resize', measureSticky);
+addEventListener('orientationchange', () => setTimeout(measureSticky, 220));
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(measureSticky);
+  if (topbarEl) ro.observe(topbarEl);
+  if (barEl) ro.observe(barEl);
+}
+
+/* 필터 접기 (모바일) — 첫 화면을 칩 4줄이 먹지 않게 */
+const filtersEl = document.getElementById('filters');
+const fbtn = document.getElementById('fbtn');
+function activeFilterCount() {
+  return (src !== 'all' ? 1 : 0) + (dom ? 1 : 0) + (grade ? 1 : 0) + (tool ? 1 : 0);
+}
+function refreshFbtn() {
+  if (!fbtn) return;
+  const n = activeFilterCount();
+  fbtn.classList.toggle('active', n > 0);
+  fbtn.querySelector('.fnum').textContent = n ? ' ' + n : '';
+  fbtn.setAttribute('aria-expanded', filtersEl.classList.contains('open') ? 'true' : 'false');
+}
+if (fbtn && filtersEl) {
+  fbtn.addEventListener('click', () => {
+    filtersEl.classList.toggle('open');
+    refreshFbtn();
+    measureSticky();
+  });
+}
+
+/* 목록 ⇄ 글 왕복 — 검색어·필터·보기·스크롤 위치를 되살린다 (뒤로가기 체감의 핵심) */
+const STATE_KEY = 'aiskillbox-catalog-state';
+function saveState() {
+  try {
+    sessionStorage.setItem(STATE_KEY, JSON.stringify({
+      q: qi.value, src, dom, grade, tool,
+      list: document.body.classList.contains('view-list'),
+      y: window.scrollY, open: filtersEl ? filtersEl.classList.contains('open') : false,
+    }));
+  } catch (_) {}
+}
+function pressChip(sel, attr, value) {
+  if (!value) return;
+  for (const b of document.querySelectorAll(sel)) {
+    if (b.dataset[attr] === value) b.classList.add('on');
+    else b.classList.remove('on');
+  }
+}
+/* 목표 위치까지 여러 프레임에 걸쳐 되돌린다 — 첫 프레임엔 문서가 아직 짧아서
+   scrollTo 가 최대 스크롤로 잘린다 (실측: 1635 요청 → 1300 착지). */
+function restoreScroll(y, tries) {
+  tries = tries === undefined ? 12 : tries;
+  window.scrollTo({ top: y, behavior: 'auto' });   // html{scroll-behavior:smooth} 무시 — 복귀는 즉시
+  if (tries <= 0 || Math.abs(window.scrollY - y) < 4) return;
+  requestAnimationFrame(() => restoreScroll(y, tries - 1));
+}
+function restoreState() {
+  let st = null;
+  try { st = JSON.parse(sessionStorage.getItem(STATE_KEY) || 'null'); } catch (_) {}
+  if (!st) return false;
+  qi.value = st.q || '';
+  q = (st.q || '').trim().toLowerCase();
+  src = st.src || 'all'; dom = st.dom || null; grade = st.grade || null; tool = st.tool || null;
+  for (const b of document.querySelectorAll('.schip')) b.classList.toggle('on', b.dataset.src === src);
+  pressChip('.chip', 'dom', dom);
+  pressChip('.gchip', 'grade', grade);
+  pressChip('.tchip', 'tool', tool);
+  if (filtersEl && st.open) filtersEl.classList.add('open');
+  apply();
+  refreshFbtn();
+  if (typeof st.y === 'number' && st.y > 0 && !location.hash) restoreScroll(st.y);
+  return true;
+}
+addEventListener('pagehide', saveState);
+addEventListener('beforeunload', saveState);
+for (const a of document.querySelectorAll('.card a')) a.addEventListener('click', saveState);
+
 /* 이전 버전 딥링크(/catalog#slug) 호환 — 해당 글로 스크롤 + 강조 */
 function flashFromHash() {
   const slug = decodeURIComponent((location.hash || '').slice(1));
@@ -415,11 +563,67 @@ function flashFromHash() {
   setTimeout(() => card.classList.remove('flash'), 2600);
 }
 window.addEventListener('hashchange', flashFromHash);
-apply();
+if (!restoreState()) apply();
 flashFromHash();
+measureSticky();
 """
 
 PAGE_JS = r"""
+/* ── 뒤로가기 동선 ─────────────────────────────────────────
+   목록에서 들어왔으면 history.back() — 카탈로그의 스크롤/필터가 그대로 살아난다.
+   직접 링크로 들어왔거나 standalone PWA 첫 화면이면 /catalog 로 이동. */
+function cameFromCatalog() {
+  try {
+    if (!document.referrer) return false;
+    const u = new URL(document.referrer);
+    return u.origin === location.origin
+      && (u.pathname === '/catalog' || u.pathname === '/catalog.html');
+  } catch (_) { return false; }
+}
+function goBack(ev) {
+  if (ev) ev.preventDefault();
+  if (cameFromCatalog() && history.length > 1) history.back();
+  else location.href = '/catalog';
+}
+for (const el of document.querySelectorAll('[data-back]')) el.addEventListener('click', goBack);
+
+for (const el of [document.getElementById('to-top'), document.getElementById('to-top-fab')]) {
+  if (el) el.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+/* 조금이라도 내려가면 플로팅 [목록]/[위로] 노출 */
+const fabs = document.getElementById('fabs');
+let _fabTick = false;
+function syncFabs() {
+  _fabTick = false;
+  if (fabs) fabs.classList.toggle('on', window.scrollY > 260);
+}
+addEventListener('scroll', () => {
+  if (_fabTick) return;
+  _fabTick = true;
+  requestAnimationFrame(syncFabs);
+}, { passive: true });
+syncFabs();
+
+/* 왼쪽 가장자리 스와이프 → 목록 (PWA 에는 브라우저 뒤로가기 제스처가 없다).
+   코드블록/표의 가로 스크롤을 방해하지 않도록 시작 지점을 32px 이내로 제한. */
+(function edgeSwipeBack() {
+  let sx = null, sy = null, blocked = false;
+  addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { sx = null; return; }
+    const t = e.touches[0];
+    if (t.clientX > 32) { sx = null; return; }
+    sx = t.clientX; sy = t.clientY;
+    blocked = !!(e.target.closest && e.target.closest('pre, table, .md table'));
+  }, { passive: true });
+  addEventListener('touchend', (e) => {
+    if (sx === null || blocked) { sx = null; return; }
+    const t = e.changedTouches[0];
+    if (t.clientX - sx > 72 && Math.abs(t.clientY - sy) < 56) goBack();
+    sx = null;
+  }, { passive: true });
+})();
+
 const toast = document.getElementById('toast');
 let tt;
 function showToast(msg) {
@@ -457,10 +661,16 @@ CATALOG_PAGE = """<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="{csp}">
 <meta name="theme-color" content="#05070d">
 <meta name="robots" content="noindex">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="aiskillbox">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <title>{title}</title>
 {fonts}
 <style>{css}</style>
@@ -493,16 +703,19 @@ CATALOG_PAGE = """<!DOCTYPE html>
 <div class="bar"><div class="barin">
   <div class="search">
     <input id="q" placeholder="스킬 검색  ( / 포커스 · Esc 초기화 )" autocomplete="off">
+    <button class="fbtn" id="fbtn" type="button" aria-expanded="false" aria-controls="filters">필터<span class="fnum"></span></button>
     <div class="views">
       <button class="vbtn" data-view="card">카드</button>
       <button class="vbtn" data-view="list">목록</button>
     </div>
     <span class="count"><b id="cnt">{total}개</b></span>
   </div>
-  <div class="chips"><span class="lbl">출처</span><button class="schip on" data-src="all">전체</button>{source_chips}</div>
-  <div class="chips"><span class="lbl">카테고리</span>{category_chips}</div>
-  <div class="chips"><span class="lbl">등급</span>{grade_chips}</div>
-  <div class="chips"><span class="lbl">AI 도구</span>{tool_chips}</div>
+  <div class="filters" id="filters">
+    <div class="chips"><span class="lbl">출처</span><button class="schip on" data-src="all">전체</button>{source_chips}</div>
+    <div class="chips"><span class="lbl">카테고리</span>{category_chips}</div>
+    <div class="chips"><span class="lbl">등급</span>{grade_chips}</div>
+    <div class="chips"><span class="lbl">AI 도구</span>{tool_chips}</div>
+  </div>
 </div></div>
 
 <div class="wrap">
@@ -522,10 +735,16 @@ SKILL_PAGE = """<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="{csp}">
 <meta name="theme-color" content="#05070d">
 <meta name="robots" content="noindex">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="aiskillbox">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <title>{title} · 두근 스킬 도서관</title>
 {fonts}
 <style>{css}</style>
@@ -534,14 +753,13 @@ SKILL_PAGE = """<!DOCTYPE html>
 <div class="bg-fx" aria-hidden="true"></div>
 
 <header class="topbar">
-  <a class="brand" href="/"><span class="brand-logo">🧠</span><span class="brand-name">aiskillbox</span></a>
+  <a class="chip-link back-chip" href="/catalog" data-back>← 목록</a>
   <div class="topbar-actions">
-    <a class="chip-link" href="/catalog">📚 도서관</a>
+    <a class="brand" href="/"><span class="brand-logo">🧠</span><span class="brand-name">aiskillbox</span></a>
   </div>
 </header>
 
 <article class="post">
-  <a class="back" href="/catalog">← 목록으로</a>
   <h1>{title}</h1>
   <div class="pmeta">{meta_chips}</div>
   <p class="slugline">~/.claude/skills/{slug}/SKILL.md</p>
@@ -558,7 +776,17 @@ SKILL_PAGE = """<!DOCTYPE html>
     <div class="srcs">{sources_html}</div>
   </section>
   {related_html}
+
+  <div class="post-end">
+    <a class="btn primary" href="/catalog" data-back>← 목록으로</a>
+    <button class="btn" id="to-top" type="button">↑ 맨 위로</button>
+  </div>
 </article>
+
+<div class="fabs" id="fabs">
+  <a class="fab" href="/catalog" data-back>← 목록</a>
+  <button class="fab ghost" type="button" id="to-top-fab" aria-label="맨 위로">↑</button>
+</div>
 
 <pre id="raw-md" class="hidden">{raw_md}</pre>
 <div id="toast"></div>

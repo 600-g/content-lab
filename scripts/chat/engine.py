@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from typing import Optional
 
 import requests
@@ -92,6 +93,21 @@ def _provider_chain() -> list[str]:
         chain.append("claude_cli")
     chain.append("ollama")  # 로컬 최후 폴백 — 가용성은 호출 시 확인
     return chain
+
+
+def model_label(prov: Optional[str] = None) -> str:
+    """상태 표시용 모델 이름 (Opus 5 · Sonnet 5 …)."""
+    prov = prov or provider()
+    raw = {
+        "claude_cli": str(config_store.get("chat.claude_model", "claude-opus-5")),
+        "anthropic": str(config_store.get("chat.model", "claude-opus-4-8")),
+        "gemini": str(config_store.get("chat.gemini_model", "gemini-2.5-flash")),
+        "ollama": str(config_store.get("chat.ollama_model", "qwen3:4b")),
+    }.get(prov, "")
+    if not raw:
+        return ""
+    pretty = raw.replace("claude-", "").replace("-", " ").title()
+    return pretty.replace("Opus 5", "Opus 5").replace("Sonnet 5", "Sonnet 5")
 
 
 def provider() -> str:
@@ -375,22 +391,249 @@ def _cli_parse_envelope(stdout: str) -> tuple[dict | None, str]:
     return None, f"structured_output 없음: {json.dumps(env)[:300]}"
 
 
-def _loop_claude_cli(user_text: str, system: str, *, session_token: Optional[str],
-                     tool_log: list[dict]) -> dict:
-    import shutil as _sh
+# ── CLI 세션 (대화 이어가기) ──────────────────────────────────
+# `claude --resume <sid>` 는 CLI 가 대화 전체를 들고 있게 해준다. 효과 2가지:
+#   ① 멀티턴 — 이전 사용자 메시지/도구 결과를 우리가 다시 안 보내도 모델이 기억한다
+#      (전에는 매 요청이 무맥락 단발이라 "그거 다시 해줘" 같은 말이 안 통했다).
+#   ② 비용/속도 — 실측 cache_read 30,792 / cache_creation 201 (fresh 는 매번 ~20,700 생성).
+CLI_SESSIONS: dict[str, dict] = {}
+CLI_SESSION_TTL = 6 * 3600
+CLI_SESSION_MAX = 50
+_CLI_SESSION_LOCK = __import__("threading").Lock()
+_CONV_ID_RE = __import__("re").compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _conv_sid(conv_id: Optional[str]) -> Optional[str]:
+    if not conv_id or not _CONV_ID_RE.match(conv_id):
+        return None
+    now = time.time()
+    with _CLI_SESSION_LOCK:
+        rec = CLI_SESSIONS.get(conv_id)
+        if not rec:
+            return None
+        if now - rec["ts"] > CLI_SESSION_TTL:
+            CLI_SESSIONS.pop(conv_id, None)
+            return None
+        return rec["sid"]
+
+
+def _conv_remember(conv_id: Optional[str], sid: Optional[str]) -> None:
+    if not conv_id or not sid or not _CONV_ID_RE.match(conv_id):
+        return
+    now = time.time()
+    with _CLI_SESSION_LOCK:
+        CLI_SESSIONS[conv_id] = {"sid": sid, "ts": now}
+        if len(CLI_SESSIONS) > CLI_SESSION_MAX:
+            for k in sorted(CLI_SESSIONS, key=lambda k: CLI_SESSIONS[k]["ts"])[:-CLI_SESSION_MAX]:
+                CLI_SESSIONS.pop(k, None)
+
+
+def forget_conversation(conv_id: Optional[str]) -> bool:
+    """'새 대화' — 다음 턴부터 CLI 세션을 새로 판다."""
+    if not conv_id:
+        return False
+    with _CLI_SESSION_LOCK:
+        return CLI_SESSIONS.pop(conv_id, None) is not None
+
+
+# ── 스트리밍 파서 ────────────────────────────────────────────
+_JSON_ESC = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\", "/": "/", "b": "\b", "f": "\f"}
+
+
+def partial_reply(buf: str) -> str:
+    """미완성 JSON 조각에서 "reply" 값만큼만 뽑아낸다 (토큰 스트리밍용).
+
+    CLI 는 structured output 을 input_json_delta 로 흘린다 —
+    `{"args": {}, "reply": "안녕하` … 처럼 문자열 중간에서 끊긴다.
+    """
+    i = buf.find('"reply"')
+    if i < 0:
+        return ""
+    j = buf.find(":", i + 7)
+    if j < 0:
+        return ""
+    k = buf.find('"', j + 1)
+    if k < 0:
+        return ""
+    out: list[str] = []
+    p, n = k + 1, len(buf)
+    while p < n:
+        ch = buf[p]
+        if ch == "\\":
+            if p + 1 >= n:
+                break
+            nx = buf[p + 1]
+            if nx == "u":
+                if p + 6 > n:
+                    break
+                try:
+                    out.append(chr(int(buf[p + 2:p + 6], 16)))
+                except ValueError:
+                    pass
+                p += 6
+                continue
+            out.append(_JSON_ESC.get(nx, nx))
+            p += 2
+            continue
+        if ch == '"':
+            break
+        out.append(ch)
+        p += 1
+    return "".join(out)
+
+
+def cli_normalize(obj: dict) -> tuple[str, str, dict]:
+    """structured output → (reply, tool, args). 모델의 스키마 이탈을 흡수한다.
+
+    실측된 이탈 3종:
+      ① {"args": {"reply": "..."}}        — reply 를 args 안에 넣음 (답변이 통째로 유실됐다)
+      ② {"reply": "...", "tool": "StructuredOutput"} — tool 칸에 출력도구 이름을 적음
+      ③ {"tool": "recent_jobs", "limit": 3}          — 인자를 args 없이 top-level 로
+    """
+    if not isinstance(obj, dict):
+        return "", "", {}
+    reply = str(obj.get("reply") or "").strip()
+    tool = str(obj.get("tool") or "").strip()
+    args = dict(obj["args"]) if isinstance(obj.get("args"), dict) else {}
+    if not reply and isinstance(args.get("reply"), str):
+        reply = args.pop("reply").strip()
+    if not tool and isinstance(args.get("tool"), str):
+        tool = args.pop("tool").strip()
+    if tool and not args:
+        args = {k: v for k, v in obj.items() if k not in ("reply", "tool", "args")}
+    if tool and tool not in tools.REGISTRY:
+        if tool != "StructuredOutput":
+            logger.info("claude_cli 미등록 도구 무시: %s", tool)
+        tool = ""
+    return reply, tool, args
+
+
+def _cli_base_cmd(claude_bin: str, model: str, system_full: str, schema_str: str) -> list[str]:
+    return [
+        claude_bin,
+        "--model", model,
+        # 한도 도달/모델 거부 시 CLI 가 알아서 낮은 티어로 — 채팅이 죽지 않는다.
+        "--fallback-model", str(config_store.get("chat.claude_fallback_model", "claude-sonnet-5")),
+        "--setting-sources", "",   # 글로벌 설정/스킬 로드 차단 — 속도 + 한도 절약 (필수)
+        "--strict-mcp-config",     # 사용자 MCP 서버(노션/Gmail 등) 로드 차단 — 무관한 도구 오염 방지
+        "--disable-slash-commands",
+        "--append-system-prompt", system_full,
+        "--output-format", "stream-json",
+        "--include-partial-messages",
+        "--verbose",
+        "--json-schema", schema_str,
+    ]
+
+
+def _cli_run_round(cmd: list[str], user_turn: str, *, env: dict, resume_sid: Optional[str],
+                   on_delta=None) -> dict:
+    """CLI 1라운드 실행 (stream-json). {structured, err, sid, streamed}."""
     import subprocess
+    import threading
+
+    full = list(cmd)
+    if resume_sid:
+        full = [full[0], "--resume", resume_sid] + full[1:]
+    full += ["-p", user_turn]
+
+    proc = subprocess.Popen(
+        full, cwd=str(CLI_SANDBOX), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, encoding="utf-8", errors="replace", env=env, bufsize=1,
+    )
+    killer = threading.Timer(CLI_ROUND_TIMEOUT, proc.kill)
+    killer.start()
+
+    sid: Optional[str] = None
+    structured: Optional[dict] = None
+    err = ""
+    buf = ""          # input_json_delta 누적
+    sent = ""         # 이미 사용자에게 흘려보낸 reply 접두사
+    plain: list[str] = []   # 스키마 밖 순수 text delta (드묾)
+    try:
+        for line in proc.stdout:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+            except Exception:  # noqa: BLE001
+                continue
+            t = ev.get("type")
+            if t == "system" and ev.get("subtype") == "init":
+                sid = ev.get("session_id") or sid
+            elif t == "stream_event":
+                inner = ev.get("event") or {}
+                if inner.get("type") == "content_block_delta":
+                    d = inner.get("delta") or {}
+                    if d.get("type") == "input_json_delta":
+                        buf += d.get("partial_json") or ""
+                        if on_delta:
+                            grown = partial_reply(buf)
+                            if grown.startswith(sent) and len(grown) > len(sent):
+                                on_delta(grown[len(sent):])
+                                sent = grown
+                    elif d.get("type") == "text_delta":
+                        chunk = d.get("text") or ""
+                        plain.append(chunk)
+                        if on_delta and chunk:
+                            on_delta(chunk)
+                            sent += chunk
+            elif t == "result":
+                sid = ev.get("session_id") or sid
+                if ev.get("is_error"):
+                    err = str(ev.get("result") or ev.get("terminal_reason") or "unknown")[:300]
+                so = ev.get("structured_output")
+                if isinstance(so, dict):
+                    structured = so
+                elif isinstance(ev.get("result"), str):
+                    try:
+                        parsed = json.loads(ev["result"])
+                        if isinstance(parsed, dict):
+                            structured = parsed
+                    except Exception:  # noqa: BLE001
+                        pass
+        proc.wait(timeout=10)
+    finally:
+        killer.cancel()
+        if proc.poll() is None:
+            proc.kill()
+
+    if structured is None and not err:
+        tail = (proc.stderr.read() or "").strip()[-300:] if proc.stderr else ""
+        if proc.returncode and proc.returncode != 0:
+            err = f"claude CLI 종료 코드 {proc.returncode}: {tail or '(출력 없음)'}"
+        elif plain:
+            structured = {"reply": "".join(plain)}
+        else:
+            err = f"structured_output 없음 {tail}".strip()
+    return {"structured": structured, "err": err, "sid": sid, "streamed": sent,
+            "plain": "".join(plain).strip()}
+
+
+def _loop_claude_cli(user_text: str, system: str, *, session_token: Optional[str],
+                     tool_log: list[dict], conv_id: Optional[str] = None,
+                     on_event=None) -> dict:
+    import shutil as _sh
     claude_bin = _sh.which("claude") or "/opt/homebrew/bin/claude"
-    model = str(config_store.get("chat.claude_model", "claude-sonnet-5"))
+    model = str(config_store.get("chat.claude_model", "claude-opus-5"))
     CLI_SANDBOX.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     if "/opt/homebrew/bin" not in env.get("PATH", ""):
         env["PATH"] = "/opt/homebrew/bin:" + env.get("PATH", "")
+
+    def emit(ev: dict) -> None:
+        if on_event:
+            try:
+                on_event(ev)
+            except Exception:  # noqa: BLE001
+                pass
 
     tool_directive = (
         "너는 aiskillbox 운영 채팅 API 다. 자연어 설명·확인 예고·과정 서술 모두 금지. "
         "매 턴 정확히 다음 두 형태 중 하나로만 응답한다 (동시에 채우지 마라):\n"
         '  A) 도구 호출이 필요할 때 → {"tool": "<이름>", "args": {...}}  (reply 는 비운다)\n'
         '  B) 사용자에게 직접 답할 때 → {"reply": "<한국어 답변>"}  (tool·args 는 비운다)\n'
+        '"tool" 에는 아래 목록의 이름만 넣는다 — 답변만 할 때는 tool/args 를 아예 넣지 마라.\n'
         "\n사용 가능한 도구 (이 목록 밖 도구/명령 사용 금지):\n"
         f"{_cli_tool_catalog()}\n"
         "\n원칙:\n"
@@ -398,85 +641,73 @@ def _loop_claude_cli(user_text: str, system: str, *, session_token: Optional[str
         "  fix_status / get_settings 등).\n"
         "- 코드 수정이 필요하면 escalate_fix 호출. 그 전에 recent_jobs 로 실패 잡 확인 필수.\n"
         "- mutating 도구 호출 실패 사유가 'PIN' / '세션' 이면 그 즉시 reply 로 'PIN 1회 입력 필요' 만 짧게 안내.\n"
+        "- 이전 턴 대화를 기억하고 있다 — 사용자가 '아까 그거' 라고 하면 되묻지 말고 맥락에서 이어가라.\n"
         "- reply 는 한국어로 3-4문장 이하. 긴 dump 금지."
     )
     system_full = system + "\n\n" + tool_directive
-
-    transcript: list[str] = [f"[사용자] {user_text}"]
-    final_text = ""
     schema_str = json.dumps(_CLI_SCHEMA, ensure_ascii=False)
+    cmd = _cli_base_cmd(claude_bin, model, system_full, schema_str)
 
-    cmd = [
-        claude_bin,
-        "--model", model,
-        "--setting-sources", "",  # 글로벌 설정/스킬 로드 차단 — 속도 + 한도 절약 (필수)
-        "--disable-slash-commands",
-        "--append-system-prompt", system_full,
-        "--output-format", "json",
-        "--json-schema", schema_str,
-    ]
-
-    def _run_once(user_turn: str):
-        return subprocess.run(
-            cmd + ["-p", user_turn],
-            cwd=str(CLI_SANDBOX), capture_output=True, text=True,
-            timeout=CLI_ROUND_TIMEOUT, env=env,
-        )
+    sid = _conv_sid(conv_id)
+    turn = user_text if sid else (
+        "아래는 사용자의 요청이다. 스키마 준수 JSON 오브젝트 하나만 반환하라.\n\n"
+        f"[사용자] {user_text}"
+    )
+    final_text = ""
 
     for _round in range(MAX_ROUNDS):
-        user_turn = (
-            "이전 대화/도구 기록 (context):\n"
-            + "\n".join(transcript)
-            + "\n\n지금 스키마 준수 JSON 오브젝트 하나만 반환하라."
-        )
-        r = _run_once(user_turn)
-        if r.returncode != 0:
-            # 일시 오류(네트워크 등) 대비 1회 재시도. 한도 도달이면 재시도해도 같지만 비용 낮음.
-            r = _run_once(user_turn)
-        if r.returncode != 0:
-            # 실패 사유는 stderr 가 아니라 stdout envelope 에 있는 경우가 대부분
-            # (예: 사용 한도 도달). 둘 다 수집해 정확한 사유를 위로 올린다.
-            stderr = (r.stderr or "").strip()[-400:]
-            stdout_tail = (r.stdout or "").strip()[-400:]
-            reason = stderr or stdout_tail or "(출력 없음)"
-            try:
-                env_json = json.loads((r.stdout or "").strip())
-                reason = str(env_json.get("result") or env_json.get("terminal_reason") or reason)[:400]
-            except Exception:  # noqa: BLE001
-                pass
-            raise RuntimeError(f"claude CLI 종료 코드 {r.returncode}: {reason}")
+        emit({"type": "status", "text": "생각 중…" if _round == 0 else "이어서 정리 중…"})
+        res = _cli_run_round(cmd, turn, env=env, resume_sid=sid, on_delta=(
+            (lambda t: emit({"type": "delta", "text": t})) if on_event else None))
+        if res["err"] and res["structured"] is None and sid and "session" in res["err"].lower():
+            # 세션 파일이 사라졌거나 손상 — 맥락 없이 1회 재시도
+            logger.warning("claude_cli resume 실패 — 새 세션으로 재시도: %s", res["err"])
+            _conv_remember(conv_id, None)
+            with _CLI_SESSION_LOCK:
+                CLI_SESSIONS.pop(conv_id or "", None)
+            sid = None
+            if res["streamed"]:
+                emit({"type": "reset"})
+            res = _cli_run_round(cmd, turn, env=env, resume_sid=None, on_delta=(
+                (lambda t: emit({"type": "delta", "text": t})) if on_event else None))
 
-        obj, err = _cli_parse_envelope(r.stdout)
-        if obj is None:
-            logger.warning("claude_cli round %d 파싱 실패: %s", _round, err)
-            final_text = f"(CLI 응답 파싱 실패 — {err})"
-            break
+        sid = res["sid"] or sid
+        _conv_remember(conv_id, sid)
 
-        reply = str(obj.get("reply") or "").strip()
-        name = str(obj.get("tool") or "").strip()
-        # 도구 이름 없고 reply 만 있으면 최종 답변. 둘 다 채운 경우도 reply 우선 처리
-        # (스키마 강제가 top-level oneOf 를 못 쓰므로 방어).
+        if res["structured"] is None:
+            raise RuntimeError(res["err"] or "claude CLI 응답 없음")
+
+        reply, name, args = cli_normalize(res["structured"])
+        # 스키마 대신 일반 텍스트 블록으로 답한 라운드도 살린다.
+        if not reply and not name and res.get("plain"):
+            reply = res["plain"]
+        # reply 우선 — 모델이 둘 다 채워도 답이 있으면 그게 최종.
         if reply and not name:
             final_text = reply
             history.log_message("assistant", final_text, provider="claude_cli")
             break
-
         if not name:
             logger.warning("claude_cli round %d 응답 필드 누락 obj=%s",
-                           _round, json.dumps(obj, ensure_ascii=False)[:500])
-            final_text = reply or "(응답 필드 누락 — 재시도 필요)"
+                           _round, json.dumps(res["structured"], ensure_ascii=False)[:500])
+            final_text = reply or "(응답 필드 누락 — 다시 말씀해 주세요)"
             break
 
-        args = obj.get("args") or {}
-        if not isinstance(args, dict):
-            args = {}
-
+        if res["streamed"]:
+            emit({"type": "reset"})   # 도구 라운드였다 — 흘린 조각 취소
+        emit({"type": "tool", "phase": "start", "name": name})
         result = _dispatch_logged(name, args, session_token, tool_log)
-        transcript.append(f'[도구 호출] {name}({json.dumps(args, ensure_ascii=False)[:500]})')
-        transcript.append(f"[도구 결과] {json.dumps(result, ensure_ascii=False)[:6000]}")
+        emit({"type": "tool", "phase": "end", "name": name,
+              "ok": bool(result.get("ok")), "summary": _short_summary(result)})
+        turn = (
+            f"[도구 결과] {name} → "
+            f"{json.dumps(result, ensure_ascii=False)[:6000]}\n\n"
+            "이 결과를 바탕으로 다음 스키마 준수 JSON 하나만 반환하라 "
+            "(추가 도구가 필요하면 tool, 끝났으면 reply)."
+        )
     else:
         final_text = (final_text or "") + "\n\n(최대 호출 라운드 도달 — 더 작은 단위로 다시 요청해주세요)"
-    return {"ok": True, "reply": final_text or "(빈 응답)", "tool_calls": tool_log}
+    return {"ok": True, "reply": final_text or "(빈 응답)", "tool_calls": tool_log,
+            "conv_id": conv_id}
 
 
 # ── Ollama (로컬, 무제한 — 최후 폴백) ────────────────────
@@ -615,8 +846,13 @@ def _short_summary(result: dict) -> str:
     return ", ".join(parts)
 
 
-def chat_turn(user_text: str, *, session_token: Optional[str]) -> dict:
-    """1 사용자 메시지 → tool loop → 최종 응답 dict."""
+def chat_turn(user_text: str, *, session_token: Optional[str],
+              conv_id: Optional[str] = None, on_event=None) -> dict:
+    """1 사용자 메시지 → tool loop → 최종 응답 dict.
+
+    conv_id  : 대화 스레드 id — claude_cli 가 `--resume` 으로 맥락을 이어간다.
+    on_event : 스트리밍 콜백 (status/delta/tool/reset). None 이면 기존 동작 그대로.
+    """
     if not user_text or not user_text.strip():
         return {"ok": False, "error": "빈 메시지"}
     max_chars = int(config_store.get("chat.max_input_chars", 12000))
@@ -636,7 +872,10 @@ def chat_turn(user_text: str, *, session_token: Optional[str]) -> dict:
             last_err = "Ollama 미기동 (localhost:11434)"
             continue
         try:
-            result = loops[prov](user_text, system, session_token=session_token, tool_log=tool_log)
+            kw = {"session_token": session_token, "tool_log": tool_log}
+            if prov == "claude_cli":
+                kw.update({"conv_id": conv_id, "on_event": on_event})
+            result = loops[prov](user_text, system, **kw)
             result["provider"] = prov
             # 폴백 투명화 — Claude 실패 후 로컬 모델이 답한 경우 품질 저하 사유를 명시.
             if prov == "ollama" and claude_failed and result.get("reply"):
@@ -683,3 +922,49 @@ def chat_turn(user_text: str, *, session_token: Optional[str]) -> dict:
         "error": f"채팅 응답 실패 — {last_err}",
         "hint": " / ".join(hints) if hints else "잠시 후 다시 시도하거나 채팅창에서 상태를 확인해 주세요.",
     }
+
+
+# ── 실시간 스트리밍 ──────────────────────────────────────────
+def chat_stream(user_text: str, *, session_token: Optional[str] = None,
+                conv_id: Optional[str] = None):
+    """chat_turn 을 백그라운드로 돌리며 진행 이벤트를 순서대로 흘린다 (SSE 용).
+
+    이벤트: status(단계) · delta(응답 토큰) · reset(흘린 조각 취소) ·
+            tool(도구 시작/끝) · done(최종) · error · ping(연결 유지).
+    """
+    import queue
+    import threading
+
+    q: "queue.Queue" = queue.Queue()
+
+    def on_event(ev: dict) -> None:
+        q.put(ev)
+
+    def run() -> None:
+        try:
+            res = chat_turn(user_text, session_token=session_token,
+                            conv_id=conv_id, on_event=on_event)
+            if res.get("ok"):
+                q.put({"type": "done", "reply": res.get("reply", ""),
+                       "tool_calls": res.get("tool_calls") or [],
+                       "provider": res.get("provider", "")})
+            else:
+                q.put({"type": "error", "message": res.get("error", "응답 실패"),
+                       "hint": res.get("hint", "")})
+        except Exception as e:  # noqa: BLE001
+            logger.exception("chat_stream 실패")
+            q.put({"type": "error", "message": str(e)})
+        finally:
+            q.put(None)
+
+    threading.Thread(target=run, daemon=True).start()
+    while True:
+        try:
+            ev = q.get(timeout=10)
+        except Exception:  # noqa: BLE001  (queue.Empty)
+            yield {"type": "ping"}     # CF 터널/프록시 버퍼링 방지용 하트비트
+            continue
+        if ev is None:
+            break
+        yield ev
+

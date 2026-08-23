@@ -163,7 +163,8 @@ def _t_dedup_report() -> dict:
 def _t_list_skills(limit: int = 200) -> dict:
     if not GLOBAL_SKILLS_DIR.exists():
         return {"ok": True, "skills": []}
-    slugs = sorted([p.name for p in GLOBAL_SKILLS_DIR.glob("*/SKILL.md")])
+    # p.name 은 항상 "SKILL.md" — 슬러그는 부모 폴더명이다 (채팅이 슬러그를 못 읽던 버그).
+    slugs = sorted(p.parent.name for p in GLOBAL_SKILLS_DIR.glob("*/SKILL.md"))
     return {"ok": True, "total": len(slugs), "slugs": slugs[:max(1, int(limit))]}
 
 

@@ -103,8 +103,10 @@ class _Sanitizer(HTMLParser):
                 if not (low.startswith("http://") or low.startswith("https://") or low.startswith("#")):
                     continue
                 kept.append(f'href="{html.escape(v, quote=True)}"')
-                kept.append('target="_blank"')
-                kept.append('rel="noopener noreferrer"')
+                if not low.startswith("#"):
+                    # 같은 글 안 목차(#앵커)까지 새 탭으로 열리던 버그 — 외부 링크만 _blank.
+                    kept.append('target="_blank"')
+                    kept.append('rel="noopener noreferrer"')
                 continue
             kept.append(f'{name}="{html.escape(value, quote=True)}"')
         attr_s = (" " + " ".join(kept)) if kept else ""
@@ -144,8 +146,23 @@ def sanitize_html(fragment: str) -> str:
     return p.result()
 
 
+def close_open_fence(md_text: str) -> str:
+    """열려만 있고 안 닫힌 코드펜스(```)를 문서 끝에서 닫는다.
+
+    본문은 LLM 이 만든 SKILL.md — 프롬프트 블록 마지막 ``` 를 빠뜨리는 일이 있고,
+    그러면 python-markdown 이 펜스를 통째로 문단 텍스트로 흘려 프롬프트 전문이
+    벽글로 렌더된다 (실사고: iu-oh-hyuk-... 게시글).
+    """
+    if not md_text:
+        return md_text or ""
+    if len(_FENCE_RE.findall(md_text)) % 2 == 0:
+        return md_text
+    return md_text.rstrip("\n") + "\n```\n"
+
+
 def render_markdown(md_text: str) -> str:
     """markdown → sanitize 된 HTML. markdown 패키지 없으면 <pre> 이스케이프 폴백."""
+    md_text = close_open_fence(md_text)
     try:
         import markdown  # type: ignore
         raw_html = markdown.markdown(md_text or "", extensions=["tables", "fenced_code", "sane_lists"])
@@ -175,6 +192,7 @@ def _esc(s: str) -> str:
 
 _MD_MARK_RE = re.compile(r"\*\*|__|`")
 _CALLOUT_RE = re.compile(r"^💡\s*(.+?)\s*$", re.M)
+_FENCE_RE = re.compile(r"^\s*```", re.M)
 
 
 def plain_text(s: str) -> str:

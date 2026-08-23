@@ -1,5 +1,5 @@
 /**
- * aiskillbox 자가 운영 채팅 패널 (Opus 4.8).
+ * aiskillbox 자가 운영 채팅 패널 (Opus 5 · SSE 실시간 스트리밍).
  *
  * - 우측 플로팅 FAB → 사이드 패널 토글.
  * - PIN 0910 1회 입력 → 세션 토큰 localStorage 보관 (30분, 만료는 서버가 거부로 통보).
@@ -20,6 +20,8 @@
   const stateText = $("#chat-state-text");
   const stateDot = $("#chat-state-dot");
   const sessionTag = $("#chat-session-tag");
+  const stopBtn = $("#chat-stop");
+  const newBtn = $("#chat-new");
 
   if (!fab || !panel) return;
 
@@ -223,7 +225,7 @@
         stateDot.style.background = "#f59e0b";
         return;
       }
-      stateText.textContent = { claude_cli: "Sonnet 5 (구독) 대기", anthropic: "Opus 대기", gemini: "Gemini 2.5 대기", ollama: "로컬 qwen2.5 대기" }[j.provider] || "대기";
+      stateText.textContent = { claude_cli: (j.model_label || "Opus 5") + " · 실시간", anthropic: "Opus 대기", gemini: "Gemini 2.5 대기", ollama: "로컬 폴백 대기" }[j.provider] || "대기";
       stateDot.style.background = "#3ddc85";
     } catch (e) {
       stateText.textContent = "상태 조회 실패";
@@ -262,6 +264,61 @@
 
   let _sending = false; // 중복 전송 가드 (Enter 연타 / IME 이중 이벤트 / 전송 중 재클릭)
   let _pendingPinText = ""; // PIN 요구로 막힌 마지막 요청 — 인증 성공 시 자동 재전송
+  let _abort = null;        // 진행 중 스트림 중단용
+
+  // ── 대화 스레드 id ────────────────────────────────────────
+  // 서버가 이 키로 claude CLI 세션(--resume)을 이어준다 → "아까 그거" 가 통한다.
+  const CONV_KEY = "aiskillbox_chat_conv";
+  function convId() {
+    try {
+      let c = localStorage.getItem(CONV_KEY);
+      if (!c) {
+        c = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        localStorage.setItem(CONV_KEY, c);
+      }
+      return c;
+    } catch (_) {
+      return "c-nostorage";
+    }
+  }
+
+  async function newConversation() {
+    const old = convId();
+    try {
+      await fetch("/api/chat/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conv_id: old }),
+      });
+    } catch (_) {}
+    try { localStorage.removeItem(CONV_KEY); } catch (_) {}
+    convId();
+    appendMsg("system", "🆕 새 대화 — 이전 맥락을 비웠어요.");
+  }
+
+  function toolLine(tc) {
+    const li = document.createElement("li");
+    li.textContent = (tc.ok ? "✅ " : "⚠️ ") + tc.name + " — " + (tc.summary || "");
+    return li;
+  }
+
+  /** 스트리밍 답변 말풍선 — 상태줄 / 본문 / 도구목록 3층. */
+  function streamBubble() {
+    const div = document.createElement("div");
+    div.className = "chat-msg assistant";
+    const status = document.createElement("div");
+    status.className = "chat-stream-status";
+    status.textContent = "● 연결 중…";
+    const body = document.createElement("span");
+    body.className = "chat-stream-body";
+    const tools = document.createElement("ul");
+    tools.className = "chat-tool-list";
+    tools.hidden = true;
+    div.append(status, body, tools);
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+    return { div, status, body, tools };
+  }
 
   async function sendMessage(text) {
     if (_sending) return;
@@ -270,44 +327,127 @@
     appendMsg("user", text);
     input.value = "";
     sendBtn.disabled = true;
-    const placeholder = appendMsg("assistant", "…");
+    if (stopBtn) stopBtn.hidden = false;
+
+    const ui = streamBubble();
+    let acc = "";          // 지금까지 흘러온 답변
+    let toolCalls = [];
+    let atBottom = true;
+
+    const stick = () => {
+      // 사용자가 위로 올려 읽는 중이면 강제 스크롤하지 않는다.
+      if (atBottom) logEl.scrollTop = logEl.scrollHeight;
+    };
+    const onScroll = () => {
+      atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 60;
+    };
+    logEl.addEventListener("scroll", onScroll, { passive: true });
+
+    function handle(ev) {
+      switch (ev.type) {
+        case "status":
+          ui.status.textContent = "● " + ev.text;
+          break;
+        case "delta":
+          acc += ev.text;
+          ui.body.textContent = acc;
+          ui.status.textContent = "● 답하는 중…";
+          stick();
+          break;
+        case "reset":       // 흘린 조각이 도구 라운드였다 — 취소
+          acc = "";
+          ui.body.textContent = "";
+          break;
+        case "tool":
+          if (ev.phase === "start") {
+            ui.status.textContent = "🔧 " + ev.name + " 실행 중…";
+          } else {
+            toolCalls.push(ev);
+            ui.tools.hidden = false;
+            ui.tools.appendChild(toolLine(ev));
+            stick();
+          }
+          break;
+        case "done":
+          ui.status.remove();
+          ui.body.textContent = ev.reply || acc || "(빈 응답)";
+          if (ev.tool_calls && ev.tool_calls.length && !toolCalls.length) {
+            ui.tools.hidden = false;
+            for (const tc of ev.tool_calls) ui.tools.appendChild(toolLine(tc));
+          }
+          if ((ev.tool_calls || toolCalls).some((tc) => !tc.ok && /세션|PIN/.test(tc.summary || ""))) {
+            _pendingPinText = text;
+            appendMsg("system", "🔐 PIN 1회 입력이 필요해요. [PIN 입력] 버튼을 눌러주세요. 인증되면 방금 요청을 자동으로 다시 실행해요.");
+          }
+          stick();
+          break;
+        case "error":
+          ui.status.remove();
+          ui.body.textContent = "❌ " + (ev.message || "응답 실패") + (ev.hint ? "\n" + ev.hint : "");
+          break;
+        default:
+          break;      // ping 등
+      }
+    }
+
     try {
-      const token = getToken();
-      const r = await fetch("/api/chat/message", {
+      _abort = new AbortController();
+      const r = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, session_token: token }),
+        body: JSON.stringify({ text, session_token: getToken(), conv_id: convId() }),
+        signal: _abort.signal,
       });
-      const j = await r.json();
-      if (!j.ok) {
-        placeholder.textContent = "❌ " + (j.error || "응답 실패") + (j.hint ? "\n" + j.hint : "");
-      } else {
-        placeholder.textContent = j.reply || "(빈 응답)";
-        if (j.tool_calls && j.tool_calls.length) {
-          const ul = document.createElement("ul");
-          ul.className = "chat-tool-list";
-          for (const tc of j.tool_calls) {
-            const li = document.createElement("li");
-            li.textContent = (tc.ok ? "✅ " : "⚠️ ") + tc.name + " — " + (tc.summary || "");
-            ul.appendChild(li);
-          }
-          placeholder.appendChild(ul);
-        }
-        // 토큰 만료를 모델이 알린 경우 — 사용자 안내.
-        const needPin = (j.tool_calls || []).some(
-          (tc) => !tc.ok && /세션|PIN/.test(tc.summary || "")
-        );
-        if (needPin) {
-          _pendingPinText = text; // 인증 후 자동 재실행 대상으로 보관
-          appendMsg("system", "🔐 PIN 1회 입력이 필요해요. [PIN 입력] 버튼을 눌러주세요. 인증되면 방금 요청을 자동으로 다시 실행해요.");
+      if (!r.ok || !r.body) throw new Error("stream unavailable (" + r.status + ")");
+
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n\n")) >= 0) {
+          const chunk = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          if (!chunk.startsWith("data:")) continue;   // ": open" 주석 무시
+          try { handle(JSON.parse(chunk.slice(5).trim())); } catch (_) {}
         }
       }
+      if (ui.status.isConnected) {
+        // done 없이 끊김 — 흘러온 텍스트라도 살린다
+        ui.status.remove();
+        if (!acc) ui.body.textContent = "❌ 응답이 중간에 끊겼어요. 다시 시도해주세요.";
+      }
     } catch (e) {
-      placeholder.textContent = "❌ 네트워크 오류: " + e.message;
+      if (e && e.name === "AbortError") {
+        ui.status.remove();
+        ui.body.textContent = (acc ? acc + "\n\n" : "") + "■ 중지했어요.";
+      } else {
+        // 스트림 미지원/실패 → 기존 단발 API 로 폴백 (구버전 서버 호환)
+        try {
+          const r2 = await fetch("/api/chat/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, session_token: getToken(), conv_id: convId() }),
+          });
+          const j = await r2.json();
+          handle(j.ok
+            ? { type: "done", reply: j.reply, tool_calls: j.tool_calls || [] }
+            : { type: "error", message: j.error, hint: j.hint });
+        } catch (e2) {
+          ui.status.remove();
+          ui.body.textContent = "❌ 네트워크 오류: " + e2.message;
+        }
+      }
     } finally {
+      logEl.removeEventListener("scroll", onScroll);
+      _abort = null;
       _sending = false;
       sendBtn.disabled = false;
-      input.focus();
+      if (stopBtn) stopBtn.hidden = true;
+      if (!IS_NARROW()) input.focus();
     }
   }
 
@@ -323,6 +463,8 @@
     }
   });
   pinBtn.addEventListener("click", askPin);
+  if (stopBtn) stopBtn.addEventListener("click", () => { if (_abort) _abort.abort(); });
+  if (newBtn) newBtn.addEventListener("click", newConversation);
   form.addEventListener("submit", (ev) => {
     ev.preventDefault();
     sendMessage(input.value);

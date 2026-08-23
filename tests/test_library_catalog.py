@@ -220,3 +220,78 @@ class BuildCatalogFileTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MobileUxTest(unittest.TestCase):
+    """v4.8 모바일 — 확대 잠금 · safe-area · 뒤로가기 동선."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.root = make_mirror()
+        idx = lib_index.load_index(cls.root)
+        cls.catalog = cat.render_catalog(idx, nonce="n1")
+        cls.page = cat.render_skill_page(idx.records[0], idx, nonce="n2")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root, ignore_errors=True)
+
+    def test_pinch_zoom_locked_on_both_pages(self):
+        # 메인 사이트(templates/index.html) 와 같은 규약 — 확대/더블탭 줌 차단
+        for html_text in (self.catalog, self.page):
+            m = re.search(r'<meta name="viewport" content="([^"]+)"', html_text)
+            self.assertIsNotNone(m)
+            self.assertIn("maximum-scale=1", m.group(1))
+            self.assertIn("user-scalable=no", m.group(1))
+
+    def test_topbar_respects_safe_area(self):
+        # viewport-fit=cover 를 쓰므로 노치 아래로 내려야 함 (톱바 = 유일한 뒤로가기)
+        for html_text in (self.catalog, self.page):
+            self.assertIn("viewport-fit=cover", html_text)
+            self.assertIn("--safe-top:env(safe-area-inset-top,0px)", html_text)
+            self.assertIn("padding:calc(10px + var(--safe-top))", html_text)
+
+    def test_sticky_bar_uses_measured_height(self):
+        # 하드코딩 top:52px/48px 제거 — JS 실측값
+        self.assertIn("top:var(--topbar-h)", self.catalog)
+        self.assertNotIn("top:52px", self.catalog)
+        self.assertIn("--topbar-h", self.catalog)
+
+    def test_detail_has_multiple_back_affordances(self):
+        # 상세는 standalone PWA 에서 브라우저 뒤로가기가 없다 — 3곳 이상
+        self.assertGreaterEqual(self.page.count("data-back"), 3)
+        self.assertIn('class="chip-link back-chip"', self.page)
+        self.assertIn('class="fabs"', self.page)
+        self.assertIn('class="post-end"', self.page)
+        self.assertIn("function goBack", self.page)
+
+    def test_catalog_filters_collapsible(self):
+        self.assertIn('id="fbtn"', self.catalog)
+        self.assertIn('<div class="filters" id="filters">', self.catalog)
+
+    def test_catalog_restores_scroll_and_filters(self):
+        self.assertIn("aiskillbox-catalog-state", self.catalog)
+        self.assertIn("function restoreScroll", self.catalog)
+
+    def test_manifest_linked_for_pwa(self):
+        for html_text in (self.catalog, self.page):
+            self.assertIn('<link rel="manifest" href="/static/manifest.json">', html_text)
+            self.assertIn("manifest-src 'self'", html_text)
+
+
+class MarkdownRobustnessTest(unittest.TestCase):
+    def test_unclosed_code_fence_still_renders_as_code(self):
+        # LLM 이 마지막 ``` 를 빠뜨리면 프롬프트 전문이 벽글로 렌더되던 실사고
+        out = cat.render_markdown("설명\n\n```\nUse the uploaded photos\n")
+        self.assertIn("<pre><code>", out)
+        self.assertIn("Use the uploaded photos", out)
+
+    def test_balanced_fence_untouched(self):
+        src = "```\nx = 1\n```\n"
+        self.assertEqual(cat.close_open_fence(src), src)
+
+    def test_internal_anchor_stays_in_page(self):
+        # #앵커(목차) 까지 새 탭으로 열리던 버그
+        out = cat.sanitize_html('<a href="#step-2">2단계</a><a href="https://x.com">외부</a>')
+        self.assertNotIn('href="#step-2" target="_blank"', out)
+        self.assertIn('href="https://x.com" target="_blank"', out)
