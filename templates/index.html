@@ -56,35 +56,52 @@
 <main>
   <section class="hero">
     <h1>티끌 모아 태산</h1>
-    <p>URL 한 줄씩 모아 두근컴퍼니 영구 자산으로</p>
+    <p>URL 한 줄 · 붙여넣은 글 한 편씩 모아 두근컴퍼니 영구 자산으로</p>
   </section>
 
   <section class="collect-card">
+    <div class="mode-tabs" role="tablist" aria-label="입력 방식">
+      <button type="button" class="mode-tab on" id="mode-url"
+              role="tab" aria-selected="true" aria-controls="pane-url">🔗 링크</button>
+      <button type="button" class="mode-tab" id="mode-text"
+              role="tab" aria-selected="false" aria-controls="pane-text">✍️ 텍스트</button>
+    </div>
     <form id="collect-form" autocomplete="off">
-      <div class="input-wrap">
+      <div class="input-wrap" id="pane-url" role="tabpanel" aria-labelledby="mode-url">
         <input type="url" id="url" name="url"
                inputmode="url" enterkeyhint="go"
                autocapitalize="off" autocorrect="off" spellcheck="false"
-               placeholder="https://youtu.be/... · github.com/... · instagram.com/..."
-               required>
+               placeholder="https://youtu.be/... · github.com/... · instagram.com/...">
+      </div>
+      <div class="input-wrap text-wrap" id="pane-text" role="tabpanel"
+           aria-labelledby="mode-text" hidden>
+        <input type="text" id="text-title" class="text-title"
+               placeholder="제목 (선택 — 비우면 본문에서 자동 추출)" maxlength="200">
+        <textarea id="text-body" rows="8" maxlength="200000"
+                  placeholder="여기에 본문을 그대로 붙여넣으세요.&#10;로그인 벽 때문에 스크랩이 안 되는 ChatGPT 공유·인스타 캡션·뉴스레터도 이 방식이면 등록됩니다."></textarea>
+        <input type="url" id="text-origin" class="text-origin"
+               inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="원본 링크 (선택 — 출처로만 기록)">
+        <p class="mini muted" id="text-counter">0자 · 최소 200자</p>
       </div>
       <button type="submit" id="submit-btn">
         <span class="btn-label">수집 시작</span>
         <span class="btn-arrow">→</span>
       </button>
-      <p class="hint">💡 제출하면 입력칸이 바로 비워져요 · 계속 넣으면 <b>순차 처리</b> · 완료 시 알림</p>
+      <p class="hint" id="hint-url">💡 제출하면 입력칸이 바로 비워져요 · 계속 넣으면 <b>순차 처리</b> · 완료 시 알림</p>
+      <p class="hint" id="hint-text" hidden>💡 스크랩 없이 <b>바로 분석</b> · 같은 텍스트를 다시 넣으면 중복으로 잡혀요</p>
     </form>
   </section>
 
   <section class="job-queue">
     <h2 class="section-title">작업 큐</h2>
     <ul id="job-list" class="job-list"></ul>
-    <p id="job-empty" class="empty">아직 작업이 없어요. URL 을 넣어보세요.</p>
+    <p id="job-empty" class="empty">아직 작업이 없어요. URL 이나 텍스트를 넣어보세요.</p>
   </section>
 </main>
 
 <footer>
-  <p class="mini muted">AISKILLBOX v4.4 · 두근컴퍼니 콘텐츠랩</p>
+  <p class="mini muted">AISKILLBOX v4.9 · 두근컴퍼니 콘텐츠랩</p>
 </footer>
 
 <!-- 설정 모달 (PIN 보호) -->

@@ -32,10 +32,10 @@ ALLOWED_HEADINGS = [
 
 
 ANALYSIS_PROMPT_TEMPLATE = """너는 AI 스킬 백과사전을 만드는 수집 에이전트다.
-URL에서 읽은 원본 콘텐츠를 분석하여 노션 DB에 등록할 페이지 본문을 작성한다.
+원본 콘텐츠를 분석하여 노션 DB에 등록할 페이지 본문을 작성한다.
 
 [원본]
-- URL: {url}
+- 출처: {url}
 - 출처유형: {source_type}
 - 제목: {title}
 
@@ -169,11 +169,32 @@ body_md 안에 callout 을 다시 넣지 마라 — callout 은 별도 필드다
 """
 
 
+# 붙여넣기 입력은 웹페이지 스크랩과 성격이 다르다 — 원본 URL 이 없고, 사용자가 이미
+# 필요한 부분만 골라 온 상태다. 그 맥락을 프롬프트에 명시해야 LLM 이 "출처 링크를 넣어라"
+# 같은 헛일을 하지 않고, 제목도 본문에서 스스로 뽑는다.
+PASTE_CONTEXT = """
+[입력 방식] 사용자가 본문을 **직접 붙여넣었다** (웹 스크랩 아님).
+- 원본 URL 이 없으므로 출처 링크를 지어내지 마라. 출처 섹션은 "직접 입력한 텍스트" 로 둔다.
+- 위 '제목' 은 본문 첫 줄에서 기계적으로 뽑은 값이라 부정확할 수 있다.
+  본문 내용을 근거로 skill_title_ko 를 새로 지어라.
+- 사용자가 이미 필요한 부분만 골라 넣은 상태다. 분량이 웹페이지보다 짧아도
+  그 자체로 감점하지 말고, 담긴 내용의 실용성으로만 등급을 매겨라.
+"""
+
+
 def build_prompt(scrape_dict: dict) -> str:
     """ScrapeResult.to_dict() → 분석 프롬프트."""
-    return ANALYSIS_PROMPT_TEMPLATE.format(
-        url=scrape_dict["url"],
+    meta = scrape_dict.get("meta") or {}
+    is_paste = scrape_dict.get("source_type") == "text" or meta.get("input_kind") == "paste"
+    url = scrape_dict["url"]
+    # paste://<hash> 는 우리 내부 식별자다. 프롬프트에 그대로 노출하면 LLM 이 그걸
+    # 진짜 URL 로 착각해 본문에 [제목](paste://...) 죽은 링크를 박는다 (실측 확인).
+    if is_paste and str(url).startswith("paste://"):
+        url = "(직접 입력한 텍스트 — 원본 링크 없음)"
+    base = ANALYSIS_PROMPT_TEMPLATE.format(
+        url=url,
         source_type=scrape_dict["source_type"],
         title=scrape_dict.get("title", "") or "(제목 없음)",
         text=(scrape_dict.get("text") or "")[:150000],
     )
+    return base + PASTE_CONTEXT if is_paste else base

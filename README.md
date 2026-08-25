@@ -1,6 +1,6 @@
-# 두근컴퍼니 콘텐츠랩 v4.8
+# 두근컴퍼니 콘텐츠랩 v4.9
 
-URL → 스크래핑 → AI 분석 → ECC 표준 SKILL.md 생성 → 글로벌 설치 → **스킬 라이브러리(검색 API · MCP · 카탈로그)** 에 즉시 등재. (Notion DB 등록은 v4.5 부터 옵션)
+URL(또는 붙여넣은 텍스트) → 스크래핑 → AI 분석 → ECC 표준 SKILL.md 생성 → 글로벌 설치 → **스킬 라이브러리(검색 API · MCP · 카탈로그)** 에 즉시 등재. (Notion DB 등록은 v4.5 부터 옵션)
 
 좋은 콘텐츠를 한 번 보고 끝내지 않고, **스킬 자산**으로 영구 활용 가능한 형태로 보관한다.
 
@@ -50,7 +50,18 @@ python -m scripts.collect "<URL>" --no-notion
 
 # 기존 슬러그 덮어쓰기
 python -m scripts.collect "<URL>" --overwrite
+
+# 텍스트 직접 입력 (v4.9) — 스크랩이 안 되는 출처용. 최소 200자
+#   ChatGPT 공유·GPT 링크, 인스타 피드, 로그인 벽 뉴스레터, 워크스페이스 전용 노션
+python -m scripts.collect --text-file ./본문.md --title "제목"
+pbpaste | python -m scripts.collect --text -
+
+# 본문만 손으로 옮겼고 원본 링크는 남기고 싶을 때 — 그 URL 이 출처가 된다
+python -m scripts.collect "https://chatgpt.com/share/abc" --text-file ./본문.md
 ```
+
+웹 UI 는 메인 폼의 **[✍️ 텍스트] 탭**에서 같은 일을 한다. 링크 입력칸에 본문을 붙여넣어도
+자동으로 텍스트 탭으로 넘어간다.
 
 ---
 

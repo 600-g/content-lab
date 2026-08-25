@@ -131,6 +131,7 @@ a{color:inherit}
 .s-instagram{background:rgba(255,194,51,.16); color:var(--amber)}
 .s-web{background:rgba(182,240,77,.14); color:var(--lime)}
 .s-tiktok,.s-twitter{background:rgba(62,230,255,.14); color:var(--cyan)}
+.s-text{background:rgba(167,139,250,.18); color:#c4b5fd}
 .date{font-family:var(--font-mono); font-size:11px; color:var(--muted)}
 
 /* 토스트 */

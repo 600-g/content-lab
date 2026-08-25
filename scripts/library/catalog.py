@@ -56,8 +56,13 @@ CATEGORY_BLURB = {
 }
 SOURCE_LABEL = {
     "youtube": "유튜브", "notion": "노션", "github": "깃허브", "instagram": "인스타그램",
-    "tiktok": "틱톡", "twitter": "X", "web": "웹",
+    "tiktok": "틱톡", "twitter": "X", "web": "웹", "text": "직접 입력",
 }
+
+
+def _is_paste(u: str) -> bool:
+    """paste:// 출처 — 클릭 가능한 외부 링크로 렌더하면 죽은 링크가 된다."""
+    return str(u or "").startswith("paste://")
 GRADE_LABEL = {"S": "S · 필수", "A": "A · 추천", "B": "B · 참고", "C": "C · 보류", "": "미평가"}
 
 # ── HTML sanitize (allowlist) ───────────────────────────────────
@@ -216,10 +221,11 @@ def _source_badge(src_type: str) -> str:
 
 
 def _origin_button(r: SkillRecord, cls: str = "btn ext") -> str:
-    """유일한 외부 이탈 링크 — 출처가 없으면 버튼 자체를 안 만든다."""
-    if not r.sources:
+    """유일한 외부 이탈 링크 — 출처가 없거나 붙여넣기면 버튼 자체를 안 만든다."""
+    ext = [u for u in r.sources if not _is_paste(u)]
+    if not ext:
         return ""
-    return (f'<a class="{cls}" href="{_esc(r.sources[0])}" target="_blank" '
+    return (f'<a class="{cls}" href="{_esc(ext[0])}" target="_blank" '
             f'rel="noopener noreferrer">원본 ↗</a>')
 
 
@@ -370,7 +376,9 @@ def render_skill_page(rec: SkillRecord, index: LibraryIndex, *, nonce: str | Non
     chips += [f'<span class="tag">{_esc(t)}</span>' for t in rec.ai_tools]
     chips.append(f'<span class="date">{_esc(rec.updated_date)}</span>')
     sources_html = "".join(
-        f'<a href="{_esc(u)}" target="_blank" rel="noopener noreferrer">{_esc(u)}</a>' for u in rec.sources
+        f'<span class="tag">✍️ 직접 입력한 텍스트</span>' if _is_paste(u)
+        else f'<a href="{_esc(u)}" target="_blank" rel="noopener noreferrer">{_esc(u)}</a>'
+        for u in rec.sources
     ) or '<span class="tag">출처 정보 없음</span>'
     return T.SKILL_PAGE.format(
         csp=T.CSP.format(nonce=nonce),

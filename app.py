@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import queue
+import re
 import threading
 import time
 import uuid
@@ -34,6 +35,7 @@ except ImportError:
 from scripts import push as push_mod
 from scripts import settings_store
 from scripts.collect import collect
+from scripts.scraper import plain_text
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 RECENT_FILE = PROJECT_ROOT / "logs" / "recent.json"
@@ -93,6 +95,9 @@ def _load_jobs() -> None:
                 j["error"] = "서버 재시작으로 중단됨. 다시 시도해주세요."
                 if not j.get("done_at"):
                     j["done_at"] = time.time()
+                # interrupted 는 재투입 대상이 아니다 (_requeue_pending 는 queued 만).
+                # 붙여넣기 본문을 계속 들고 있어봐야 jobs.json 만 불린다.
+                j.pop("text", None)
             JOBS[jid] = j
         log.info("JOBS 복원: %d건", len(JOBS))
     except Exception as e:  # noqa: BLE001
@@ -147,7 +152,11 @@ def _push_for_job(job: dict) -> None:
     try:
         r = job.get("result") or {}
         skill = r.get("skill") or {}
-        name = skill.get("title") or skill.get("name") or job.get("url", "")
+        # 붙여넣기 잡은 url 이 없거나 paste://<hash> 라 알림에 그대로 쓰면 못 알아본다.
+        fallback = job.get("label") or job.get("url", "")
+        if str(fallback).startswith("paste://"):
+            fallback = "붙여넣은 텍스트"
+        name = skill.get("title") or skill.get("name") or fallback
         if job.get("status") == "failed":
             title = "aiskillbox · ❌ 실패"
             body = r.get("error_ko") or job.get("error") or "오류가 발생했어요"
@@ -185,19 +194,30 @@ def _run_job(job_id: str) -> None:
         if not job:
             return
         url = job["url"]
+        text = job.get("text") or ""
+        title = job.get("title") or ""
         job["status"] = "running"
-        job["stage"] = "scraping"
+        job["stage"] = "텍스트 분석" if text else "scraping"
         _save_jobs()
     try:
         # v4.5: SKILL.md 가 유일한 원본 — Notion 등록은 config 옵션 (기본 off).
-        summary = collect(url, register_notion=_notion_enabled(), skip_duplicate=False)
+        summary = collect(
+            url, text=text, title=title,
+            register_notion=_notion_enabled(), skip_duplicate=False,
+        )
         with JOBS_LOCK:
             j = JOBS.get(job_id)
             if j is not None:
                 j["status"] = "completed" if summary.get("ok") else "failed"
                 j["result"] = summary
                 j["done_at"] = time.time()
+                # 본문 원문은 SKILL.md 에 남으므로 잡에 계속 들고 있을 이유가 없다.
+                # 200건 × 최대 200KB 가 jobs.json 에 쌓이는 걸 막는다.
+                j.pop("text", None)
+                if summary.get("url"):
+                    j["url"] = summary["url"]
             _save_jobs()
+        url = summary.get("url") or url
         if summary.get("ok") and not summary.get("skipped"):
             skill = summary.get("skill", {})
             web = summary.get("notion_web_url", "")
@@ -224,6 +244,7 @@ def _run_job(job_id: str) -> None:
                 j["status"] = "failed"
                 j["error"] = str(e)
                 j["done_at"] = time.time()
+                j.pop("text", None)
             _save_jobs()
     with JOBS_LOCK:
         finished = dict(JOBS.get(job_id, {}))
@@ -339,20 +360,51 @@ def service_worker_root():
     return resp
 
 
+# 붙여넣기 본문 상한 — 분석 프롬프트가 150k 로 자르므로 그 위는 받아도 버려진다.
+COLLECT_TEXT_MAX = 200_000
+_URL_RE = re.compile(r"^https?://\S+$")
+
+
+def _looks_like_url(s: str) -> bool:
+    return bool(_URL_RE.match((s or "").strip()))
+
+
 @app.post("/api/collect")
 def api_collect():
     data = request.get_json(silent=True) or request.form.to_dict()
     url = (data.get("url") or "").strip()
-    if not url:
-        return jsonify({"ok": False, "error": "url 필수"}), 400
-    if not (url.startswith("http://") or url.startswith("https://")):
+    text = (data.get("text") or "").strip()
+    title = (data.get("title") or "").strip()[:200]
+
+    # 사용자가 링크칸에 본문을 통째로 붙여넣는 일이 흔하다 — 400 으로 튕기지 말고 받는다.
+    if url and not text and not _looks_like_url(url):
+        text, url = url, ""
+
+    if not url and not text:
+        return jsonify({"ok": False, "error": "url 또는 text 필수"}), 400
+    if url and not _looks_like_url(url):
         return jsonify({"ok": False, "error": "유효한 http(s) URL 필요"}), 400
+    if text:
+        if len(text) > COLLECT_TEXT_MAX:
+            text = text[:COLLECT_TEXT_MAX]
+        if len(text) < plain_text.TEXT_MIN_LEN:
+            return jsonify({
+                "ok": False,
+                "error": f"텍스트가 너무 짧습니다 ({len(text)}자) — 최소 {plain_text.TEXT_MIN_LEN}자",
+            }), 400
 
     job_id = uuid.uuid4().hex[:12]
+    # 큐 UI 는 job["url"] 을 라벨로 쓴다. 붙여넣기는 URL 이 없으므로 제목/본문 앞머리를 보여준다.
+    label = url or (title or plain_text.derive_title(text))
     with JOBS_LOCK:
         JOBS[job_id] = {
             "id": job_id,
             "url": url,
+            "label": label,
+            "input_kind": "paste" if text else "url",
+            "text": text,          # 워커가 읽는다 (완료 시 _run_job 이 비운다)
+            "title": title,
+            "text_length": len(text),
             "status": "queued",
             "stage": "queued",
             "started_at": time.time(),
@@ -383,6 +435,9 @@ def api_jobs_active():
                 items.append({
                     "id": j["id"],
                     "url": j["url"],
+                    "label": j.get("label") or j["url"],
+                    "input_kind": j.get("input_kind", "url"),
+                    "text_length": j.get("text_length", 0),
                     "status": j["status"],
                     "stage": j.get("stage", ""),
                     "started_at": j.get("started_at", 0),

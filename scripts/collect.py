@@ -25,6 +25,7 @@ except ImportError:
 from scripts.scraper import scrape, detect_source
 # 분석에 들어갈 최소 본문 길이 — 스크래퍼 폴백 트리거와 같은 기준을 쓴다 (SCRAPER_MIN_TEXT_LEN 로 조정).
 from scripts.scraper.router import MIN_TEXT_LEN
+from scripts.scraper import plain_text
 from scripts.analyzer import analyze
 from scripts.analyzer.merger import merge_with_existing
 from scripts.skill_builder import render_skill_md, install_skill, mirror_skill
@@ -69,14 +70,20 @@ def _short_text_hint(scrape_res) -> str:
     url = (scrape_res.url or "").lower()
     src = scrape_res.source_type
     if "chatgpt.com" in url or "chat.openai.com" in url:
-        return ("ChatGPT 공유·GPT 링크는 로그인 벽이라 본문 수집이 구조적으로 불가능합니다. "
-                "대화 내용을 복사해 노션 등에 붙여넣고 그 공개 URL로 등록해 주세요.")
+        # 예전엔 "노션에 붙여넣고 그 공개 URL 로 등록" 을 권했지만, 이제 중간 단계 없이
+        # 텍스트 탭에 바로 넣으면 된다.
+        return "ChatGPT 공유·GPT 링크는 로그인 벽이라 본문 수집이 구조적으로 불가능합니다."
     if src == "notion":
         return ("노션이라면 [Share] → [Publish to web] 이 켜져 있는지 확인 후 재시도해 주세요. "
                 "공개 상태인데 반복되면 잠시 후 다시 시도하면 대개 풀립니다.")
     if src in ("instagram", "tiktok", "twitter"):
         return "SNS는 로그인 벽이 강합니다. 캡션을 직접 텍스트로 옮겨 등록해 주세요."
     return "다른 URL(모바일 버전·원문 링크)로 시도하거나, 본문을 직접 텍스트로 옮겨 등록해 주세요."
+
+
+# 위 안내들이 전부 "직접 텍스트로 옮겨 등록" 을 가리키므로, 실제 그 경로가 있다는 걸
+# 사용자에게 같은 화면에서 알려준다 (예전엔 안내만 하고 입력 수단이 없었다).
+PASTE_FALLBACK_HINT = "화면의 [✍️ 텍스트] 탭에 본문을 그대로 붙여넣으면 스크랩 없이 바로 스킬로 만들어집니다."
 
 
 def _humanize_analyze_error(analysis) -> tuple[str, str]:
@@ -139,9 +146,23 @@ def _confirm_semantic_merge(analysis, slug: str, cand_path: Path, log) -> bool:
         return False
 
 
-def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = False) -> dict:
-    """전체 파이프라인. 실패 시 한글 사유 + 부분 성공 반환."""
+def collect(
+    url: str = "",
+    *,
+    text: str = "",
+    title: str = "",
+    register_notion: bool = True,
+    skip_duplicate: bool = False,
+) -> dict:
+    """전체 파이프라인. 실패 시 한글 사유 + 부분 성공 반환.
+
+    입력은 둘 중 하나:
+    - url: 스크랩 대상 링크 (기존 경로)
+    - text: 붙여넣은 본문. 스크랩 단계를 건너뛰고 바로 분석으로 간다.
+            url 을 같이 주면 그 URL 이 출처로 기록된다 (본문만 손으로 옮긴 경우).
+    """
     log = logging.getLogger("collect")
+    is_paste = bool((text or "").strip())
     summary: dict = {
         "url": url,
         "stages": {},
@@ -149,22 +170,38 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
         "partial_ok": False,  # 일부 단계만 성공
     }
 
-    # ── 1. 스크랩 ──────────────────────────────────────────────────
-    source_type = detect_source(url)
-    log.info("[1/5] 스크랩 시작 type=%s", source_type)
-    summary["stages"]["scrape"] = {"stage": "스크래핑", "ok": None}
-    try:
-        scrape_res = scrape(url)
-    except Exception as e:  # noqa: BLE001
-        log.exception("스크랩 예외")
+    # ── 1. 스크랩 (붙여넣기 입력이면 생략) ─────────────────────────
+    if is_paste:
+        scrape_res = plain_text.scrape(text, title=title, origin_url=url)
+        url = scrape_res.url  # paste://<hash> 또는 사용자가 준 원본 URL
+        source_type = scrape_res.source_type
+        summary["url"] = url
+        summary["input_kind"] = "paste"
+        log.info("[1/5] 텍스트 직접 입력 %d자 — 스크랩 생략", len(scrape_res.text))
         summary["stages"]["scrape"] = {
-            "stage": "스크래핑", "ok": False,
-            "error_ko": f"스크래핑 단계에서 예기치 못한 오류: {e}",
-            "hint": "logs/launchd_stderr.log 확인",
+            "stage": "텍스트 입력",
+            "ok": bool(scrape_res.text.strip()),
+            "source_type": source_type,
+            "title": scrape_res.title,
+            "text_length": len(scrape_res.text),
+            "skipped_scrape": True,
         }
-        summary["error_ko"] = summary["stages"]["scrape"]["error_ko"]
-        summary["hint"] = summary["stages"]["scrape"]["hint"]
-        return summary
+    else:
+        source_type = detect_source(url)
+        log.info("[1/5] 스크랩 시작 type=%s", source_type)
+        summary["stages"]["scrape"] = {"stage": "스크래핑", "ok": None}
+        try:
+            scrape_res = scrape(url)
+        except Exception as e:  # noqa: BLE001
+            log.exception("스크랩 예외")
+            summary["stages"]["scrape"] = {
+                "stage": "스크래핑", "ok": False,
+                "error_ko": f"스크래핑 단계에서 예기치 못한 오류: {e}",
+                "hint": "logs/launchd_stderr.log 확인",
+            }
+            summary["error_ko"] = summary["stages"]["scrape"]["error_ko"]
+            summary["hint"] = summary["stages"]["scrape"]["hint"]
+            return summary
 
     # 의도적 사전 차단 (IG 로그인 벽 등) — 실패가 아닌 'skipped' 로 깔끔 종료.
     if getattr(scrape_res, "skip_reason", None):
@@ -178,19 +215,27 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
         summary["ok"] = True
         summary["skipped"] = True
         summary["skip_kind"] = "blocked"  # UI 배지 구분 — '이미 등록됨' 아님
-        summary["message_ko"] = scrape_res.skip_message_ko or "사전 차단된 URL 입니다."
+        summary["message_ko"] = (
+            (scrape_res.skip_message_ko or "사전 차단된 URL 입니다.") + " " + PASTE_FALLBACK_HINT
+        )
+        summary["hint"] = PASTE_FALLBACK_HINT
         return summary
 
     text_len = len(scrape_res.text or "")
-    summary["stages"]["scrape"] = {
-        "stage": "스크래핑",
-        "ok": scrape_res.ok and bool(scrape_res.text.strip()),
-        "source_type": scrape_res.source_type,
-        "title": scrape_res.title,
-        "text_length": text_len,
-    }
+    # 붙여넣기 경로는 위에서 이미 stage 를 채웠다 — 덮어쓰면 '텍스트 입력' 라벨이 날아간다.
+    if not is_paste:
+        summary["stages"]["scrape"] = {
+            "stage": "스크래핑",
+            "ok": scrape_res.ok and bool(scrape_res.text.strip()),
+            "source_type": scrape_res.source_type,
+            "title": scrape_res.title,
+            "text_length": text_len,
+        }
     if not summary["stages"]["scrape"]["ok"]:
-        msg_ko, hint = _humanize_scrape_error(scrape_res)
+        if is_paste:
+            msg_ko, hint = "붙여넣은 텍스트가 비어 있습니다.", "본문을 다시 복사해 붙여넣어 주세요."
+        else:
+            msg_ko, hint = _humanize_scrape_error(scrape_res)
         summary["stages"]["scrape"]["error_ko"] = msg_ko
         summary["stages"]["scrape"]["hint"] = hint
         summary["error_ko"] = msg_ko
@@ -201,18 +246,28 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
     # 예전에는 그대로 분석에 넘겨서 Gemini 가 빈약한 입력으로 등급 C 를 내렸고, 사용자에겐
     # "가치 없는 콘텐츠" 로 표시됐다 — 실제 사유는 로그인 벽/렌더 실패인데 콘텐츠 탓으로 오인됨
     # (실사고 2026-08-13: ChatGPT 공유 링크 106자 → 등급 C). 사유를 정확히 알려주고 쿼터도 아낀다.
-    if text_len < MIN_TEXT_LEN:
+    # 붙여넣기는 사람이 의도적으로 넣은 본문이라 '렌더 실패로 껍데기만 잡힘' 위험이 없다.
+    # 스크랩용 임계(500)보다 낮은 기준을 쓴다.
+    min_len = plain_text.TEXT_MIN_LEN if is_paste else MIN_TEXT_LEN
+    if text_len < min_len:
         summary["stages"]["scrape"]["ok"] = False
-        msg_ko = (
-            f"본문을 {text_len}자밖에 가져오지 못했습니다 (분석에 최소 {MIN_TEXT_LEN}자 필요). "
-            "로그인이 필요한 페이지이거나 JS 렌더링이 끝나기 전 화면만 잡혔을 가능성이 큽니다."
-        )
-        hint = _short_text_hint(scrape_res)
+        if is_paste:
+            msg_ko = (
+                f"붙여넣은 텍스트가 {text_len}자입니다 (분석에 최소 {min_len}자 필요). "
+                "핵심 내용이 담긴 본문 전체를 넣어 주세요."
+            )
+            hint = "제목·본문·예시까지 함께 넣으면 스킬 품질이 올라갑니다."
+        else:
+            msg_ko = (
+                f"본문을 {text_len}자밖에 가져오지 못했습니다 (분석에 최소 {min_len}자 필요). "
+                "로그인이 필요한 페이지이거나 JS 렌더링이 끝나기 전 화면만 잡혔을 가능성이 큽니다."
+            )
+            hint = f"{_short_text_hint(scrape_res)} {PASTE_FALLBACK_HINT}"
         summary["stages"]["scrape"]["error_ko"] = msg_ko
         summary["stages"]["scrape"]["hint"] = hint
         summary["error_ko"] = msg_ko
         summary["hint"] = hint
-        log.warning("본문 부족 %d자 (<%d) → 분석 생략", text_len, MIN_TEXT_LEN)
+        log.warning("본문 부족 %d자 (<%d) → 분석 생략", text_len, min_len)
         return summary
 
     # ── 2. 분석 ────────────────────────────────────────────────────
@@ -484,8 +539,13 @@ def collect(url: str, *, register_notion: bool = True, skip_duplicate: bool = Fa
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="콘텐츠랩 v4.0 — URL → 스킬 자산화 (자동 합병)")
-    parser.add_argument("url")
+    parser = argparse.ArgumentParser(
+        description="콘텐츠랩 — URL 또는 붙여넣은 텍스트 → 스킬 자산화 (자동 합병)")
+    parser.add_argument("url", nargs="?", default="",
+                        help="수집할 URL. --text/--text-file 과 함께 주면 '출처 URL' 로만 기록된다.")
+    parser.add_argument("--text", default="", help="본문을 직접 전달 (스크랩 생략). '-' 이면 stdin")
+    parser.add_argument("--text-file", default="", help="본문이 담긴 파일 경로 (스크랩 생략)")
+    parser.add_argument("--title", default="", help="텍스트 입력 시 제목 지정 (없으면 본문에서 추출)")
     notion_grp = parser.add_mutually_exclusive_group()
     notion_grp.add_argument("--notion", action="store_true", help="Notion 등록 강제 (config 무관)")
     notion_grp.add_argument("--no-notion", action="store_true", help="Notion 등록 생략 (config 무관)")
@@ -505,7 +565,21 @@ def main() -> int:
             register_notion = bool(config_store.get("notion.register_on_collect", False))
         except Exception:  # noqa: BLE001
             register_notion = False
-    result = collect(args.url, register_notion=register_notion, skip_duplicate=args.skip_duplicate)
+    text = args.text
+    if args.text_file:
+        text = Path(args.text_file).read_text(encoding="utf-8", errors="replace")
+    elif text == "-":
+        text = sys.stdin.read()
+    if not text and not args.url:
+        parser.error("url 또는 --text/--text-file 중 하나는 필요합니다")
+
+    result = collect(
+        args.url,
+        text=text,
+        title=args.title,
+        register_notion=register_notion,
+        skip_duplicate=args.skip_duplicate,
+    )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["ok"] else 1
 

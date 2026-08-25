@@ -175,9 +175,15 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def source_type(url: str) -> str:
-    """scripts.scraper.router.detect_source 와 같은 규칙 (의존 차단용 복제 — 규칙 바꾸면 양쪽 동시)."""
+    """scripts.scraper.router.detect_source 와 같은 규칙 (의존 차단용 복제 — 규칙 바꾸면 양쪽 동시).
+
+    paste:// 는 붙여넣은 텍스트의 출처 식별자 (scripts/scraper/plain_text.PASTE_SCHEME).
+    """
     try:
-        domain = urlparse(url).netloc.lower()
+        parsed = urlparse(url)
+        if parsed.scheme == "paste":
+            return "text"
+        domain = parsed.netloc.lower()
     except Exception:  # noqa: BLE001
         return "web"
     if "youtube.com" in domain or "youtu.be" in domain:

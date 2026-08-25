@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**aiskillbox** (콘텐츠랩 v4.8) — URL 한 줄 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
+**aiskillbox** (콘텐츠랩 v4.9) — URL 한 줄 **또는 붙여넣은 텍스트** 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
 
 - **v4.6 전체 잠금**: 사이트 전체(수집 UI·카탈로그·라이브러리 API)가 초대코드 로그인 필요. 예외는 `/login`·`/healthz`(112 모니터)·`/static/*`·`/sw.js` 뿐. 첫 진입/복구는 `/login` 의 "관리자 첫 등록(PIN)". 설계: `docs/superpowers/specs/2026-08-22-invite-auth-design.md`
 - 게시판(도서관): https://aiskillbox.600g.net/catalog — 카테고리 섹션 + 칩 필터 + 카드/목록 전환. **제목 클릭 = 사이트 안 게시글** `/skill/<slug>` (본문 전문·SKILL.md 복사·같은 카테고리 글), 외부로 나가는 링크는 [원본 ↗] 하나뿐 · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
 - 채팅(v4.8): **Opus 5 · SSE 실시간 스트리밍 · 대화 기억**. `POST /api/chat/stream` 이 `status/delta/tool/done` 이벤트를 흘리고, `conv_id` 로 `claude --resume` 세션을 이어 앞 턴을 기억한다. `POST /api/chat/reset` = 새 대화.
+- 입력(v4.9): 메인 폼이 **[🔗 링크] / [✍️ 텍스트] 2탭**. 텍스트 탭은 스크랩을 건너뛰고 붙여넣은 본문을 바로 분석한다 (최소 200자). 로그인 벽 때문에 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 뉴스레터, 워크스페이스 전용 노션)의 정식 경로. 링크칸에 본문을 붙여넣어도 자동으로 텍스트 탭으로 넘어간다.
 - 설계: `docs/superpowers/specs/2026-08-20-skill-library-design.md`
 
 좋은 콘텐츠를 한 번 보고 끝내지 않고 **스킬 자산**으로 영구 활용 가능한 형태로 보관. 두근컴퍼니의 모든 다른 AI 에이전트가 이 DB와 글로벌 `~/.claude/skills/` 에서 자동으로 활용.
@@ -28,6 +29,11 @@ playwright install chromium
 python -m scripts.collect "https://youtu.be/<영상ID>"
 python -m scripts.collect "<URL>" --no-notion        # Notion 등록 생략
 python -m scripts.collect "<URL>" --skip-duplicate   # 중복 시 합병 안 하고 스킵
+
+# 수집 — 텍스트 직접 입력 (v4.9, 스크랩 불가 출처용). 최소 200자
+python -m scripts.collect --text-file ./본문.md --title "제목"
+pbpaste | python -m scripts.collect --text -                       # 클립보드 그대로
+python -m scripts.collect "https://chatgpt.com/share/x" --text-file ./본문.md   # 원본 URL 을 출처로 기록
 
 # 컴파일 사전 검증 (변경 후 항상)
 python -m py_compile app.py scripts/**/*.py
@@ -90,10 +96,12 @@ python -m scripts.restore_from_backup --apply "키워드"           # 백업에�
 ### 데이터 흐름 (collect.py 한 사이클)
 
 ```
-URL 입력 (CLI / 웹UI / Telegram)
-  ↓
-scripts/scraper/router.py  ── detect_source() → 전용 스크래퍼 → Playwright → requests 폴백 (3단)
-  ↓ ScrapeResult
+URL 입력 (CLI / 웹UI / Telegram)          텍스트 붙여넣기 (웹UI [✍️ 텍스트] 탭 / CLI --text)
+  ↓                                          ↓
+scripts/scraper/router.py                 scripts/scraper/plain_text.py
+  ── detect_source() → 전용 스크래퍼          ── 스크랩 생략, 본문을 ScrapeResult 로 포장
+     → Playwright → requests 폴백 (3단)         출처 = paste://<sha16> (또는 사용자가 준 원본 URL)
+  ↓ ScrapeResult                            ↓ ScrapeResult (source_type="text")
 scripts/analyzer/gemini.py ── Gemini 2.5 Flash → 2.0 Flash → Gemma 4 26B(로컬) 3단 폴백
   ↓ AnalysisResult (8섹션 + 메타)
 중복 검사 (mirror + 글로벌 슬러그 + Notion URL) → 있으면 scripts/analyzer/merger.py 로 합병
@@ -224,6 +232,8 @@ scripts/
     github.py                       ── GitHub REST API (Playwright보다 10배 빠름, README+stars+topics)
     social.py                       ── Instagram/TikTok/Twitter (yt-dlp 우선, X는 로그인 벽 명시)
     web.py                          ── Playwright + trafilatura + UA 회전 4종 (mobile UA 1종 포함)
+    plain_text.py                   ── v4.9 붙여넣은 텍스트 → ScrapeResult (네트워크 0). paste://<sha16> 식별자,
+                                        제목 자동 추출(마크다운 헤딩 > 첫 의미 줄), TEXT_MIN_LEN=200
     mcp_fallback.py                 ── requests 최후 폴백 (정적 페이지만)
   analyzer/
     prompt.py                       ── ANALYSIS_PROMPT_TEMPLATE (enum 강제 + 외부 도구 대체 매핑 14종)
@@ -341,6 +351,16 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 35. **CLI 라운드를 매번 새로 띄우면 컨텍스트를 매번 다시 산다** (v4.8) — `--setting-sources ""` 를 줘도 Claude Code 기본 시스템 컨텍스트 ~20.7k 토큰이 라운드마다 `cache_creation` 으로 새로 생성된다. `--resume <session_id>` 로 이어가면 `cache_read 30,792 / cache_creation 201` (실측) — 비용·지연이 확 준다. 부수효과로 **멀티턴 기억이 공짜로 생긴다** (그전엔 매 메시지가 무맥락 단발이라 "아까 그거" 가 안 통했다). session_id 는 stream-json 의 `system/init` 과 `result` 이벤트에 있고, `conv_id → sid` 매핑은 `engine.CLI_SESSIONS` (6시간 TTL, 최대 50). `--strict-mcp-config` 로 사용자 MCP 서버(노션/Gmail 등) 로드도 차단한다.
 
+36. **"직접 텍스트로 옮겨 등록하세요" 라고 안내하면서 그 수단이 없었다** (v4.9) — `collect.py` 의 실패 안내(`_short_text_hint`, IG/노션 사전 차단 메시지)는 오래전부터 붙여넣기를 권해 왔는데, `/api/collect` 가 `http(s)://` 로 시작하지 않는 입력을 400 으로 튕겼다. 안내받은 대로 해도 막히는 자기모순 상태. 이제 `scripts/scraper/plain_text.py` 가 그 경로다. **새 실패 안내를 쓸 때는 그 안내가 가리키는 경로가 실재하는지 확인할 것** — 이 케이스는 코드가 아니라 안내문만 읽어서는 안 잡힌다.
+
+37. **`paste://<hash>` 는 내부 식별자다 — 링크로 렌더되면 전부 죽은 링크** (v4.9) — 붙여넣은 텍스트도 중복 감지 축이 필요해서 본문 SHA-256 을 `paste://<sha16>` 로 만들어 `sources:` 에 넣는다. 그런데 이게 URL 모양이라 세 군데서 링크가 됐다: ① `md_generator` 의 `- [{u}]({u})`, ② 카탈로그 [원본 ↗] 버튼·출처 목록, ③ **LLM 이 프롬프트의 `URL: paste://...` 를 보고 본문에 `[제목](paste://...)` 를 직접 박음** (실측 확인). ③ 은 프롬프트에서 식별자를 아예 감춰 차단(`build_prompt` 가 "직접 입력한 텍스트 — 원본 링크 없음" 으로 치환)하고, 합병된 옛 본문 대비로 `md_generator._scrub_paste_links` 가 2차 방어. **paste 출처를 새로 표시하는 곳을 만들 때마다 `is_paste_source()` 분기를 넣을 것.**
+
+38. **router 가 확보한 최선의 스크랩 결과를 버렸다** (v4.9, 실사고 2026-08-25) — `_retry` 는 `len(text) >= MIN_TEXT_LEN(500)` 이 아니면 `None` 을 반환했고, `scrape()` 는 그걸 '실패'로 보고 3단계 requests 폴백 결과로 넘어갔다. 실제로는 Playwright 가 459자를 확보한 상태였는데 폴백이 가져온 103자가 최종 결과가 됐다 — 사용자에겐 `"본문을 103자밖에 가져오지 못했습니다"` 로 표시돼 **실제 확보량보다 나쁜 숫자**를 봤고, 다른 사이트에서는 임계를 넘겼을 결과가 더 나쁜 결과로 대체된다. 지금은 `_retry` 가 회차 중 최장 결과를 들고 나오고, `pick_best()` 가 (성공여부, 길이) 순으로 폴백과 겨룬다. **임계 미달을 '없음' 으로 치환하지 말 것 — 미달과 부재는 다르다.** 검증: `tests/test_scrape_best_of.py` 12건 + 실 URL 재측(103자 → 459자).
+
+39. **except 블록 안의 무방어 재시도가 잡을 통째로 죽인다** (v4.9) — `gemini.analyze()` 는 JSON 파싱 실패 시 Gemma 로 1회 폴백하는데, 그 2차 `_extract_json(raw_text)` 이 `except` 블록 안에서 감싸이지 않은 채 호출됐다. 두 모델이 다 파싱 불가면 예외가 `analyze()` 밖으로 전파 → `collect()` 는 analyze 를 감싸지 않으므로 워커까지 올라가 `job failed: JSON 블록 없음` traceback (실발생 3건). 사용자에겐 **한글 사유도 우회 안내도 안 갔다.** 이제 ok=False + 한글 error 로 정상 종료한다. **`except` 안에서 같은 함수를 다시 부를 때는 거기도 감싸라 — 폴백 경로가 원래 경로보다 방어가 약한 게 이 코드베이스의 반복 패턴이다.**
+
+40. **`[hidden]` 은 UA 스타일이라 author 의 `display` 선언에 항상 진다** (v4.9) — 특이도(specificity) 문제가 아니라 **cascade origin** 문제다. `.text-wrap{display:flex}` 를 쓰는 순간 그 요소의 `hidden` 속성이 무력화돼 링크 패널과 텍스트 패널이 **동시에 렌더**됐다 (헤드리스 실측에서 잡힘 — 눈으로는 "그냥 폼이 긴가보다" 로 보인다). `static/style.css` 에 `[hidden]{display:none !important}` 전역 선언. **`hidden` 으로 토글하는 요소에 display 를 주는 순간 이 함정.**
+
 ## Related docs in this repo
 
 - **`TEMPLATE.md`** — 스킬 페이지 표준 템플릿 v2.1 (단일 진실, enum/구조/외부 도구 매핑 14종 정의)
@@ -356,8 +376,8 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 너는 두근컴퍼니의 **콘텐츠 스킬 자산화 에이전트**다.
 
-URL 하나만 던지면:
-1. 자동으로 스크래핑 (YouTube/IG/TikTok/Notion/Web/GitHub)
+URL 하나를 던지거나 본문을 그대로 붙여넣으면:
+1. 자동으로 스크래핑 (YouTube/IG/TikTok/Notion/Web/GitHub) — 붙여넣은 텍스트는 이 단계 생략
 2. Gemini → Gemma 4 폴백으로 핵심 AI 스킬 추출 + 등급 판정
 3. ECC 표준 `SKILL.md` 자동 생성 (8섹션 표준)
 4. 글로벌 `~/.claude/skills/{slug}/SKILL.md` + mirror에 설치
@@ -383,6 +403,7 @@ URL 하나만 던지면:
 
 | 날짜 | 버전 | 변경 |
 |------|------|----------|
+| 2026-08-25 | v4.9 | **텍스트 직접 입력 + 최근 실패 3종 근절.** ① **[✍️ 텍스트] 탭** — 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 로그인 벽 뉴스레터)를 위해 본문 붙여넣기 경로 신설. 예전엔 실패 안내가 "직접 텍스트로 옮겨 등록하세요" 라고 하면서 정작 `/api/collect` 가 non-URL 을 400 으로 튕겨 **안내대로 해도 막히는 상태**였다 (gotcha 36). `scripts/scraper/plain_text.py` 가 본문을 `ScrapeResult(source_type="text")` 로 포장해 기존 파이프라인(분석 → 중복 합병 → SKILL.md → 라이브러리)을 그대로 태운다. 출처는 본문 SHA-256 기반 `paste://<sha16>` — 같은 글 재등록 시 중복으로 잡힌다 (실측 확인). 원본 URL 을 같이 주면 그게 출처가 된다. 임계는 200자 (스크랩용 500 은 '렌더 실패로 껍데기만 잡힘' 방어라 사람이 고른 본문엔 과하다). CLI `--text` / `--text-file` / `--title`, 링크칸 본문 붙여넣기 자동 전환, 모드 기억(localStorage). ② **paste 식별자 링크 누수 3곳 차단** (gotcha 37) — SKILL.md 출처 줄·카탈로그 [원본 ↗]·**LLM 이 본문에 직접 박은 `[제목](paste://...)`**. 셋 다 실측으로 발견, 프롬프트에서 식별자를 감추고 `_scrub_paste_links` 2차 방어. ③ **router 가 최선의 스크랩을 버리던 버그** (gotcha 38, 실사고 8/25) — 459자 확보해놓고 임계 미달이라 통째로 버린 뒤 폴백 103자를 채택. `pick_best()` 도입, 실 URL 재측 103자 → **459자**. ④ **analyze() 무방어 재폴백** (gotcha 39) — 2차 `_extract_json` 이 except 안에서 안 감싸여 `job failed: JSON 블록 없음` traceback 3건. ok=False + 한글 사유로 정상 종료. ⑤ **`[hidden]` 무력화** (gotcha 40) — `.text-wrap{display:flex}` 가 UA 의 `[hidden]{display:none}` 을 이겨 두 패널이 동시 렌더. 헤드리스에서만 잡힌 종류. 실측: 로그인→탭 전환→카운터→붙여넣기 자동전환→모드 기억→제출→큐 라벨, 모바일 폭 가로스크롤 0, 콘솔 에러 0. 테스트 121 → **175건**. |
 | 2026-08-23 | v4.8 | **모바일 UX 수리 + 채팅 실시간화(Opus 5).** ① **게시판 모바일** — v4.7 이식 때 빠진 확대 잠금(`maximum-scale=1, user-scalable=no`)·safe-area 톱바 패딩 복원(gotcha 33). 필터바 `top` 하드코딩(52/48px) → JS 실측 `--topbar-h`. 모바일은 칩 4줄을 **[필터] 로 접고** 활성 개수 배지. ② **뒤로가기 4중화** — standalone PWA 엔 브라우저 뒤로가기가 없다: 톱바 `← 목록`(40px) + 스크롤 시 플로팅 FAB(← 목록 / ↑ 위로) + 글 끝 버튼 + 왼쪽 엣지 스와이프. 목록에서 들어왔으면 `history.back()` 으로 **검색어·필터·스크롤 위치까지 복원**(sessionStorage). ③ **채팅 실시간** — `POST /api/chat/stream` SSE (`status/delta/tool/done/ping`), `input_json_delta` 를 파싱해 **토큰 단위 스트리밍**(`partial_reply`), 도구 실행이 라이브로 보이고 [중지] 가능. 모델 기본 Sonnet 5 → **Opus 5** (`--fallback-model claude-sonnet-5`). ④ **대화 기억** — `conv_id` → `claude --resume` (gotcha 35). [새 대화] 버튼 = `POST /api/chat/reset`. ⑤ **실측 버그 4건** — 스키마 이탈로 답 유실(gotcha 34) · `list_skills` 슬러그가 전부 `SKILL.md`(`p.name` → `p.parent.name`) · 본문 `#앵커` 목차가 새 탭으로 열림 · 안 닫힌 ``` 펜스로 프롬프트 전문이 벽글 렌더(`close_open_fence`). 헤드리스 실측: 로그인→카드→상세→뒤로(스크롤 복원)→필터 유지→채팅 스트리밍, 콘솔 에러 0. 테스트 86 → **121건**. |
 | 2026-08-23 | v4.7 | **카탈로그 → 게시판(도서관) 전환 + 레트로 테마 통일.** ① **이탈 없는 구조** — 카드 제목이 외부 원본으로 나가던 것을 뒤집어, **제목 = 사이트 안 게시글**(`/skill/<slug>` 전용 페이지: 본문 전문·💡 콜아웃·SKILL.md 복사·링크 복사·출처 목록·**같은 카테고리 다른 글**), **외부는 [원본 ↗] 버튼 하나**. 모달 제거. ② **카드/목록 보기 전환** (기기에 기억, 목록 모드는 게시판식 한 줄). ③ **레트로 테마** — 메인 사이트의 픽셀+디지털 토큰 이식(도트그리드·스캔라인·하드섀도·네온 시안/마젠타, 커서 블링크), 본문은 Pretendard 유지하고 Galmuri11 은 뱃지·라벨·숫자만 (가독성 우선). ④ **경량화** — 카드에서 본문/템플릿 제거로 1.49MB → 358KB(84건). ⑤ 링크 정리: 잡 완료 카드·최근 목록·채팅이 `📖 읽기`(`/skill/<slug>`)로, API/검색/MCP 응답에 `page_url` 추가 (gotcha 32-b). 실측: 헤드리스에서 로그인→카드/목록/검색/상세/뒤로가기 + 모바일 폭, 콘솔 에러 0. 테스트 86건. |
 | 2026-08-22 | v4.6 | **초대코드 전체 잠금 + 노션 '링크 복사' 오탐 근절.** ① 사이트 전체(수집 UI·카탈로그·라이브러리 API) 로그인 필요 — 두근컴퍼니 초대 패턴 축소판: 코드→기기 영구 토큰(계정 없음), 쿠키 자동로그인, 코드 삭제 = cascade 로그아웃. `auth_store.py`(코드 평문·토큰 해시, 0600) + `auth_routes.py`(게이트 allowlist, redeem 5회/5분 잠금, PIN bootstrap 으로 닭-달걀 해소). 설정창 초대코드 관리 UI, `/login` 픽셀 페이지. 무인증 공개였던 `/api/collect` 구멍 봉쇄. MCP `AISKILLBOX_TOKEN` + 401→로컬 폴백, CORS X-Auth-Token. 테스트 +23 (전체 71). ② **노션 오탐** — '링크 복사'가 발급하는 `app.notion.com/p/<id>` 공개 공유 링크가 도메인 가드에 차단되던 실사고(8/19, 3건) 수정: `/p/` 경로만 가드 예외, 비로그인 렌더 실측(블록 57/5개) + 실패 링크 2건 재스크랩 성공(1,786/1,800자) 검증. ③ MCP 가 구버전 서버(HTML 404)를 만나면 로컬 인덱스 폴백 (JSON envelope 판별). |

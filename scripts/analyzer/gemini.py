@@ -572,7 +572,23 @@ def analyze(scrape_dict: dict) -> AnalysisResult:
                 ok=False, error=f"JSON 파싱 실패 + Gemma 폴백 실패: {parse_err}",
             )
         raw_text = gemma_text
-        data = _extract_json(raw_text)
+        try:
+            data = _extract_json(raw_text)
+        except Exception as gemma_err:  # noqa: BLE001
+            # 여기서 raise 하면 analyze() 밖으로 전파돼 잡 전체가 traceback 으로 죽는다
+            # (실사고: "job failed: JSON 블록 없음" 3건 — 사용자에겐 한글 사유가 안 감).
+            # 두 모델 모두 파싱 불가면 실패 사유를 담은 AnalysisResult 로 정상 종료한다.
+            logger.warning("Gemma 폴백 응답도 파싱 실패 (길이=%d): %s", len(raw_text), gemma_err)
+            return AnalysisResult(
+                skill_name="", skill_title_ko="", category="기타", grade="C",
+                grade_reason="", targets=[], summary="", when_to_use="", memo="",
+                ai_tools=[], tags=[], difficulty="", body_content="",
+                ok=False,
+                error=(
+                    "AI 응답을 JSON 으로 해석하지 못했습니다 "
+                    f"(Gemini: {parse_err} / Gemma: {gemma_err})"
+                ),
+            )
 
     try:
         data = _validate(data)

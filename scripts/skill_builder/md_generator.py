@@ -9,6 +9,7 @@ v2.4 변경 (2026-05-25):
 from __future__ import annotations
 
 import datetime
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -50,6 +51,29 @@ def _compose_legacy_body(r: "AnalysisResult") -> str:
     return "\n\n".join(out)
 
 
+_PASTE_LINK_RE = re.compile(r"\[([^\]]*)\]\(paste://[0-9a-f]+\)")
+
+
+def _scrub_paste_links(body: str) -> str:
+    """본문에 새어든 [텍스트](paste://...) 죽은 링크를 평문으로 되돌린다.
+
+    프롬프트에서 식별자를 감췄지만(build_prompt), 합병된 옛 본문이나 모델의 창작으로
+    남아 있을 수 있다. 카탈로그는 http(s) 링크만 허용하므로 방치하면 깨진 링크가 된다.
+    """
+    return _PASTE_LINK_RE.sub(lambda m: m.group(1) or "직접 입력한 텍스트", body or "")
+
+
+def _source_line(u: str) -> str:
+    """출처 한 줄. paste:// 는 진짜 URL 이 아니므로 죽은 링크로 렌더하면 안 된다."""
+    try:
+        from scripts.scraper.plain_text import is_paste_source
+    except Exception:  # noqa: BLE001
+        is_paste_source = lambda _x: False  # noqa: E731
+    if is_paste_source(u):
+        return "- ✍️ 직접 입력한 텍스트 (원본 링크 없음)"
+    return f"- [{u}]({u})"
+
+
 def render_skill_md(result: "AnalysisResult", source_url: str, source_type: str) -> str:
     """SKILL.md — v2.4 lean. 제목 + 💡 1줄 + body + 출처."""
     today = datetime.date.today().isoformat()  # noqa: F841 — 호환용 (현재 본문엔 미사용)
@@ -60,6 +84,7 @@ def render_skill_md(result: "AnalysisResult", source_url: str, source_type: str)
     body_md = (getattr(result, "body_md", "") or "").strip()
     if not body_md:
         body_md = _compose_legacy_body(result)
+    body_md = _scrub_paste_links(body_md)
 
     # description (frontmatter, AI 활성화 트리거) — callout/tldr 한 줄
     _callout = (getattr(result, "callout", "") or "").strip()
@@ -84,7 +109,7 @@ sources:
 """
 
     merged_badge = " (합병됨)" if is_merged else ""
-    sources_md = "\n".join(f"- [{u}]({u})" for u in source_urls)
+    sources_md = "\n".join(_source_line(u) for u in source_urls)
     # v2.6: callout 은 💡 prefix 로 출력 → register 가 Notion callout 블록으로 변환
     callout_line = (getattr(result, "callout", "") or result.tldr or "").strip()
     callout_md = f"\n\n💡 {callout_line}\n" if callout_line else "\n"

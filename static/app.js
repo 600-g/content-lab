@@ -9,6 +9,18 @@
 const form = document.getElementById('collect-form');
 const urlInput = document.getElementById('url');
 const submitBtn = document.getElementById('submit-btn');
+const modeUrlBtn = document.getElementById('mode-url');
+const modeTextBtn = document.getElementById('mode-text');
+const paneUrl = document.getElementById('pane-url');
+const paneText = document.getElementById('pane-text');
+const textBody = document.getElementById('text-body');
+const textTitle = document.getElementById('text-title');
+const textOrigin = document.getElementById('text-origin');
+const textCounter = document.getElementById('text-counter');
+const hintUrl = document.getElementById('hint-url');
+const hintText = document.getElementById('hint-text');
+
+const TEXT_MIN_LEN = 200;   // 서버 plain_text.TEXT_MIN_LEN 와 같은 값
 const jobList = document.getElementById('job-list');
 const jobEmpty = document.getElementById('job-empty');
 const recentList = document.getElementById('recent-list');
@@ -206,6 +218,15 @@ function isTerminal(status) {
   return status === 'completed' || status === 'failed' || status === 'interrupted';
 }
 
+function jobLabel(item) {
+  if (item.input_kind === 'paste' || !item.url || item.url.startsWith('paste://')) {
+    const n = item.text_length || 0;
+    const t = (item.label || '').trim();
+    return `✍️ ${t || '붙여넣은 텍스트'}${n ? ` · ${n}자` : ''}`;
+  }
+  return item.label || item.url;
+}
+
 function renderJobCard(item) {
   const b = jobBadge(item);
   const r = item.result || {};
@@ -235,8 +256,11 @@ function renderJobCard(item) {
     // failed / interrupted / partial
     const err = r.error_ko || item.error || '오류가 발생했어요';
     const hint = r.hint ? `<span class="job-hint">💡 ${escapeHtml(r.hint)}</span>` : '';
-    detail = `<span class="job-err">🚨 ${escapeHtml(err)}</span>${hint}
-              <button class="job-retry" data-url="${escapeHtml(item.url)}" type="button">🔄 다시 시도</button>`;
+    // 붙여넣기 잡은 원문을 서버가 완료 시 지우므로 URL 재시도가 불가능하다.
+    const retryBtn = (item.input_kind === 'paste' || !item.url)
+      ? ''
+      : `<button class="job-retry" data-url="${escapeHtml(item.url)}" type="button">🔄 다시 시도</button>`;
+    detail = `<span class="job-err">🚨 ${escapeHtml(err)}</span>${hint}${retryBtn}`;
   }
 
   const id = escapeHtml(item.id);
@@ -245,7 +269,7 @@ function renderJobCard(item) {
       <span class="${b.cls}">${b.text}</span>
       ${closable ? `<button class="job-dismiss" data-id="${id}" aria-label="닫기">✕</button>` : ''}
     </div>
-    <div class="job-url">${escapeHtml(item.url)}</div>
+    <div class="job-url">${escapeHtml(jobLabel(item))}</div>
     <div class="job-detail">${detail}</div>
   </li>`;
 }
@@ -312,32 +336,108 @@ function startPolling() {
   })();
 }
 
-async function submitUrl(url) {
-  url = (url || '').trim();
-  if (!url) return;
+// ── 입력 방식 (링크 / 텍스트) ───────────────────────────
+let inputMode = 'url';
+
+function setMode(mode) {
+  inputMode = mode === 'text' ? 'text' : 'url';
+  const isText = inputMode === 'text';
+  if (paneUrl) paneUrl.hidden = isText;
+  if (paneText) paneText.hidden = !isText;
+  if (hintUrl) hintUrl.hidden = isText;
+  if (hintText) hintText.hidden = !isText;
+  for (const [btn, on] of [[modeUrlBtn, !isText], [modeTextBtn, isText]]) {
+    if (!btn) continue;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-selected', String(on));
+  }
+  try { localStorage.setItem('aiskillbox-input-mode', inputMode); } catch (_) {}
+}
+
+function updateTextCounter() {
+  if (!textCounter || !textBody) return;
+  const n = textBody.value.trim().length;
+  const ok = n >= TEXT_MIN_LEN;
+  textCounter.textContent = ok ? `${n}자 · 준비됨 ✓` : `${n}자 · 최소 ${TEXT_MIN_LEN}자`;
+  textCounter.classList.toggle('ready', ok);
+}
+
+modeUrlBtn?.addEventListener('click', () => { setMode('url'); urlInput?.focus(); });
+modeTextBtn?.addEventListener('click', () => { setMode('text'); textBody?.focus(); });
+textBody?.addEventListener('input', updateTextCounter);
+
+// 링크칸에 본문을 통째로 붙여넣는 일이 흔하다 — 튕겨내지 말고 텍스트 탭으로 옮겨준다.
+urlInput?.addEventListener('paste', (e) => {
+  const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+  const looksLikeUrl = /^https?:\/\/\S+$/.test(pasted.trim());
+  if (looksLikeUrl || pasted.trim().length < TEXT_MIN_LEN) return;
+  e.preventDefault();
+  setMode('text');
+  if (textBody) {
+    textBody.value = pasted;
+    updateTextCounter();
+    textBody.focus();
+  }
+});
+
+try {
+  setMode(localStorage.getItem('aiskillbox-input-mode') || 'url');
+} catch (_) { setMode('url'); }
+updateTextCounter();
+
+async function postCollect(payload) {
   try {
     const resp = await fetch('/api/collect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify(payload),
     });
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error || '요청 실패');
-    // 새 잡이 보이도록 닫음 목록에서 혹시 같은 id 있으면 제거 (id 는 신규라 무관)
     startPolling();
+    return true;
   } catch (err) {
     alert('요청 실패: ' + err.message);
+    return false;
   }
+}
+
+async function submitUrl(url) {
+  url = (url || '').trim();
+  if (!url) return;
+  await postCollect({ url });
 }
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const url = urlInput.value.trim();
-  if (!url) return;
 
-  // 핵심: 제출 즉시 입력칸 비우기 — 기다리지 않고 다음 링크 입력 가능
-  urlInput.value = '';
-  urlInput.blur();
+  const isText = inputMode === 'text';
+  let payload;
+  if (isText) {
+    const body = (textBody?.value || '').trim();
+    if (body.length < TEXT_MIN_LEN) {
+      alert(`텍스트가 너무 짧습니다 (${body.length}자) — 최소 ${TEXT_MIN_LEN}자`);
+      textBody?.focus();
+      return;
+    }
+    payload = {
+      text: body,
+      title: (textTitle?.value || '').trim(),
+      url: (textOrigin?.value || '').trim(),
+    };
+    // 핵심: 제출 즉시 입력칸 비우기 — 기다리지 않고 다음 건 입력 가능
+    if (textBody) textBody.value = '';
+    if (textTitle) textTitle.value = '';
+    if (textOrigin) textOrigin.value = '';
+    textBody?.blur();
+    updateTextCounter();
+  } else {
+    const url = urlInput.value.trim();
+    if (!url) return;
+    payload = { url };
+    urlInput.value = '';
+    urlInput.blur();
+  }
 
   // 잠깐 버튼 피드백 (비활성화는 아주 짧게 — 연속 제출 막지 않음)
   const label = submitBtn.querySelector('.btn-label');
@@ -351,7 +451,7 @@ form.addEventListener('submit', async (e) => {
     setupPush(true).then(updateNotifRow);
   }
 
-  await submitUrl(url);
+  await postCollect(payload);
 });
 
 // ── 시스템 상태 (드로어) ────────────────────────────────
@@ -451,8 +551,10 @@ function _renderRecentItem(item) {
   const postUrl = item.post_url || (item.skill_name ? `/skill/${encodeURIComponent(item.skill_name)}` : '');
   const catalogLink = postUrl
     ? `<a href="${escapeHtml(postUrl)}">📖 읽기</a>` : '';
-  const originLink = item.url
-    ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🔗 원본</a>` : '';
+  // paste:// 는 진짜 URL 이 아니다 — 링크로 걸면 죽은 링크가 된다.
+  const originLink = (item.url && !item.url.startsWith('paste://'))
+    ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🔗 원본</a>`
+    : (item.url ? '<span class="muted">✍️ 직접 입력</span>' : '');
   return `<li>
     <div class="row1">
       <span class="grade grade-${grade}">${grade}</span>
@@ -737,4 +839,4 @@ document.addEventListener('visibilitychange', () => {
 attachNotionHandlers();
 registerServiceWorker().then(() => setupPush(false));  // 권한 이미 있으면 조용히 재구독
 startPolling();  // 즉시 1회 폴 + 활성 잡 있으면 2초 간격 유지 (없으면 pollJobs 가 자동 중단)
-console.log('[aiskillbox] v4.4 ready · Notification:', ('Notification' in window) ? Notification.permission : 'unsupported');
+console.log('[aiskillbox] v4.9 ready · Notification:', ('Notification' in window) ? Notification.permission : 'unsupported');

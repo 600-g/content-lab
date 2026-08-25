@@ -74,12 +74,46 @@ def detect_source(url: str) -> str:
     return "web"
 
 
+def _text_len(r: Optional["ScrapeResult"]) -> int:
+    return len(getattr(r, "text", "") or "") if r is not None else -1
+
+
+def _is_good(r: Optional["ScrapeResult"]) -> bool:
+    """더 시도할 필요 없는 '충분한' 결과인지."""
+    return bool(r is not None and r.ok and _text_len(r) >= MIN_TEXT_LEN)
+
+
+def pick_best(*results: Optional["ScrapeResult"]) -> Optional["ScrapeResult"]:
+    """여러 스크래퍼 결과 중 본문이 가장 긴 것.
+
+    실사고 (2026-08-25): Playwright 가 459자·477자를 확보했는데 MIN_TEXT_LEN(500) 미달이라
+    통째로 버려지고, 그 뒤 requests 폴백이 가져온 103자가 최종 결과가 됐다. 사용자에겐
+    "본문을 103자밖에 가져오지 못했습니다" 로 표시돼 실제 확보량(477자)보다 나쁘게 보였고,
+    다른 사이트에서는 임계를 넘겼을 결과가 더 나쁜 결과로 대체되는 손실이 발생한다.
+    """
+    best: Optional["ScrapeResult"] = None
+    for r in results:
+        if r is None:
+            continue
+        # 실패 결과라도 아무것도 없는 것보단 낫다 — 단 성공 결과가 항상 우선.
+        if best is None:
+            best = r
+            continue
+        if (r.ok, _text_len(r)) > (best.ok, _text_len(best)):
+            best = r
+    return best
+
+
 def _retry(func: Callable[[int], "ScrapeResult"], attempts: int = 2, label: str = "") -> Optional["ScrapeResult"]:
     """exponential backoff 재시도. skip_reason 이 잡히면 즉시 반환 (재시도 무의미).
 
     func 는 회차 인덱스(0-base)를 받는다 — 스크래퍼가 회차별로 UA 를 바꿀 수 있게.
+
+    반환값은 **시도 중 본문이 가장 긴 결과** (MIN_TEXT_LEN 미달이어도 버리지 않는다).
+    호출측이 _is_good() 으로 충분한지 판단하고, 부족하면 다음 폴백 결과와 pick_best 로 겨룬다.
     """
     last_err: Exception | None = None
+    best: Optional["ScrapeResult"] = None
     for i in range(attempts):
         try:
             r = func(i)
@@ -87,17 +121,19 @@ def _retry(func: Callable[[int], "ScrapeResult"], attempts: int = 2, label: str 
             if getattr(r, "skip_reason", None):
                 logger.info("%s skip_reason=%s → 재시도 스킵", label, r.skip_reason)
                 return r
-            if r.ok and len(r.text or "") >= MIN_TEXT_LEN:
+            best = pick_best(best, r)
+            if _is_good(r):
                 return r
-            logger.warning("%s attempt %d: 빈/짧은 결과 (len=%d)", label, i + 1, len(r.text or ""))
+            logger.warning("%s attempt %d: 빈/짧은 결과 (len=%d, 최선=%d)",
+                           label, i + 1, _text_len(r), _text_len(best))
         except Exception as e:  # noqa: BLE001
             last_err = e
             logger.warning("%s attempt %d 실패: %s", label, i + 1, e)
         if i < attempts - 1:
             time.sleep(1.5 ** i)
-    if last_err:
+    if last_err and best is None:
         logger.warning("%s 모든 시도 실패: %s", label, last_err)
-    return None
+    return best
 
 
 # config 의 IG 차단 토글 — 채팅이 켜고 끌 수 있다.
@@ -232,21 +268,34 @@ def scrape(url: str) -> ScrapeResult:
         attempts=2,
         label=f"playwright[{source}]",
     )
-    if result:
+    if getattr(result, "skip_reason", None) or _is_good(result):
         return result
 
-    # 3단계 — requests 폴백 (정적 페이지)
+    # 3단계 — requests 폴백 (정적 페이지).
+    # Playwright 가 짧게라도 뭔가 가져왔다면 그걸 버리지 않고 폴백 결과와 길이로 겨룬다.
+    fallback: Optional[ScrapeResult] = None
     try:
         from . import mcp_fallback
-        return mcp_fallback.scrape(url, source_type=source)
+        fallback = mcp_fallback.scrape(url, source_type=source)
     except Exception as e:  # noqa: BLE001
-        logger.error("all scrapers failed for %s: %s", url, e)
-        return ScrapeResult(
-            url=url,
-            source_type=source,
-            title="",
-            text="",
-            meta={},
-            ok=False,
-            error=f"모든 스크래퍼 실패: {e}",
-        )
+        logger.warning("requests 폴백 실패 for %s: %s", url, e)
+        if result is None:
+            logger.error("all scrapers failed for %s: %s", url, e)
+            return ScrapeResult(
+                url=url,
+                source_type=source,
+                title="",
+                text="",
+                meta={},
+                ok=False,
+                error=f"모든 스크래퍼 실패: {e}",
+            )
+
+    best = pick_best(result, fallback)
+    if best is not None and best is not fallback:
+        logger.info("폴백보다 Playwright 결과가 김 (%d자 > %d자) → Playwright 채택",
+                    _text_len(result), _text_len(fallback))
+    return best if best is not None else ScrapeResult(
+        url=url, source_type=source, title="", text="", meta={},
+        ok=False, error="모든 스크래퍼가 본문을 가져오지 못했습니다",
+    )
