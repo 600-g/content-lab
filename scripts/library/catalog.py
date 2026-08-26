@@ -412,7 +412,23 @@ def build_catalog_file(out: Path | str = DEFAULT_OUT, *, root: Path | str | None
     return {"ok": True, "path": str(out_p), "count": len(idx.records), "bytes": len(html_text.encode("utf-8"))}
 
 
+def _load_env_for_cli() -> None:
+    """CLI 실행 시에만 .env 로드 — 의미 검색이 조용히 꺼지는 걸 막는다.
+
+    서버(app.py)는 기동 시 .env 를 읽지만 `python -m scripts.library search` 는 안 읽었다.
+    그래서 GEMINI_API_KEY 가 .env 에 멀쩡히 있어도 CLI 에서는 embedder 가 키를 못 찾아
+    임베딩이 None → hybrid 가 조용히 keyword 로 강등됐다 (CLAUDE.md 는 이걸 '터미널
+    하이브리드 검색' 이라고 안내). import 경로(routes.py)에는 영향이 없도록 main() 안에서만 호출.
+    """
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(PROJECT_ROOT / ".env")
+    except Exception:  # noqa: BLE001
+        pass  # dotenv 없어도 CLI 는 키워드 검색으로 계속 동작
+
+
 def main(argv: list[str] | None = None) -> int:
+    _load_env_for_cli()
     parser = argparse.ArgumentParser(description="스킬 라이브러리 CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("build-catalog", help="정적 catalog.html 생성")

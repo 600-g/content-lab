@@ -302,21 +302,36 @@ def search(
     kw = keyword_rank(q, idx)
     rank_lists: dict[str, list[tuple[str, float]]] = {"kw": kw}
     semantic_used = False
+    # 의미 검색이 왜 빠졌는지 응답에 남긴다. 예전엔 semantic_used=False 뿐이라
+    # '키가 없어서' 인지 '캐시가 비어서' 인지 구분이 안 됐고, .env 미로딩으로 CLI 가
+    # 조용히 키워드 전용으로 강등된 걸 아무도 못 알아챘다.
+    semantic_skip_reason: Optional[str] = None
     sem: list[tuple[str, float]] = []
     if mode == "hybrid":
         vecs = vectors if vectors is not None else load_vectors()
-        if vecs:
+        if not vecs:
+            semantic_skip_reason = "임베딩 캐시가 비어 있음 (scripts/skills/embeddings.json)"
+        else:
             fn = embed_fn or default_embed
             qvec: Optional[list[float]] = None
             try:
                 qvec = fn(q)
             except Exception as e:  # noqa: BLE001
                 logger.warning("embed_fn 예외 — 키워드만: %s", e)
+                semantic_skip_reason = f"질의 임베딩 예외: {e}"
             if qvec:
                 sem = semantic_rank(qvec, vecs, limit=max(SEM_CANDIDATES_MIN, 3 * k))
                 if sem:
                     semantic_used = True
                     rank_lists["sem"] = sem
+                else:
+                    semantic_skip_reason = "임베딩된 후보가 없음"
+            elif semantic_skip_reason is None:
+                semantic_skip_reason = (
+                    "질의 임베딩 실패 — GEMINI_API_KEY 미설정이거나 임베딩 API 호출 불가"
+                )
+    else:
+        semantic_skip_reason = "mode=keyword (요청)"
 
     fused = rrf_fuse(rank_lists)
     kw_rank = {slug: i for i, (slug, _) in enumerate(kw, start=1)}
@@ -352,6 +367,7 @@ def search(
         "query": q,
         "mode": mode,
         "semantic_used": semantic_used,
+        "semantic_skip_reason": semantic_skip_reason,
         "total_indexed": len(idx.records),
         "index_version": idx.version,
         "took_ms": int((time.time() - t0) * 1000),

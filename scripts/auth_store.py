@@ -52,14 +52,36 @@ class AuthStore:
         self._lock = threading.Lock()
         self._data: dict = {"codes": {}, "sessions": {}}
         self._loaded = False
+        self._mtime: float | None = None  # 마지막으로 읽어들인 auth.json 의 mtime
         self._last_seen_flush: dict[str, float] = {}  # token_hash -> 마지막 디스크 갱신 시각
 
     # ── 내부 IO ──────────────────────────────────────────────
 
+    def _disk_mtime(self) -> Optional[float]:
+        try:
+            return self.path.stat().st_mtime
+        except OSError:
+            return None
+
     def _load(self) -> None:
-        if self._loaded:
+        """auth.json 읽기. **디스크가 바뀌었으면 다시 읽는다.**
+
+        예전엔 `if self._loaded: return` 한 번만 읽고 끝이라, 24시간 떠 있는 서버가
+        기동 후의 디스크 변경을 영원히 못 봤다. 실측으로 확인된 두 가지 실패:
+
+        1. `python -m scripts.auth_store create` 로 발급한 코드가 서버에서 **거부**된다
+           ("초대코드가 올바르지 않아요"). CLAUDE.md 가 안내하는 코드 발급 절차 그대로인데
+           재시작 전까지 안 먹힌다 — 코드를 건네받은 사람은 이유를 알 수 없다.
+        2. 더 나쁜 쪽: `delete <code>` 가 "로그아웃된 기기 N대" 를 출력하는데 **실행 중인
+           서버는 그 토큰을 계속 200 으로 통과시킨다.** 분실 기기·협업 종료 시 접근을
+           끊었다고 믿지만 실제로는 안 끊긴다 (launchd KeepAlive 라 서버는 계속 떠 있다).
+
+        mtime 비교라 정상 요청 경로에서는 stat() 한 번 비용만 든다.
+        """
+        mtime = self._disk_mtime()
+        if self._loaded and mtime == self._mtime:
             return
-        if self.path.exists():
+        if mtime is not None:
             try:
                 raw = json.loads(self.path.read_text(encoding="utf-8"))
                 if isinstance(raw, dict):
@@ -70,6 +92,8 @@ class AuthStore:
             except Exception as e:  # noqa: BLE001
                 logger.warning("auth.json 파싱 실패 — 빈 저장소로 시작 (bootstrap 으로 재진입): %s", e)
                 self._data = {"codes": {}, "sessions": {}}
+                # 파싱 실패한 mtime 을 기록해 매 요청마다 같은 파일을 다시 깨뜨리지 않게 한다.
+        self._mtime = mtime
         self._loaded = True
 
     def _save(self) -> None:
@@ -79,6 +103,8 @@ class AuthStore:
         tmp.write_text(json.dumps(self._data, ensure_ascii=False, indent=1), encoding="utf-8")
         os.chmod(tmp, 0o600)
         tmp.replace(self.path)
+        # 방금 우리가 쓴 내용을 '외부 변경' 으로 오인해 다시 읽지 않도록 mtime 갱신.
+        self._mtime = self._disk_mtime()
 
     # ── 코드 관리 ────────────────────────────────────────────
 
