@@ -111,6 +111,18 @@ class AuthRoutesTest(unittest.TestCase):
         r = self.client.get("/catalog")
         self.assertEqual(r.status_code, 302)
 
+    def test_unknown_oauth_subpath_is_gated(self):
+        """exact-match 전환 회귀 가드 — /oauth/ 아래 미등록 경로는 게이트에 걸려야 한다.
+
+        prefix 방식이었다면 이 경로가 조용히 통과했다 (fail-open). 정확 일치라 막힌다.
+        """
+        r = self.client.get("/oauth/some-future-endpoint")
+        self.assertNotEqual(r.status_code, 200)
+
+    def test_unknown_well_known_subpath_is_gated(self):
+        r = self.client.get("/.well-known/something-else")
+        self.assertNotEqual(r.status_code, 200)
+
     # ── redeem ──────────────────────────────────────────────
 
     def test_redeem_sets_cookie_and_grants_access(self):

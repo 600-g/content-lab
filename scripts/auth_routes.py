@@ -1,7 +1,8 @@
 """전체 잠금 게이트 + 초대코드 인증 라우트 — app.py 가 register_auth(app, pin_ok=_pin_ok) 로 등록.
 
 - before_request 게이트: allowlist(/login, /api/auth/redeem|bootstrap, /healthz, /static/*, /sw.js,
-  OPTIONS) 외 전부 인증 필요. 쿠키 `aiskillbox_auth` 또는 헤더 `X-Auth-Token`.
+  원격 MCP 경로(/mcp, /oauth/*, /.well-known/*, 자체 인증 보유), OPTIONS) 외 전부 인증 필요.
+  쿠키 `aiskillbox_auth` 또는 헤더 `X-Auth-Token`.
 - 미인증: /api/* → 401 JSON(need_login), 페이지 → 302 /login?next=<path>.
 - bootstrap: ADMIN_PIN(주입된 pin_ok — app.py 의 무차별 대입 잠금 공유) 으로 첫 코드 발급 + 즉시 로그인.
   코드가 하나도 없어도 오너는 PIN 만으로 진입 (닭-달걀 해소, 전 기기 로그아웃 복구로도 사용).
@@ -29,11 +30,22 @@ COOKIE_MAX_AGE = 400 * 24 * 3600  # Chrome 쿠키 수명 상한 (~400일) — �
 LOGIN_PATH = "/login"
 
 # 게이트 없이 통과하는 경로 (정확 일치 or prefix)
-# 여기 있는 경로는 전부 자체 인증을 가진다: /mcp=Bearer, /oauth/token=client secret+PKCE,
-# /oauth/authorize=쿠키+동의, /.well-known/*=비밀 없는 공개 메타데이터.
-_ALLOW_EXACT = {LOGIN_PATH, "/api/auth/redeem", "/api/auth/bootstrap", "/healthz", "/sw.js",
-                "/favicon.ico", "/mcp"}
-_ALLOW_PREFIX = ("/static/", "/oauth/", "/.well-known/")
+# 여기 있는 경로는 전부 **자체 인증**을 가진다: /mcp=Bearer 토큰, /oauth/token·/oauth/revoke=
+# client_secret+PKCE, /oauth/authorize=쿠키+명시적 동의, /.well-known/*=비밀 없는 공개 메타데이터,
+# /oauth/register=dynamic_registration 토글 off 면 404.
+#
+# 원격 MCP 경로를 **prefix 가 아니라 정확 일치로** 둔 이유: prefix("/oauth/") 는 그 아래 새 라우트를
+# 추가하는 순간 자동으로 게이트 밖이 된다(fail-open). 정확 일치는 여기 명시적으로 적기 전까지
+# 게이트 안에 남는다(fail-closed). 새 OAuth 엔드포인트를 추가하면 자체 인증을 넣고 이 목록에도 추가할 것.
+_ALLOW_EXACT = {
+    LOGIN_PATH, "/api/auth/redeem", "/api/auth/bootstrap", "/healthz", "/sw.js", "/favicon.ico",
+    "/mcp",
+    "/oauth/authorize", "/oauth/token", "/oauth/revoke", "/oauth/register",
+    "/.well-known/oauth-protected-resource",
+    "/.well-known/oauth-protected-resource/mcp",
+    "/.well-known/oauth-authorization-server",
+}
+_ALLOW_PREFIX = ("/static/",)
 
 _REDEEM_MAX_FAILS = 5
 _REDEEM_LOCK_SECONDS = 300
