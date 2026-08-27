@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 게시판(도서관): https://aiskillbox.600g.net/catalog — 카테고리 섹션 + 칩 필터 + 카드/목록 전환. **제목 클릭 = 사이트 안 게시글** `/skill/<slug>` (본문 전문·SKILL.md 복사·같은 카테고리 글), 외부로 나가는 링크는 [원본 ↗] 하나뿐 · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
 - 채팅(v4.8): **Opus 5 · SSE 실시간 스트리밍 · 대화 기억**. `POST /api/chat/stream` 이 `status/delta/tool/done` 이벤트를 흘리고, `conv_id` 로 `claude --resume` 세션을 이어 앞 턴을 기억한다. `POST /api/chat/reset` = 새 대화.
 - 입력(v4.9): 메인 폼이 **[🔗 링크] / [✍️ 텍스트] 2탭**. 텍스트 탭은 스크랩을 건너뛰고 붙여넣은 본문을 바로 분석한다 (최소 200자). 로그인 벽 때문에 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 뉴스레터, 워크스페이스 전용 노션)의 정식 경로. 링크칸에 본문을 붙여넣어도 자동으로 텍스트 탭으로 넘어간다.
+- **원격 MCP (v5.0)**: `POST /mcp` (Streamable HTTP) + OAuth 2.1 인가서버. claude.ai 웹·모바일·Cowork 에 커스텀 커넥터로 붙는다. 읽기 전용 3종 도구. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md`
 - 설계: `docs/superpowers/specs/2026-08-20-skill-library-design.md`
 
 좋은 콘텐츠를 한 번 보고 끝내지 않고 **스킬 자산**으로 영구 활용 가능한 형태로 보관. 두근컴퍼니의 모든 다른 AI 에이전트가 이 DB와 글로벌 `~/.claude/skills/` 에서 자동으로 활용.
@@ -89,6 +90,15 @@ python -m scripts.rename_headings --apply                       # H2 헤더 한�
 python -m scripts.demote_h2_to_h3 --apply                       # 비표준 H2 → H3 강등
 python -m scripts.strip_meta_quotes --apply                     # TL;DR/메타 quote 박스 제거
 python -m scripts.restore_from_backup --apply "키워드"           # 백업에서 원본 raw_blocks 복원 (LLM 변환 실패 시)
+
+# 원격 MCP 커넥터 (claude.ai 웹/모바일/Cowork) — v5.0
+curl -s https://aiskillbox.600g.net/.well-known/oauth-protected-resource | python3 -m json.tool
+venv/bin/python -m scripts.mcp_remote client list          # 붙어있는 커넥터
+venv/bin/python -m scripts.mcp_remote client delete <id>   # 커넥터 끊기
+#   커넥터 연결은 초대코드에 묶인다 → 초대코드 삭제하면 그 커넥터도 즉시 끊긴다
+#   새 커넥터 붙일 때만 config.json 의 mcp_remote.dynamic_registration 을 true 로 켰다가 되돌린다.
+#   ★ 되돌린 직후 반드시 `client list` 로 낯선 클라이언트가 등록되지 않았는지 확인할 것
+#     (창이 열린 동안에는 인터넷 누구나 클라이언트를 등록할 수 있다)
 ```
 
 ## High-level architecture

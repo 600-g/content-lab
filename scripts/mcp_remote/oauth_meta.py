@@ -68,7 +68,8 @@ def register_oauth_meta(app: Flask, *, store=None, cfg: Optional[dict] = None) -
             "response_types_supported": ["code"],
             "grant_types_supported": ["authorization_code", "refresh_token"],
             "code_challenge_methods_supported": ["S256"],
-            "token_endpoint_auth_methods_supported": ["client_secret_post", "none"],
+            "token_endpoint_auth_methods_supported":
+                ["client_secret_basic", "client_secret_post", "none"],
         }
         if mcp_config.dynamic_registration(c):
             meta["registration_endpoint"] = mcp_config.abs_url("/oauth/register", c)
@@ -101,4 +102,7 @@ def register_oauth_meta(app: Flask, *, store=None, cfg: Optional[dict] = None) -
                "scope": SCOPE}
         if secret:
             out["client_secret"] = secret
-        return jsonify(out), 201
+        resp = jsonify(out)
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Pragma"] = "no-cache"
+        return resp, 201

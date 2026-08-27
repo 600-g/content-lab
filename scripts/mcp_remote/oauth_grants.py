@@ -11,7 +11,7 @@ import hashlib
 import logging
 import secrets
 from typing import Optional
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, unquote, urlencode, urlparse
 
 from flask import Flask, jsonify, redirect, render_template, request
 
@@ -41,6 +41,11 @@ def _err_page(message: str, status: int = 400):
             f"<p style='font-family:sans-serif;padding:2rem'>연결 실패: {message}</p>"), status
 
 
+def _with_query(uri: str, q: dict) -> str:
+    """redirect_uri 에 이미 쿼리가 있으면 &, 없으면 ? 로 잇는다 (RFC 6749 §4.1.2)."""
+    return uri + ("&" if urlparse(uri).query else "?") + urlencode(q)
+
+
 def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[dict] = None,
                           consent_template: Optional[str] = "oauth_consent.html") -> None:
     """store/auth/cfg/consent_template 은 테스트 주입용.
@@ -62,10 +67,22 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
     def _auth():
         return auth if auth is not None else auth_store_mod.get_store()
 
-    def _client_from_form():
-        cid = request.form.get("client_id", "")
-        secret = request.form.get("client_secret") or None
-        return cid, secret
+    def _client_credentials() -> tuple[str, Optional[str]]:
+        """RFC 6749 §2.3.1 — Basic 헤더 우선, 없으면 form 폴백.
+
+        Basic 의 client_id/secret 은 base64 앞에 form-urlencode 되어 있으므로 unquote 한다.
+        """
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.lower().startswith("basic "):
+            try:
+                raw = base64.b64decode(auth_header[6:].strip()).decode("utf-8")
+            except Exception:  # noqa: BLE001
+                return "", None
+            cid, sep, secret = raw.partition(":")
+            if not sep:
+                return "", None
+            return unquote(cid), (unquote(secret) or None)
+        return request.form.get("client_id", ""), (request.form.get("client_secret") or None)
 
     # ── authorize ────────────────────────────────────────────
 
@@ -132,7 +149,7 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
             q = {"error": "access_denied"}
             if params["state"]:
                 q["state"] = params["state"]
-            return redirect(params["redirect_uri"] + "?" + urlencode(q))
+            return redirect(_with_query(params["redirect_uri"], q))
         code = _store().issue_code(
             client_id=request.args.get("client_id", ""), redirect_uri=params["redirect_uri"],
             code_challenge=params["code_challenge"], resource=params["resource"],
@@ -140,7 +157,7 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
         q = {"code": code}
         if params["state"]:
             q["state"] = params["state"]
-        return redirect(params["redirect_uri"] + "?" + urlencode(q))
+        return redirect(_with_query(params["redirect_uri"], q))
 
     # ── token ────────────────────────────────────────────────
 
@@ -148,14 +165,13 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
     def oauth_token():
         c = _cfg()
         st = _store()
-        cid, secret = _client_from_form()
+        cid, secret = _client_credentials()
         locked = guard.check(cid or "anon")
         if locked:
             return jsonify({"error": "too_many_requests", "error_description": locked}), 429
         if not st.verify_client(cid, secret):
             guard.fail(cid or "anon")
             return jsonify({"error": "invalid_client"}), 401
-        guard.ok(cid)
         grant_type = request.form.get("grant_type", "")
 
         if grant_type == "authorization_code":
@@ -195,14 +211,18 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
         else:
             return jsonify({"error": "unsupported_grant_type"}), 400
 
-        return jsonify({"access_token": access, "token_type": "Bearer", "expires_in": ttl,
+        guard.ok(cid)   # 실제 grant 발급에만 리셋 — 클라이언트 인증 성공만으로는 리셋하지 않는다
+        resp = jsonify({"access_token": access, "token_type": "Bearer", "expires_in": ttl,
                         "refresh_token": refresh, "scope": SCOPE})
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
 
     # ── revoke ───────────────────────────────────────────────
 
     @app.post("/oauth/revoke")
     def oauth_revoke():
-        cid, secret = _client_from_form()
+        cid, secret = _client_credentials()
         locked = guard.check(cid or "anon")
         if locked:
             return jsonify({"error": "too_many_requests", "error_description": locked}), 429

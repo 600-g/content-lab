@@ -52,3 +52,26 @@ class FailGuardTest(unittest.TestCase):
             self.g.fail("c1")
         self.assertIsNotNone(self.g.check("c1"))
         self.assertIsNone(self.g.check("c2"))
+
+    def test_expired_locks_are_evicted(self):
+        for i in range(3):
+            for _ in range(5):
+                self.g.fail(f"k{i}")
+        self.clock.advance(301)
+        self.g.check("k0")
+        self.assertEqual(len(self.g._until), 0)
+        self.assertEqual(len(self.g._fails), 0)
+
+    def test_key_count_is_bounded(self):
+        g = FailGuard(max_fails=5, lock_seconds=300, clock=self.clock, max_keys=10)
+        for i in range(50):
+            g.fail(f"k{i}")
+        self.assertLessEqual(len(g._fails) + len(g._until), 20)
+
+    def test_active_locks_survive_eviction(self):
+        g = FailGuard(max_fails=5, lock_seconds=300, clock=self.clock, max_keys=10)
+        for _ in range(5):
+            g.fail("locked")
+        for i in range(50):
+            g.fail(f"noise{i}")
+        self.assertIsNotNone(g.check("locked"))

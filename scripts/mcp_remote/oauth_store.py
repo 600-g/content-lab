@@ -239,16 +239,16 @@ class OAuthStore:
 
     def rotate_refresh(self, token: str, *, access_ttl: int, refresh_ttl: int,
                        client_id: Optional[str] = None) -> Optional[tuple[str, str, int]]:
-        g = self._valid("refresh", token, resource=None)
-        if g is None:
-            return None
-        if client_id is not None and g.get("client_id") != client_id:
-            return None   # RFC 6749 §6 — refresh 토큰은 발급받은 클라이언트에만
-        with self._lock:
+        with self._lock:          # RLock — _valid/issue_tokens 재진입 안전
+            g = self._valid("refresh", token, resource=None)
+            if g is None:
+                return None
+            if client_id is not None and g.get("client_id") != client_id:
+                return None   # RFC 6749 §6 — refresh 토큰은 발급받은 클라이언트에만
             self._load()
             self._data["refresh"].pop(_h(token), None)
             self._save()
-        return self.issue_tokens(g, access_ttl=access_ttl, refresh_ttl=refresh_ttl)
+            return self.issue_tokens(g, access_ttl=access_ttl, refresh_ttl=refresh_ttl)
 
     def revoke(self, token: str) -> bool:
         with self._lock:

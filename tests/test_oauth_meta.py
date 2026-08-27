@@ -56,6 +56,11 @@ class MetaTest(unittest.TestCase):
         self.assertIn("authorization_code", b["grant_types_supported"])
         self.assertIn("refresh_token", b["grant_types_supported"])
 
+    def test_as_metadata_advertises_basic_auth_support(self):
+        """RFC 6749 §2.3.1 — 서버는 Basic 인증도 지원해야 한다 (F-4)."""
+        b = self._client().get("/.well-known/oauth-authorization-server").get_json()
+        self.assertIn("client_secret_basic", b["token_endpoint_auth_methods_supported"])
+
     def test_no_http_urls_anywhere(self):
         """CF Tunnel 함정 회귀 가드."""
         import json as _json
@@ -86,6 +91,13 @@ class MetaTest(unittest.TestCase):
         self.assertTrue(b["client_id"])
         self.assertEqual(b["redirect_uris"], ["https://claude.ai/cb"])
         self.assertEqual(self.st.get_client(b["client_id"])["source"], "dynamic")
+
+    def test_register_response_has_no_store_cache_control(self):
+        """RFC 6749 §5.1 MUST — 등록 응답도 캐시되면 안 된다."""
+        c = self._client(dcr=True)
+        r = c.post("/oauth/register", json={"redirect_uris": ["https://claude.ai/cb"]})
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.headers["Cache-Control"], "no-store")
 
     def test_register_rejects_missing_redirect_uris(self):
         r = self._client(dcr=True).post("/oauth/register", json={"client_name": "X"})

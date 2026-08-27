@@ -117,6 +117,22 @@ class GrantsTest(unittest.TestCase):
         r = self.c.get("/oauth/authorize?" + self._authorize_qs(code_challenge=None))
         self.assertEqual(r.status_code, 400)
 
+    def test_redirect_uri_with_existing_query_is_appended_correctly(self):
+        cid2, _ = self.st.create_client("Q", ["https://ex.example/cb?tenant=1"])
+        self._login()
+        q = ("response_type=code&client_id=" + cid2 +
+             "&redirect_uri=https://ex.example/cb?tenant=1"
+             "&code_challenge=" + _challenge(VERIFIER) +
+             "&code_challenge_method=S256&state=xyz&resource=" + RESOURCE +
+             "&scope=skills:read")
+        r = self.c.post("/oauth/authorize?" + q, data={"approve": "yes"})
+        self.assertEqual(r.status_code, 302)
+        loc = r.headers["Location"]
+        self.assertEqual(loc.count("?"), 1)
+        parsed = parse_qs(urlparse(loc).query)
+        self.assertEqual(parsed["tenant"], ["1"])
+        self.assertTrue(parsed["code"][0])
+
     # ── token ──
 
     def test_token_exchange_succeeds(self):
@@ -131,6 +147,28 @@ class GrantsTest(unittest.TestCase):
         self.assertEqual(b["scope"], "skills:read")
         self.assertTrue(b["access_token"] and b["refresh_token"])
         self.assertIsNotNone(self.st.validate_access(b["access_token"], resource=RESOURCE))
+
+    def test_token_response_has_no_store_cache_control(self):
+        """RFC 6749 §5.1 MUST — 토큰 응답은 캐시되면 안 된다 (CF 뒤에 있는 서버)."""
+        code = self._get_code()
+        r = self.c.post("/oauth/token", data={
+            "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT,
+            "client_id": self.cid, "client_secret": self.secret,
+            "code_verifier": VERIFIER, "resource": RESOURCE})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.headers["Cache-Control"], "no-store")
+
+    def test_token_exchange_via_http_basic_auth(self):
+        """RFC 6749 §2.3.1 — client_secret_basic 도 지원해야 한다 (claude.ai 실사용 방식 미확인)."""
+        code = self._get_code()
+        basic = base64.b64encode(f"{self.cid}:{self.secret}".encode("utf-8")).decode("ascii")
+        r = self.c.post("/oauth/token", data={
+            "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT,
+            "code_verifier": VERIFIER, "resource": RESOURCE},
+            headers={"Authorization": f"Basic {basic}"})
+        self.assertEqual(r.status_code, 200)
+        b = r.get_json()
+        self.assertTrue(b["access_token"])
 
     def test_token_rejects_wrong_verifier(self):
         code = self._get_code()
@@ -156,6 +194,22 @@ class GrantsTest(unittest.TestCase):
         r = self.c.post("/oauth/token", data={"grant_type": "authorization_code",
                                               "client_id": self.cid,
                                               "client_secret": self.secret})
+        self.assertEqual(r.status_code, 429)
+
+    def test_token_locks_after_repeated_bad_codes_with_valid_secret(self):
+        """유효한 secret + 잘못된 code 를 반복해도 잠금이 걸려야 한다 (guard.ok 위치 회귀)."""
+        for _ in range(5):
+            r = self.c.post("/oauth/token", data={
+                "grant_type": "authorization_code", "code": "bogus",
+                "redirect_uri": REDIRECT, "client_id": self.cid,
+                "client_secret": self.secret, "code_verifier": VERIFIER,
+                "resource": RESOURCE})
+            self.assertEqual(r.status_code, 400)
+        r = self.c.post("/oauth/token", data={
+            "grant_type": "authorization_code", "code": "bogus",
+            "redirect_uri": REDIRECT, "client_id": self.cid,
+            "client_secret": self.secret, "code_verifier": VERIFIER,
+            "resource": RESOURCE})
         self.assertEqual(r.status_code, 429)
 
     def test_code_reuse_revokes_all_grants_of_client(self):

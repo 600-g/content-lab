@@ -1,7 +1,9 @@
 """전체 잠금 게이트 + 초대코드 인증 라우트 — app.py 가 register_auth(app, pin_ok=_pin_ok) 로 등록.
 
-- before_request 게이트: allowlist(/login, /api/auth/redeem|bootstrap, /healthz, /static/*, /sw.js,
-  원격 MCP 경로(/mcp, /oauth/*, /.well-known/*, 자체 인증 보유), OPTIONS) 외 전부 인증 필요.
+- before_request 게이트: allowlist(/login, /api/auth/redeem|bootstrap, /healthz, /sw.js,
+  /static/* prefix, 원격 MCP 경로 — /mcp · /oauth/authorize|token|revoke|register ·
+  /.well-known/oauth-protected-resource(/mcp) · /.well-known/oauth-authorization-server,
+  전부 **정확 일치**로 나열되어 있으며 각자 자체 인증을 가진다, OPTIONS) 외 전부 인증 필요.
   쿠키 `aiskillbox_auth` 또는 헤더 `X-Auth-Token`.
 - 미인증: /api/* → 401 JSON(need_login), 페이지 → 302 /login?next=<path>.
 - bootstrap: ADMIN_PIN(주입된 pin_ok — app.py 의 무차별 대입 잠금 공유) 으로 첫 코드 발급 + 즉시 로그인.
@@ -87,6 +89,9 @@ def _request_token() -> str:
 def _set_auth_cookie(resp, token: str):
     # Secure 미설정: localhost(http) + CF Tunnel(https 종단) 양쪽에서 동작해야 함.
     # HttpOnly + SameSite=Lax 로 JS 탈취/타사이트 전송 차단.
+    # samesite="Lax" 는 /oauth/authorize 동의 POST 의 CSRF 방어이기도 하다 —
+    # 그 엔드포인트에는 별도 CSRF 토큰이 없다. "None" 으로 바꾸면 아무 테스트도
+    # 실패하지 않은 채 동의 화면이 CSRF 가능해진다.
     resp.set_cookie(
         COOKIE_NAME, token,
         max_age=COOKIE_MAX_AGE, httponly=True, samesite="Lax", path="/",
