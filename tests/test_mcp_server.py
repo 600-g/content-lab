@@ -187,5 +187,51 @@ class McpOldServerFallbackTest(_McpHarness):
         self.assertIn("name: notion-mcp-setup", got["result"]["content"][0]["text"])
 
 
+class LocalBackendSeamTest(unittest.TestCase):
+    """use_local_backend() 이후에는 _http_get 이 절대 호출되지 않아야 한다."""
+
+    def setUp(self):
+        from scripts.library import mcp_server as ms
+        self.ms = ms
+        self.root = make_mirror()
+        self._saved_force = getattr(ms, "_FORCE_LOCAL", False)
+        self._saved_http = ms._http_get
+        self._saved_root = ms.LOCAL_ROOT
+        ms.LOCAL_ROOT = str(self.root)
+
+        def landmine(*a, **kw):
+            raise AssertionError("in-process 모드인데 HTTP 백엔드를 호출했다")
+
+        ms._http_get = landmine
+
+    def tearDown(self):
+        self.ms._http_get = self._saved_http
+        self.ms._FORCE_LOCAL = self._saved_force
+        self.ms.LOCAL_ROOT = self._saved_root
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def test_search_uses_local_index(self):
+        self.ms.use_local_backend()
+        res, mode = self.ms.backend_search("릴스", 3, "")
+        self.assertEqual(mode, "inproc")
+        self.assertIn("results", res)
+
+    def test_get_uses_local_index(self):
+        self.ms.use_local_backend()
+        raw, mode = self.ms.backend_get("instagram-reels-script-automation")
+        self.assertEqual(mode, "inproc")
+        self.assertIn("---", raw)
+
+    def test_list_uses_local_index(self):
+        self.ms.use_local_backend()
+        items, mode = self.ms.backend_list("", "")
+        self.assertEqual(mode, "inproc")
+        self.assertTrue(items)
+
+    def test_inproc_mode_has_no_fallback_warning(self):
+        """'서버 미응답' 문구가 사용자에게 새면 안 된다 — 정상 경로다."""
+        self.assertEqual(self.ms._mode_tag("inproc"), "")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -36,6 +36,19 @@ LOCAL_ROOT = os.environ.get("SKILL_LIBRARY_ROOT") or None   # 테스트/커스�
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MAX_K = 20
 
+_FORCE_LOCAL = False
+
+
+def use_local_backend() -> None:
+    """같은 프로세스 안(Flask transport)에서 쓸 때 HTTP 백엔드를 건너뛴다.
+
+    안 하면 _http_get 이 자기 서버를 다시 때리고 v4.6 게이트에 막혀 401 을 받는다.
+    같은 프로세스라 scripts.library 인덱스를 공유하므로 이중 적재도 없다.
+    """
+    global _FORCE_LOCAL
+    _FORCE_LOCAL = True
+
+
 TOOLS = [
     {
         "name": "search_skills",
@@ -161,6 +174,8 @@ def _local_list(category: str, grade: str) -> list[dict]:
 
 
 def backend_search(query: str, k: int, category: str) -> tuple[dict, str]:
+    if _FORCE_LOCAL:
+        return _local_search(query, k, category), "inproc"
     try:
         return _http_get("/api/library/search", {"q": query, "k": k, "category": category}), "http"
     except urllib.error.HTTPError as e:
@@ -175,6 +190,8 @@ def backend_search(query: str, k: int, category: str) -> tuple[dict, str]:
 
 
 def backend_get(slug: str) -> tuple[Optional[str], str]:
+    if _FORCE_LOCAL:
+        return _local_get_raw(slug), "inproc"
     try:
         data = _http_get(f"/api/library/skills/{urllib.parse.quote(slug)}")
         return data.get("raw_md"), "http"
@@ -192,6 +209,8 @@ def backend_get(slug: str) -> tuple[Optional[str], str]:
 
 
 def backend_list(category: str, grade: str) -> tuple[list[dict], str]:
+    if _FORCE_LOCAL:
+        return _local_list(category, grade), "inproc"
     try:
         data = _http_get("/api/library/skills", {"category": category, "grade": grade})
         return data.get("items", []), "http"
@@ -209,7 +228,7 @@ def backend_list(category: str, grade: str) -> tuple[list[dict], str]:
 # ── 포맷 ────────────────────────────────────────────────────────
 
 def _mode_tag(mode: str) -> str:
-    return "" if mode == "http" else " (로컬 인덱스 폴백 — aiskillbox 서버 미응답)"
+    return "" if mode in ("http", "inproc") else " (로컬 인덱스 폴백 — aiskillbox 서버 미응답)"
 
 
 def fmt_search(res: dict, mode: str) -> str:
