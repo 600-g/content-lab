@@ -186,6 +186,24 @@ class AuthStore:
                 self._save()
             return True
 
+    def has_code(self, code: str) -> bool:
+        """초대코드가 아직 살아있는지 — OAuth grant 지연 폐기 검증용."""
+        code = (code or "").strip().upper()
+        if not code:
+            return False
+        with self._lock:
+            self._load()
+            return code in self._data["codes"]
+
+    def code_of_token(self, token: Optional[str]) -> Optional[str]:
+        """기기 토큰 → 그것을 발급한 초대코드. OAuth grant 에 승인 주체를 박기 위해 필요."""
+        if not token:
+            return None
+        with self._lock:
+            self._load()
+            s = self._data["sessions"].get(_hash_token(str(token)))
+            return s.get("code") if s else None
+
     def session_count(self) -> int:
         with self._lock:
             self._load()
