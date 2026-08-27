@@ -50,6 +50,18 @@ class AuthRoutesTest(unittest.TestCase):
         def style():
             return "css"
 
+        @app.post("/mcp")
+        def mcp():
+            return jsonify({"ok": True})
+
+        @app.get("/.well-known/oauth-authorization-server")
+        def as_meta():
+            return jsonify({"ok": True})
+
+        @app.get("/oauth/authorize")
+        def oauth_authorize():
+            return "AUTHORIZE"
+
         register_auth(app, store=self.store, pin_ok=_pin_ok, login_template=None)
         self.client = app.test_client()
 
@@ -80,6 +92,24 @@ class AuthRoutesTest(unittest.TestCase):
     def test_options_preflight_passes(self):
         r = self.client.open("/api/library/search", method="OPTIONS")
         self.assertLess(r.status_code, 400)
+
+    def test_mcp_bypasses_gate(self):
+        """/mcp 는 자체 Bearer 인증을 가지므로 게이트를 통과해야 한다."""
+        r = self.client.post("/mcp", json={})
+        self.assertEqual(r.status_code, 200)
+
+    def test_well_known_bypasses_gate(self):
+        r = self.client.get("/.well-known/oauth-authorization-server")
+        self.assertEqual(r.status_code, 200)
+
+    def test_oauth_path_bypasses_gate(self):
+        r = self.client.get("/oauth/authorize")
+        self.assertEqual(r.status_code, 200)
+
+    def test_unrelated_path_still_gated(self):
+        """예외 추가가 게이트를 넓히지 않았는지 — 회귀 가드."""
+        r = self.client.get("/catalog")
+        self.assertEqual(r.status_code, 302)
 
     # ── redeem ──────────────────────────────────────────────
 

@@ -597,6 +597,15 @@ except Exception as _lib_err:  # noqa: BLE001
     log.warning("라이브러리 라우트 등록 실패 — 검색/카탈로그 비활성: %s", _lib_err)
 
 
+# ── 원격 MCP 커넥터 (/mcp + OAuth 2.1) ────────────────────
+# 등록 실패 시 /mcp 가 404 일 뿐 게이트에 구멍이 생기지 않으므로 try/except 가 안전하다.
+try:
+    from scripts.mcp_remote import register_mcp_remote
+    register_mcp_remote(app)
+except Exception as _mcp_err:  # noqa: BLE001
+    log.warning("원격 MCP 커넥터 등록 실패 — /mcp 비활성: %s", _mcp_err)
+
+
 # ── 초대코드 인증 — v4.6 전체 잠금 ─────────────────────────
 # 의도적으로 try/except 없음: 게이트 등록이 실패하면 사이트가 무보호로 뜨는 것보다
 # 서버 기동 실패(healthz 죽음 → 112 모니터 감지)가 낫다.

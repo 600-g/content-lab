@@ -29,8 +29,11 @@ COOKIE_MAX_AGE = 400 * 24 * 3600  # Chrome 쿠키 수명 상한 (~400일) — �
 LOGIN_PATH = "/login"
 
 # 게이트 없이 통과하는 경로 (정확 일치 or prefix)
-_ALLOW_EXACT = {LOGIN_PATH, "/api/auth/redeem", "/api/auth/bootstrap", "/healthz", "/sw.js", "/favicon.ico"}
-_ALLOW_PREFIX = ("/static/",)
+# 여기 있는 경로는 전부 자체 인증을 가진다: /mcp=Bearer, /oauth/token=client secret+PKCE,
+# /oauth/authorize=쿠키+동의, /.well-known/*=비밀 없는 공개 메타데이터.
+_ALLOW_EXACT = {LOGIN_PATH, "/api/auth/redeem", "/api/auth/bootstrap", "/healthz", "/sw.js",
+                "/favicon.ico", "/mcp"}
+_ALLOW_PREFIX = ("/static/", "/oauth/", "/.well-known/")
 
 _REDEEM_MAX_FAILS = 5
 _REDEEM_LOCK_SECONDS = 300
