@@ -127,3 +127,27 @@ class OAuthStoreTest(unittest.TestCase):
         other = OAuthStore(self.dir / "oauth.json", auth_store=self.auth)
         other.delete_client(cid)
         self.assertFalse(self.st.verify_client(cid, secret))
+
+    def test_code_replay_detection(self):
+        code = self.st.issue_code(client_id="c1", redirect_uri="https://claude.ai/cb",
+                                  code_challenge="chal", resource=RESOURCE,
+                                  scope="skills:read", invite_code=self.code)
+        self.assertFalse(self.st.code_was_seen(code))
+        self.st.consume_code(code)
+        self.st.mark_code_spent(code, "c1")
+        self.assertTrue(self.st.code_was_seen(code))
+
+    def test_unspent_code_is_not_seen(self):
+        other = self.st.issue_code(client_id="c1", redirect_uri="https://claude.ai/cb",
+                                   code_challenge="chal", resource=RESOURCE,
+                                   scope="skills:read", invite_code=self.code)
+        self.assertFalse(self.st.code_was_seen(other))
+        self.assertFalse(self.st.code_was_seen("nonexistent"))
+
+    def test_revoke_kills_access_and_refresh(self):
+        access, refresh, _ = self.st.issue_tokens(self._grant(), access_ttl=60, refresh_ttl=600)
+        self.assertTrue(self.st.revoke(access))
+        self.assertIsNone(self.st.validate_access(access, resource=RESOURCE))
+        self.assertTrue(self.st.revoke(refresh))
+        self.assertIsNone(self.st.rotate_refresh(refresh, access_ttl=60, refresh_ttl=600))
+        self.assertFalse(self.st.revoke("never-existed"))
