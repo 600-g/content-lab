@@ -39,5 +39,14 @@
     "claude_model": "claude-opus-5",
     "claude_fallback_model": "claude-sonnet-5",
     "_note": "claude_model = 구독(claude CLI) 으로 쓰는 채팅 모델. 한도 도달 시 CLI 가 claude_fallback_model 로 자동 강등. model 은 ANTHROPIC_API_KEY 직결 경로 전용."
+  },
+  "mcp_remote": {
+    "enabled": true,
+    "public_base_url": "https://aiskillbox.600g.net",
+    "dynamic_registration": false,
+    "allowed_origins": ["https://claude.ai", "https://claude.com"],
+    "access_ttl_seconds": 3600,
+    "refresh_ttl_seconds": 7776000,
+    "_note": "dynamic_registration 은 최초 커넥터 연결 때만 true 로 켰다가 되돌린다. public_base_url 은 반드시 https — CF Tunnel 이 TLS 를 종단해서 헤더 추측은 http 를 준다."
   }
 }
