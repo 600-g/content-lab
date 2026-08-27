@@ -194,7 +194,51 @@ class GrantsTest(unittest.TestCase):
             "code_verifier": VERIFIER, "resource": RESOURCE}).get_json()
         self.assertEqual(b["scope"], "skills:read")
 
+    def test_other_client_cannot_destroy_code(self):
+        """남의 인가코드로 교환 시도해도 그 코드가 파괴되지 않아야 한다 (무흔적 DoS 차단)."""
+        other_cid, other_secret = self.st.create_client("Evil", [REDIRECT])
+        code = self._get_code()
+        bad = self.c.post("/oauth/token", data={
+            "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT,
+            "client_id": other_cid, "client_secret": other_secret,
+            "code_verifier": VERIFIER, "resource": RESOURCE})
+        self.assertEqual(bad.status_code, 400)
+        # 정당한 소유자의 교환이 **여전히 성공**해야 한다
+        ok = self.c.post("/oauth/token", data={
+            "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT,
+            "client_id": self.cid, "client_secret": self.secret,
+            "code_verifier": VERIFIER, "resource": RESOURCE})
+        self.assertEqual(ok.status_code, 200)
+        self.assertTrue(ok.get_json()["access_token"])
+
+    def test_refresh_rejects_other_clients_token(self):
+        """RFC 6749 §6 — 다른 클라이언트의 refresh 토큰은 회전시킬 수 없다."""
+        other_cid, other_secret = self.st.create_client("Evil", [REDIRECT])
+        code = self._get_code()
+        mine = self.c.post("/oauth/token", data={
+            "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT,
+            "client_id": self.cid, "client_secret": self.secret,
+            "code_verifier": VERIFIER, "resource": RESOURCE}).get_json()
+        r = self.c.post("/oauth/token", data={
+            "grant_type": "refresh_token", "refresh_token": mine["refresh_token"],
+            "client_id": other_cid, "client_secret": other_secret})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.get_json()["error"], "invalid_grant")
+        # 원 소유자의 회전은 여전히 동작해야 한다
+        good = self.c.post("/oauth/token", data={
+            "grant_type": "refresh_token", "refresh_token": mine["refresh_token"],
+            "client_id": self.cid, "client_secret": self.secret})
+        self.assertEqual(good.status_code, 200)
+
     # ── revoke ──
+
+    def test_revoke_locks_after_repeated_bad_secrets(self):
+        for _ in range(5):
+            self.c.post("/oauth/revoke", data={"token": "x", "client_id": self.cid,
+                                               "client_secret": "wrong"})
+        r = self.c.post("/oauth/revoke", data={"token": "x", "client_id": self.cid,
+                                               "client_secret": self.secret})
+        self.assertEqual(r.status_code, 429)
 
     def test_revoke_kills_token_and_returns_200_for_unknown(self):
         code = self._get_code()

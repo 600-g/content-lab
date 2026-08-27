@@ -144,6 +144,22 @@ class OAuthStoreTest(unittest.TestCase):
         self.assertFalse(self.st.code_was_seen(other))
         self.assertFalse(self.st.code_was_seen("nonexistent"))
 
+    def test_consume_code_rejects_wrong_owner_without_destroying(self):
+        code = self.st.issue_code(client_id="c1", redirect_uri="https://claude.ai/cb",
+                                  code_challenge="chal", resource=RESOURCE,
+                                  scope="skills:read", invite_code=self.code)
+        self.assertIsNone(self.st.consume_code(code, client_id="c2"))
+        got = self.st.consume_code(code, client_id="c1")   # 아직 살아있어야 한다
+        self.assertIsNotNone(got)
+        self.assertEqual(got["client_id"], "c1")
+
+    def test_rotate_refresh_rejects_wrong_owner(self):
+        _, refresh, _ = self.st.issue_tokens(self._grant(), access_ttl=60, refresh_ttl=600)
+        self.assertIsNone(self.st.rotate_refresh(refresh, access_ttl=60, refresh_ttl=600,
+                                                 client_id="other"))
+        self.assertIsNotNone(self.st.rotate_refresh(refresh, access_ttl=60, refresh_ttl=600,
+                                                    client_id="c1"))
+
     def test_revoke_kills_access_and_refresh(self):
         access, refresh, _ = self.st.issue_tokens(self._grant(), access_ttl=60, refresh_ttl=600)
         self.assertTrue(self.st.revoke(access))

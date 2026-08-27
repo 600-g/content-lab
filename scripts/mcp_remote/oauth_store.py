@@ -169,16 +169,25 @@ class OAuthStore:
             self._save()
         return code
 
-    def consume_code(self, code: str) -> Optional[dict]:
-        """1회용 — 존재하면 삭제하고 반환. 만료면 None (삭제는 함)."""
+    def consume_code(self, code: str, *, client_id: Optional[str] = None) -> Optional[dict]:
+        """1회용 — 존재하면 삭제하고 반환. 만료면 None (삭제는 함).
+
+        client_id 를 주면 **소유자가 일치할 때만** 삭제한다. 불일치면 코드를 건드리지 않고
+        None — 남의 코드를 파괴해 정당한 교환을 막는 무흔적 DoS 를 차단한다.
+        """
         if not code:
             return None
         with self._lock:
             self._load()
-            g = self._data["auth_codes"].pop(_h(code), None)
-            if g is not None:
-                self._save()
-            if g is None or g.get("expires_at", 0) < time.time():
+            h = _h(code)
+            g = self._data["auth_codes"].get(h)
+            if g is None:
+                return None
+            if client_id is not None and g.get("client_id") != client_id:
+                return None   # 소유자 불일치 — pop 하지 않는다
+            del self._data["auth_codes"][h]
+            self._save()
+            if g.get("expires_at", 0) < time.time():
                 return None
             return g
 
@@ -228,11 +237,13 @@ class OAuthStore:
     def validate_access(self, token: str, *, resource: str) -> Optional[dict]:
         return self._valid("tokens", token, resource=resource)
 
-    def rotate_refresh(self, token: str, *, access_ttl: int,
-                       refresh_ttl: int) -> Optional[tuple[str, str, int]]:
+    def rotate_refresh(self, token: str, *, access_ttl: int, refresh_ttl: int,
+                       client_id: Optional[str] = None) -> Optional[tuple[str, str, int]]:
         g = self._valid("refresh", token, resource=None)
         if g is None:
             return None
+        if client_id is not None and g.get("client_id") != client_id:
+            return None   # RFC 6749 §6 — refresh 토큰은 발급받은 클라이언트에만
         with self._lock:
             self._load()
             self._data["refresh"].pop(_h(token), None)

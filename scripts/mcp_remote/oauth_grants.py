@@ -165,8 +165,10 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
                 logger.warning("인가코드 재사용 감지 — client=%s grant %d건 폐기", cid, n)
                 return jsonify({"error": "invalid_grant",
                                 "error_description": "인가코드 재사용"}), 400
-            g = st.consume_code(code)
-            if g is None or g["client_id"] != cid:
+            g = st.consume_code(code, client_id=cid)
+            if g is None:
+                guard.fail(cid or "anon")
+                logger.warning("token: 인가코드 거부 (없음/만료/소유자 불일치) client=%s", cid)
                 return jsonify({"error": "invalid_grant"}), 400
             st.mark_code_spent(code, cid)
             if g["redirect_uri"] != request.form.get("redirect_uri", ""):
@@ -184,7 +186,8 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
         elif grant_type == "refresh_token":
             rotated = st.rotate_refresh(request.form.get("refresh_token", ""),
                                         access_ttl=mcp_config.access_ttl(c),
-                                        refresh_ttl=mcp_config.refresh_ttl(c))
+                                        refresh_ttl=mcp_config.refresh_ttl(c),
+                                        client_id=cid)
             if rotated is None:
                 return jsonify({"error": "invalid_grant"}), 400
             access, refresh, ttl = rotated
@@ -200,7 +203,12 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
     @app.post("/oauth/revoke")
     def oauth_revoke():
         cid, secret = _client_from_form()
+        locked = guard.check(cid or "anon")
+        if locked:
+            return jsonify({"error": "too_many_requests", "error_description": locked}), 429
         if not _store().verify_client(cid, secret):
+            guard.fail(cid or "anon")
             return jsonify({"error": "invalid_client"}), 401
+        guard.ok(cid)
         _store().revoke(request.form.get("token", ""))
         return "", 200   # RFC 7009 — 알 수 없는 토큰도 200
