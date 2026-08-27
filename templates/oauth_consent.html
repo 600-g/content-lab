@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>스킬 라이브러리 연결 승인</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+           background: #0f1115; color: #e6e8ec; display: grid; place-items: center;
+           min-height: 100vh; margin: 0; padding: 1.5rem; }
+    .card { max-width: 26rem; width: 100%; background: #171a21; border: 1px solid #262b36;
+            border-radius: 14px; padding: 1.75rem; }
+    h1 { font-size: 1.15rem; margin: 0 0 1rem; }
+    .who { font-weight: 600; color: #7dd3fc; }
+    ul { padding-left: 1.1rem; line-height: 1.7; color: #aab2c0; }
+    .row { display: flex; gap: .6rem; margin-top: 1.5rem; }
+    button { flex: 1; padding: .8rem; border-radius: 9px; border: 0; font-size: .95rem;
+             font-weight: 600; cursor: pointer; }
+    .ok { background: #2563eb; color: #fff; }
+    .no { background: #262b36; color: #aab2c0; }
+    .fine { margin-top: 1rem; font-size: .78rem; color: #6b7280; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1><span class="who">{{ client_name }}</span> 이(가) 스킬 라이브러리 접근을 요청합니다</h1>
+    <ul>
+      <li>스킬 검색 및 목록 조회</li>
+      <li>SKILL.md 본문 읽기</li>
+    </ul>
+    <form method="post" action="{{ action }}">
+      <div class="row">
+        <button class="no" type="submit" name="deny" value="1">거부</button>
+        <button class="ok" type="submit" name="approve" value="yes">승인</button>
+      </div>
+    </form>
+    <p class="fine">읽기 전용입니다 — 수집·삭제·수정 권한은 포함되지 않습니다.
+       연결을 끊으려면 이 기기의 초대코드를 삭제하세요.</p>
+  </div>
+</body>
+</html>
