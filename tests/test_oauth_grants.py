@@ -294,6 +294,29 @@ class GrantsTest(unittest.TestCase):
                                                "client_secret": self.secret})
         self.assertEqual(r.status_code, 429)
 
+    def test_revoke_does_not_reset_token_lockout(self):
+        """/oauth/revoke 성공이 /oauth/token 의 브루트포스 카운터를 씻으면 안 된다 (R-1).
+
+        5회 실패(마지막 실패가 잠금을 건다) + 매회 사이 성공적인 revoke 호출 후, **별도의**
+        6번째 요청에서 429 인지 확인한다 — 잠금을 발동시킨 요청 자신은 그 요청의 원래 오류
+        (400) 를 반환하고, 잠금은 그 다음 요청부터 적용되기 때문에 6번째가 필요하다
+        (F-1 의 test_token_locks_after_repeated_bad_codes_with_valid_secret 과 동일 구조).
+        """
+        for _ in range(5):
+            self.c.post("/oauth/token", data={
+                "grant_type": "authorization_code", "code": "bogus",
+                "redirect_uri": REDIRECT, "client_id": self.cid,
+                "client_secret": self.secret, "code_verifier": VERIFIER,
+                "resource": RESOURCE})
+            self.c.post("/oauth/revoke", data={"token": "x", "client_id": self.cid,
+                                               "client_secret": self.secret})
+        r = self.c.post("/oauth/token", data={
+            "grant_type": "authorization_code", "code": "bogus",
+            "redirect_uri": REDIRECT, "client_id": self.cid,
+            "client_secret": self.secret, "code_verifier": VERIFIER,
+            "resource": RESOURCE})
+        self.assertEqual(r.status_code, 429)
+
     def test_revoke_kills_token_and_returns_200_for_unknown(self):
         code = self._get_code()
         b = self.c.post("/oauth/token", data={

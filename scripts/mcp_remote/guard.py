@@ -29,17 +29,29 @@ class FailGuard:
         self._max_keys = max_keys
 
     def _evict_locked(self) -> None:
-        """만료된 잠금을 지우고, 그래도 상한을 넘으면 **잠기지 않은** 카운터만 버린다.
+        """만료 축출 + 상한 유지. `_until` 과 `_fails` 를 **독립적으로** max_keys 이내로 유지한다.
 
-        활성 잠금(_until)은 보존한다 — 그걸 버리면 공격자가 키를 흘려 잠금을 씻어낼 수 있다.
-        호출자가 이미 self._mu 를 잡고 있어야 한다.
+        두 버킷을 하나의 공유 예산으로 두면 어느 한쪽의 플러딩이 다른 쪽의 정상 항목을
+        밀어낸다 — (a) `_fails` 플러딩(수많은 저카운트 키)이 예산을 다 써서 이미 확정된
+        `_until` 잠금을 밀어내면 활성 잠금이 증발한다(test_active_locks_survive_eviction),
+        (b) 반대로 `_until` 플러딩(수많은 만료된/오래된 잠금)이 예산을 다 써서 `_fails` 를
+        통째로 비우면 어떤 키도 max_fails 에 도달하지 못해 새 잠금이 영원히 생기지 않는다
+        (무인증 엔드포인트에서 도달 가능한 회귀 — R-2). 그래서 각 버킷을 자신의 max_keys
+        예산 안에서만 축출한다: `_until` 은 만료가 임박한 것부터, `_fails` 는 카운트가
+        낮은 것부터. 호출자가 이미 self._mu 를 잡고 있어야 한다.
         """
         now = self._clock()
         for k in [k for k, t in self._until.items() if t <= now]:
             self._until.pop(k, None)
             self._fails.pop(k, None)
-        if len(self._fails) + len(self._until) > self._max_keys:
-            self._fails.clear()
+        over_until = len(self._until) - self._max_keys
+        if over_until > 0:
+            for k, _ in sorted(self._until.items(), key=lambda kv: kv[1])[:over_until]:
+                self._until.pop(k, None)
+        over_fails = len(self._fails) - self._max_keys
+        if over_fails > 0:
+            for k, _ in sorted(self._fails.items(), key=lambda kv: kv[1])[:over_fails]:
+                self._fails.pop(k, None)
 
     def check(self, key: str = "global") -> Optional[str]:
         """잠겨 있으면 사용자에게 보여줄 사유, 아니면 None."""

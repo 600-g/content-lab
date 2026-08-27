@@ -42,8 +42,13 @@ def _err_page(message: str, status: int = 400):
 
 
 def _with_query(uri: str, q: dict) -> str:
-    """redirect_uri 에 이미 쿼리가 있으면 &, 없으면 ? 로 잇는다 (RFC 6749 §4.1.2)."""
-    return uri + ("&" if urlparse(uri).query else "?") + urlencode(q)
+    """redirect_uri 에 이미 쿼리가 있으면 &, 없으면 ? 로 잇는다 (RFC 6749 §4.1.2).
+
+    트레일링 "?" (빈 쿼리)는 먼저 떼어낸다 — 안 그러면 urlparse().query 가 "" 라서
+    "??" 가 만들어진다.
+    """
+    base = uri[:-1] if uri.endswith("?") else uri
+    return base + ("&" if urlparse(base).query else "?") + urlencode(q)
 
 
 def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[dict] = None,
@@ -171,7 +176,10 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
             return jsonify({"error": "too_many_requests", "error_description": locked}), 429
         if not st.verify_client(cid, secret):
             guard.fail(cid or "anon")
-            return jsonify({"error": "invalid_client"}), 401
+            resp = jsonify({"error": "invalid_client"})
+            resp.status_code = 401
+            resp.headers["WWW-Authenticate"] = 'Basic realm="aiskillbox"'
+            return resp
         grant_type = request.form.get("grant_type", "")
 
         if grant_type == "authorization_code":
@@ -229,6 +237,8 @@ def register_oauth_grants(app: Flask, *, store=None, auth=None, cfg: Optional[di
         if not _store().verify_client(cid, secret):
             guard.fail(cid or "anon")
             return jsonify({"error": "invalid_client"}), 401
-        guard.ok(cid)
+        # guard.ok(cid) 없음 — revoke 는 실패에만 guard.fail 을 걸므로 리셋할 이유가 없다.
+        # /oauth/token 과 guard 를 공유하는데, 여기서 리셋하면 token 의 브루트포스 잠금이
+        # 무효화된다 (R-1 회귀).
         _store().revoke(request.form.get("token", ""))
         return "", 200   # RFC 7009 — 알 수 없는 토큰도 200

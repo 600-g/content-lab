@@ -1,7 +1,7 @@
 """전체 잠금 게이트 + 초대코드 인증 라우트 — app.py 가 register_auth(app, pin_ok=_pin_ok) 로 등록.
 
 - before_request 게이트: allowlist(/login, /api/auth/redeem|bootstrap, /healthz, /sw.js,
-  /static/* prefix, 원격 MCP 경로 — /mcp · /oauth/authorize|token|revoke|register ·
+  /favicon.ico, /static/* prefix, 원격 MCP 경로 — /mcp · /oauth/authorize|token|revoke|register ·
   /.well-known/oauth-protected-resource(/mcp) · /.well-known/oauth-authorization-server,
   전부 **정확 일치**로 나열되어 있으며 각자 자체 인증을 가진다, OPTIONS) 외 전부 인증 필요.
   쿠키 `aiskillbox_auth` 또는 헤더 `X-Auth-Token`.
