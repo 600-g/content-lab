@@ -80,3 +80,7 @@
 {"ts": "2026-08-23T17:43:01", "role": "assistant", "content": "\"안녕? 한 문장으로만 인사해줘.\" 라고 하셨어요.", "provider": "claude_cli"}
 {"ts": "2026-08-23T17:43:58", "role": "user", "content": "1더하기1은? 숫자만."}
 {"ts": "2026-08-23T17:44:02", "role": "assistant", "content": "2", "provider": "claude_cli"}
+{"ts": "2026-08-28T09:30:48", "role": "user", "content": "0910"}
+{"ts": "2026-08-28T09:30:58", "role": "assistant", "content": "입력하신 내용만으로는 요청을 알기 어렵습니다. 어떤 작업을 원하시는지 알려주세요 — 예: 최근 잡 상태 확인, 설정 조회, 스킬 검색, 중복 합병 등.", "provider": "claude_cli"}
+{"ts": "2026-09-05T19:23:01", "role": "user", "content": "프롬프트 최적화 관련 스킬 있어?"}
+{"ts": "2026-09-05T19:23:11", "role": "assistant", "content": "프롬프트 최적화 쪽 상위 후보 3개입니다.\n\n- **context-rich-prompting** (S, 프롬프트) — 역할 부여 대신 구체적 맥락을 주는 방식으로 답변 품질을 올리는 원리. /skill/context-rich-prompting\n- **fable-5-70** (S, 업무) — 목적별 완성형 프롬프트 70개 모음, 복붙 후 내용만 바꿔 쓰는 형태. /skill/fable-5-70\n- **claude-sub-agent-pattern** (S, 개발) — 서브에이전트로 컨텍스트 보호 + 토큰 비용 최적화. /skill/claude-sub-agent-pattern\n\n전체 목록은 /catalog. 이 중 본문 요약이 필요한 게 있으면 슬러그만 알려주세요.", "provider": "claude_cli"}
