@@ -101,6 +101,9 @@ PASTE_FALLBACK_HINT = "화면의 [✍️ 텍스트] 탭에 본문을 그대로 �
 
 def _humanize_analyze_error(analysis) -> tuple[str, str]:
     err = (analysis.error or "").lower()
+    if "모든 llm 호출 실패" in err:
+        return ("AI 분석 실패 — Claude·Gemini·Gemma 모두 응답이 없습니다.",
+                "터미널에서 `claude -p ok` 로그인 확인 · .env GEMINI_API_KEY · `ollama list` 순으로 점검")
     if "gemini_api_key" in err or "미설정" in err:
         return ("Gemini API 키가 .env에 없습니다.",
                 "https://aistudio.google.com/apikey 에서 발급 → .env GEMINI_API_KEY")
@@ -305,13 +308,16 @@ def collect(
         return summary
 
     # ── 2. 분석 ────────────────────────────────────────────────────
-    log.info("[2/5] Gemini 분석 시작")
+    log.info("[2/5] AI 분석 시작 (Claude → Gemini → Gemma)")
     summary["stages"]["analyze"] = {"stage": "AI 분석", "ok": None}
     analysis = analyze(scrape_res.to_dict())
     summary["stages"]["analyze"]["ok"] = analysis.ok
+    summary["stages"]["analyze"]["provider"] = getattr(analysis, "provider", "")
     summary["stages"]["analyze"]["skill_name"] = analysis.skill_name
     summary["stages"]["analyze"]["grade"] = analysis.grade
     summary["stages"]["analyze"]["category"] = analysis.category
+    log.info("[2/5] AI 분석 완료 — provider=%s ok=%s grade=%s",
+             getattr(analysis, "provider", "") or "-", analysis.ok, analysis.grade)
 
     if not analysis.ok:
         msg_ko, hint = _humanize_analyze_error(analysis)

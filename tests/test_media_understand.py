@@ -9,6 +9,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from scripts.analyzer import media_understand as mu
 from scripts.scraper.router import ScrapeResult
@@ -32,8 +33,12 @@ class EnrichTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.cache = os.path.join(self.tmp.name, "media_cache.json")
+        # 기본 이미지 판독기는 Claude(claude -p). 이 클래스는 Gemini 경로를 검증하므로 끈다.
+        self._reader = mock.patch.object(mu, "_default_read_images", lambda files, prompt: None)
+        self._reader.start()
 
     def tearDown(self):
+        self._reader.stop()
         self.tmp.cleanup()
 
     def test_video_is_uploaded_then_transcribed(self):
@@ -112,6 +117,85 @@ class EnrichTest(unittest.TestCase):
         out = mu.enrich(r, fetch=lambda u: b"v", upload=lambda d, m: "files/1", generate=Recorder("   "), cache_path=self.cache)
         self.assertEqual(r.text, "캡션")
         self.assertFalse(out["items"][0]["ok"])
+
+
+class ReaderRecorder:
+    def __init__(self, reply=None, raise_exc=None):
+        self.calls = []
+        self.reply, self.raise_exc = reply, raise_exc
+
+    def __call__(self, files, prompt):
+        self.calls.append((files, prompt))
+        if self.raise_exc:
+            raise self.raise_exc
+        return self.reply
+
+
+class ClaudeImagesTest(unittest.TestCase):
+    """슬라이드(이미지)는 Claude 가 먼저 읽고, 못 읽으면 Gemini. 영상은 Claude 가 못 받으니 그대로 Gemini."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.cache = os.path.join(self.tmp.name, "media_cache.json")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _imgs(self, n=2, ext="png"):
+        return _res([{"kind": "image", "url": f"https://cdn/{i}.{ext}?sig=abc", "key": f"ig:X:{i}"} for i in range(n)])
+
+    def test_claude_reader_runs_before_gemini(self):
+        reader = ReaderRecorder("슬라이드 1: Komi Store (Claude)")
+        gen = Recorder("gemini")
+        r = self._imgs()
+        out = mu.enrich(r, fetch=lambda u: b"png", generate=gen, read_images=reader, cache_path=self.cache)
+        self.assertEqual(gen.calls, [], "Claude 가 읽었으면 Gemini 쿼터를 쓰지 않는다")
+        self.assertEqual(len(reader.calls), 1)
+        files, prompt = reader.calls[0]
+        self.assertEqual(files, [(b"png", "image/png"), (b"png", "image/png")])
+        self.assertIn("슬라이드", prompt)
+        self.assertIn("(Claude)", r.text)
+        self.assertTrue(out["ok"])
+        self.assertEqual([i["provider"] for i in out["items"]], ["claude", "claude"])
+        cache = json.load(open(self.cache, encoding="utf-8"))
+        self.assertEqual(list(cache.values())[0]["provider"], "claude")
+
+    def test_gemini_used_when_claude_returns_none(self):
+        reader = ReaderRecorder(None)
+        gen = Recorder("gemini 판독")
+        r = self._imgs(ext="jpg")
+        out = mu.enrich(r, fetch=lambda u: b"jpg", generate=gen, read_images=reader, cache_path=self.cache)
+        self.assertEqual(len(gen.calls), 1)
+        self.assertEqual(sum(1 for p in gen.calls[0] if "inline_data" in p), 2)
+        self.assertIn("gemini 판독", r.text)
+        self.assertEqual(out["items"][0]["provider"], "gemini")
+
+    def test_gemini_used_when_claude_raises(self):
+        reader = ReaderRecorder(raise_exc=RuntimeError("claude 죽음"))
+        gen = Recorder("gemini 판독")
+        r = self._imgs()
+        out = mu.enrich(r, fetch=lambda u: b"png", generate=gen, read_images=reader, cache_path=self.cache)
+        self.assertTrue(out["ok"])
+        self.assertEqual(len(gen.calls), 1)
+
+    def test_video_never_goes_to_claude(self):
+        reader = ReaderRecorder("안 불려야 함")
+        gen = Recorder("영상 전사")
+        r = _res([{"kind": "video", "url": "https://cdn/x.mp4", "key": "ig:X:0"}])
+        out = mu.enrich(r, fetch=lambda u: b"v", upload=lambda d, m: "files/1", generate=gen,
+                        read_images=reader, cache_path=self.cache)
+        self.assertEqual(reader.calls, [])
+        self.assertEqual(out["items"][0]["provider"], "gemini")
+
+    def test_default_reader_is_claude_cli(self):
+        from scripts.analyzer import claude_cli
+        with mock.patch.object(claude_cli, "call_claude_read_files", return_value="클로드 판독") as m:
+            r = self._imgs(n=3, ext="webp")
+            mu.enrich(r, fetch=lambda u: b"w", generate=Recorder("x"), cache_path=self.cache)
+        self.assertEqual(m.call_count, 1)
+        files = m.call_args.args[1]
+        self.assertEqual([n for n, _ in files], ["slide_1.webp", "slide_2.webp", "slide_3.webp"])
+        self.assertIn("클로드 판독", r.text)
 
 
 if __name__ == "__main__":

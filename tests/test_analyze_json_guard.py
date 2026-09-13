@@ -47,6 +47,7 @@ class AnalyzeDoesNotRaiseTest(unittest.TestCase):
         }
         with mock.patch.dict("sys.modules", {"google.generativeai": fake_genai}), \
              mock.patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), \
+             mock.patch.object(gemini, "call_claude_json", return_value=None), \
              mock.patch.object(gemini, "call_gemma_json", return_value=gemma_text), \
              mock.patch.object(gemini, "_quota_should_skip", return_value=False), \
              mock.patch.object(gemini, "_quota_increment"):

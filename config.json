@@ -44,9 +44,19 @@
     "enabled": true,
     "public_base_url": "https://aiskillbox.600g.net",
     "dynamic_registration": false,
-    "allowed_origins": ["https://claude.ai", "https://claude.com"],
+    "allowed_origins": [
+      "https://claude.ai",
+      "https://claude.com"
+    ],
     "access_ttl_seconds": 3600,
     "refresh_ttl_seconds": 7776000,
     "_note": "dynamic_registration 은 최초 커넥터 연결 때만 true 로 켰다가 되돌린다. public_base_url 은 반드시 https — CF Tunnel 이 TLS 를 종단해서 헤더 추측은 http 를 준다."
+  },
+  "analyzer": {
+    "claude_enabled": true,
+    "claude_model": "claude-sonnet-5",
+    "claude_timeout_seconds": 180,
+    "claude_cooldown_minutes": 30,
+    "_note": "v5.2 스킬 분석 1순위 = 구독(claude -p). 슬라이드 판독도 같은 스위치. 한도 메시지가 뜨면 cooldown 동안 Gemini/Gemma 로. 긴급 차단은 env ANALYZER_CLAUDE=0 (재시작 필요) 또는 claude_enabled=false (mtime 재적재, 재시작 불필요)."
   }
 }

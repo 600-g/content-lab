@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**aiskillbox** (콘텐츠랩 v5.0) — URL 한 줄 **또는 붙여넣은 텍스트** 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
+**aiskillbox** (콘텐츠랩 v5.2) — URL 한 줄 **또는 붙여넣은 텍스트** 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
 
 - **v4.6 전체 잠금**: 사이트 전체(수집 UI·카탈로그·라이브러리 API)가 초대코드 로그인 필요. 예외는 `/login`·`/api/auth/redeem|bootstrap`·`/healthz`(112 모니터)·`/static/*`·`/sw.js`·`/favicon.ico` 와 v5.0 원격 MCP 경로(`/mcp`·`/oauth/*` 4종·`/.well-known/*` 3종) 뿐 — 목록의 단일 진실은 `scripts/auth_routes.py:_ALLOW_EXACT`(정확 일치, gotcha 43). 첫 진입/복구는 `/login` 의 "관리자 첫 등록(PIN)". 설계: `docs/superpowers/specs/2026-08-22-invite-auth-design.md`
 - 게시판(도서관): https://aiskillbox.600g.net/catalog — 카테고리 섹션 + 칩 필터 + 카드/목록 전환. **제목 클릭 = 사이트 안 게시글** `/skill/<slug>` (본문 전문·SKILL.md 복사·같은 카테고리 글), 외부로 나가는 링크는 [원본 ↗] 하나뿐 · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
 - 채팅(v4.8): **Opus 5 · SSE 실시간 스트리밍 · 대화 기억**. `POST /api/chat/stream` 이 `status/delta/tool/done` 이벤트를 흘리고, `conv_id` 로 `claude --resume` 세션을 이어 앞 턴을 기억한다. `POST /api/chat/reset` = 새 대화.
 - 입력(v4.9): 메인 폼이 **[🔗 링크] / [✍️ 텍스트] 2탭**. 텍스트 탭은 스크랩을 건너뛰고 붙여넣은 본문을 바로 분석한다 (최소 200자). 로그인 벽 때문에 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 뉴스레터, 워크스페이스 전용 노션)의 정식 경로. 링크칸에 본문을 붙여넣어도 자동으로 텍스트 탭으로 넘어간다.
 - **미디어 이해 (v5.1)**: 인스타 릴스·피드 캐러셀·자막 없는 유튜브의 **내용**을 읽는다. 인스타는 공개 embed 엔드포인트(로그인·yt-dlp 불필요)에서 캡션 + 영상/슬라이드 URL 을 얻고, `analyzer/media_understand.py` 가 Gemini 멀티모달(flash-lite 우선)로 음성·화면 텍스트를 본문에 덧붙인다. 설계: `docs/superpowers/specs/2026-09-12-media-understanding-design.md`
+- **분석 1순위 = Claude 구독 (v5.2)**: SKILL.md 본문을 만드는 `analyze()` 가 **Claude Sonnet 5(`claude -p`) → Gemini → Gemma** 순으로 돈다 (`analyzer/claude_cli.py`). 슬라이드(카드뉴스) 판독도 Claude(Read 도구) 가 먼저, 영상·유튜브는 Claude 가 입력을 못 받아 계속 Gemini. 한도 메시지가 뜨면 30분 쿨다운 후 Gemini/Gemma. 스위치 `config.json analyzer.claude_enabled` (재시작 불필요) · 긴급 env `ANALYZER_CLAUDE=0`. 어느 LLM 이 만들었는지 잡 summary `stages.analyze.provider` 와 로그 `AI 분석 완료 — provider=…` 에 남는다.
 - **원격 MCP (v5.0)**: `POST /mcp` (Streamable HTTP) + OAuth 2.1 인가서버. claude.ai 웹·모바일·Cowork 에 커스텀 커넥터로 붙는다. 읽기 전용 3종 도구. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md`
 - 설계: `docs/superpowers/specs/2026-08-20-skill-library-design.md`
 
@@ -49,6 +50,10 @@ launchctl kickstart -k "gui/$(id -u)/com.doogeun.aiskillbox"
 launchctl load -w ~/Library/LaunchAgents/com.doogeun.aiskillbox.plist
 tail -f logs/launchd_stdout.log
 
+# 분석 프로바이더 (v5.2) — 1순위 Claude 구독(claude -p, Sonnet 5). 슬라이드 판독도 같은 스위치.
+#   끄기/모델/쿨다운은 config.json analyzer.* (mtime 재적재 — 재시작 불필요). 실측: 스킬 1건 50초·~20k 토큰, 슬라이드 2장 6초
+grep -a "AI 분석 완료\|Claude 한도" logs/launchd_stderr.log | tail -5   # provider=claude|gemini-2.5-…|gemma · 한도 쿨다운 이력
+
 # 초대코드 (v4.6 전체 잠금) — 발급/목록/삭제(삭제 = 그 코드 기기 전부 로그아웃)
 python -m scripts.auth_store create "폰" && python -m scripts.auth_store list
 # 첫 진입/전기기 로그아웃 복구: /login → "관리자 첫 등록" 에 ADMIN_PIN
@@ -62,12 +67,12 @@ curl -s "http://localhost:5050/api/library/search?q=인스타+릴스&k=5" | pyth
 curl -s "http://localhost:5050/api/library/skills/<slug>?format=raw"   # SKILL.md 전문
 claude mcp add --scope user skill-library -- python3 ~/Developer/my-company/content-lab/scripts/library/mcp_server.py
 #   외부 기기: -e AISKILLBOX_URL=https://aiskillbox.600g.net (표준 라이브러리만 — venv 불필요)
-# 테스트 — unittest 전용 (★ pytest 는 venv 에 없다). 279건 · ~1.7초 · 네트워크 0
+# 테스트 — unittest 전용 (★ pytest 는 venv 에 없다). 344건 · ~1.7초 · 네트워크 0
 venv/bin/python -m unittest discover -s tests -t .
 venv/bin/python -m unittest tests.test_mcp_transport -v                                   # 파일 하나
 venv/bin/python -m unittest tests.test_mcp_transport.TransportTest.test_bad_token_is_401   # 메서드 하나
 
-# 헬스 + 외부 검증 (응답의 version 은 app.py:/healthz 하드코딩 — 릴리스마다 손으로 올린다. 2026-09-10 현재 "4.8" 로 v5.0 과 어긋남)
+# 헬스 + 외부 검증 (응답의 version 은 app.py:/healthz 하드코딩 — 릴리스마다 손으로 올린다. 2026-09-14 현재 "5.2")
 curl -s http://localhost:5050/healthz | python3 -m json.tool
 curl -s https://aiskillbox.600g.net/healthz | python3 -m json.tool
 
@@ -129,10 +134,10 @@ scripts/scraper/router.py                 scripts/scraper/plain_text.py
   ── detect_source() → 전용 스크래퍼          ── 스크랩 생략, 본문을 ScrapeResult 로 포장
      → Playwright → requests 폴백 (3단)         출처 = paste://<sha16> (또는 사용자가 준 원본 URL)
   ↓ ScrapeResult                            ↓ ScrapeResult (source_type="text")
-scripts/analyzer/media_understand.py ── (meta["media"] 가 있을 때만) 영상 → Files API, 슬라이드 → inline, 유튜브 → URL 직접
-  ── flash-lite → flash 로 음성·화면 텍스트를 본문 끝 [영상 내용]/[슬라이드 텍스트] 섹션으로. 캐시 logs/media_cache.json
+scripts/analyzer/media_understand.py ── (meta["media"] 가 있을 때만) 영상 → Gemini Files API, 슬라이드 → Claude(Read) → Gemini inline, 유튜브 → URL 직접
+  ── 음성·화면 텍스트를 본문 끝 [영상 내용]/[슬라이드 텍스트] 섹션으로. 캐시 logs/media_cache.json (provider 기록)
   ↓ 텍스트가 보강된 ScrapeResult (500자 게이트는 그 뒤)
-scripts/analyzer/gemini.py ── Gemini 2.5 Flash → 2.0 Flash → Gemma 4 26B(로컬) 3단 폴백
+scripts/analyzer/gemini.py ── Claude Sonnet 5(구독 claude -p) → Gemini 2.5 Flash → Flash Lite → Gemma 4 26B(로컬) 4단 폴백 (v5.2)
   ↓ AnalysisResult (8섹션 + 메타)
 중복 검사 (mirror + 글로벌 슬러그 + Notion URL) → 있으면 scripts/analyzer/merger.py 로 합병
   ↓
@@ -144,11 +149,13 @@ scripts/skill_builder/md_generator.py ── ECC 표준 SKILL.md 렌더 (프론�
 scripts/notion_client/register.py ── Notion DB 등록 (또는 update if existing)
 ```
 
-### LLM 폴백 체인 (`scripts/analyzer/gemini.py:call_gemma_json`)
+### LLM 폴백 체인 (`scripts/analyzer/gemini.py:analyze` · `analyzer/claude_cli.py`)
 
-비용 0원 + quota 무한 보장:
-1. **Gemini 2.5 Flash** (cloud, 빠름, 무료 20/day per project)
-2. **Gemini 2.0 Flash** (cloud, fallback)
+품질 우선 + 무료 폴백 + quota 무한 보장 (v5.2):
+0. **Claude Sonnet 5** (구독 `claude -p`, API 과금 X) — 도구 0개 + `--json-schema`(enum 강제) + `--setting-sources ""`. 성공하면 Gemini 쿼터를 아예 안 쓴다.
+   한도 메시지 → 30분 쿨다운(`analyzer.claude_cooldown_minutes`). 검증 재요청·보강도 Claude 로 (품질 유지), 막히면 Gemma
+1. **Gemini 2.5 Flash** (cloud, 무료 20/day per project — company-hq 와 키 공유)
+2. **Gemini 2.5 Flash Lite** (cloud, 실측 20/day)
 3. **Gemma 4 26B 또는 e4b** (Ollama localhost:11434, 무제한, cold start 20-30s)
 
 같은 패턴이 `analyzer/merger.py`, `curate_db.py` 의 `_gemini_reclassify` / `_gemini_polish_body` 에도 적용.
@@ -281,13 +288,16 @@ scripts/
     mcp_fallback.py                 ── requests 최후 폴백 (정적 페이지만)
   analyzer/
     prompt.py                       ── ANALYSIS_PROMPT_TEMPLATE (enum 강제 + 외부 도구 대체 매핑 14종)
-    gemini.py                       ── analyze() + call_gemma_json() + AnalysisResult 데이터클래스. 일별 호출 수를 logs/gemini_quota.json 에
-                                          기록하고 GEMINI_FLASH_RPD(기본 20)·GEMINI_QUOTA_SOFT(0.80) 에 닿은 모델은 호출 자체를 스킵
+    claude_cli.py                   ── v5.2 구독 프로바이더 — call_claude_json(prompt, schema=)(도구 0개, --json-schema SKILL_SCHEMA) ·
+                                          call_claude_read_files(prompt, files)(Read 만, 임시 폴더 cwd). 한도 쿨다운, config analyzer.*, runner 주입 (gotcha 49)
+    gemini.py                       ── analyze() (Claude → Gemini → Gemma, 결과 .provider) + call_gemma_json() + AnalysisResult. 일별 Gemini 호출 수를
+                                          logs/gemini_quota.json 에 기록하고 GEMINI_FLASH_RPD(기본 20)·GEMINI_QUOTA_SOFT(0.80) 에 닿은 모델은 호출 자체를 스킵
     merger.py                       ── merge_with_existing() — 중복 시 기존+신규 합병 (출처 URL 누적)
     embedder.py                     ── Gemini 임베딩 (x-goog-api-key 헤더 — gotcha 22). dedup 캐시 scripts/skills/embeddings.json 이
                                           라이브러리 의미검색과 공용. 키/쿼터 없으면 None → 호출측이 키워드로 강등 (gotcha 42)
-    media_understand.py             ── v5.1 미디어 이해 단계 — enrich(scrape_res, fetch=, upload=, generate=, cache_path=). 영상은 Files API
-                                          resumable 업로드+ACTIVE 대기, 이미지 ≤10장 inline 일괄, 유튜브는 file_data URL. 항목별 실패 격리, 예외 불출
+    media_understand.py             ── v5.1 미디어 이해 단계 — enrich(scrape_res, fetch=, upload=, generate=, read_images=, cache_path=). 영상은 Gemini
+                                          Files API resumable 업로드+ACTIVE 대기, 이미지 ≤10장은 v5.2 부터 Claude(Read) 먼저 → 실패 시 Gemini inline 일괄,
+                                          유튜브는 file_data URL. 항목별 실패 격리, 예외 불출. 캐시·items 에 provider 기록
     dedup_finder.py                 ── 의미 dedup 후보 탐색 (임계 config dedup.threshold, GENERIC_SLUGS 제외 — gotcha 28)
   skill_builder/
     md_generator.py                 ── render_skill_md() — SKILL.md 프론트매터 + 8섹션
@@ -468,6 +478,8 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 48. **프롬프트에 enum 라벨을 풀어 쓰면 모델이 라벨을 그대로 돌려준다** (v5.1) — `prompt.py` 가 등급 기준을 `S-즉시적용 / A-참고가치` 로 설명하니 Gemini 가 `"grade": "S-즉시적용"` 을 반환했고, `_validate` 는 `GRADES` 밖이라며 **C 로 강등** → "스킬 가치 없음" 으로 안내되고 미등록됐다 (실사고 2026-08-28 fieldby). 이제 첫 글자가 enum 이면 그 글자로 정규화한다(`tests/test_grade_normalize.py`). **enum 을 검증하는 파서는 프롬프트가 보여주는 표기 전부를 받아야 한다** — 프롬프트를 고칠 때 파서를 같이 보라.
 
+49. **`claude -p` 를 파이프라인 프로바이더로 쓸 때는 도구를 0개로 잠그고 stdin 을 닫아라** (v5.2, 2026-09-14 실측) — ① `--tools ""` 없이 부르면 CLI 가 기본 도구(Read/Bash/…)를 들고 시작해 분석 대신 "확인해볼게요" 류 행동을 하려 한다 (v4.4.3 채팅에서 겪은 것과 같은 함정 #19). 순수 생성은 `--tools ""` + `--json-schema`, 파일 판독만 `--tools Read --allowedTools Read` 로 **그 파일만 든 임시 폴더를 cwd** 로 (cwd 밖은 Read 도 권한 프롬프트에 걸려 non-interactive 에선 실패). ② stdin 을 안 닫으면 "no stdin data received in 3s, proceeding" 을 기다린다 — `subprocess.DEVNULL`. ③ `--json-schema` 의 enum 이 곧 `_validate` 의 enum 이어야 한다 — 프롬프트 라벨(`S-즉시적용`) 문제(#48)가 구조적으로 사라지지만, `SKILL_SCHEMA` 와 `prompt.py` 상수가 어긋나면 모델이 옳게 답해도 C 로 강등된다 (`SchemaTest` 가 지킨다). ④ 한도는 stdout envelope `is_error + result` 에 "usage limit" 류로 온다 — 이걸 보면 이 프로세스에서 더 두드리지 말고 쿨다운 (같은 5시간 창을 사용자의 코딩과 나눠 쓴다). 실측: 스킬 1건 50초·cache_creation ~9k + 본문, 슬라이드 2장 6초. 119 가드에는 `sdk-cli` 로 잡힌다 (A 경보 10분 150K — 건당 ~20k 라 여유).
+
 ## Related docs in this repo
 
 - **`TEMPLATE.md`** — 스킬 페이지 표준 템플릿 v2.1 (단일 진실, enum/구조/외부 도구 매핑 14종 정의)
@@ -511,6 +523,7 @@ URL 하나를 던지거나 본문을 그대로 붙여넣으면:
 
 | 날짜 | 버전 | 변경 |
 |------|------|----------|
+| 2026-09-14 | v5.2 | **분석 1순위 = Claude 구독 — SKILL.md 품질을 Max 플랜으로 올린다.** 그동안 본문을 쓰는 건 Gemini 2.5 Flash 였고 하루 20회 뒤엔 Gemma 26B 로컬이었다 (09-13 재처리 10건 중 후반이 Gemma). Claude 는 채팅·fix 러너에만 쓰고 있었는데, 영상만 못 받을 뿐 텍스트·이미지는 Claude 가 낫고 스킬 1건 ~20k 토큰이라 플랜 여유도 충분. ① `analyzer/claude_cli.py` — `claude -p` 래퍼 2종: `call_claude_json`(도구 0개 + `--json-schema SKILL_SCHEMA`, enum 을 스키마로 강제) · `call_claude_read_files`(Read 만, 임시 폴더 cwd). `--setting-sources ""`·`--strict-mcp-config`·stdin DEVNULL. 한도 메시지 → 30분 쿨다운. runner 주입으로 프로세스 0 테스트. ② `analyze()` 순서 Claude → Gemini → Gemma, 결과 `provider` 필드 + 잡 summary/로그에 기록. Gemini SDK/키가 없어도 Claude 로 분석된다 (종전엔 키 없으면 즉시 실패). 검증 재요청·body_too_short 보강은 1차가 Claude 면 Claude 로 (Gemma 로 품질 강등 X). ③ 슬라이드 판독 Claude 우선 (`read_images=` 주입점), 영상·유튜브는 Gemini 유지. ④ config `analyzer.*` 블록 (enabled/model/timeout/cooldown, 재시작 불필요), 긴급 env `ANALYZER_CLAUDE=0`. 실측: 기존 스킬 본문 재분석 50초·S 등급·본문 2.8k자·경고 0, 슬라이드 2장 판독 6초·한글 100% (gotcha 49). 테스트 316 → **344건**. |
 | 2026-09-13 | v5.1 | **미디어 이해 — 릴스·피드·자막 없는 유튜브의 내용을 읽는다.** 로그 전수(05-14~09-12) 에서 인스타 릴스 5건은 yt-dlp 가 매번 "login required" 로 실패해 Playwright 가 **캡션만** 뜯었고 그걸로 스킬이 만들어졌다 (실사례 DdGu4P0MjXk: 영상은 "AI Office 8가지 대시보드", 스킬은 "AI 정보 큐레이션 마인드셋"). 피드 `/p/` 4건은 시도조차 없이 차단. ① `scraper/instagram_embed.py` — 공개 embed 엔드포인트의 contextJSON 에서 캡션·`video_url`·캐러셀 슬라이드 URL 을 로그인 없이 확보 (gotcha 47), router 가 IG 를 embed 우선으로. ② `analyzer/media_understand.py` — 스크랩과 분석 사이의 새 단계. 릴스 mp4 → Files API → flash-lite 가 8초·8k 토큰으로 음성+화면 자막 정리, 캐러셀 5장 inline 7초, 유튜브는 URL 을 file_data 로 직접(87초 영상 11초). 결과는 본문 끝 섹션으로 덧붙고 500자 게이트는 그 뒤. 캐시 `logs/media_cache.json` (key 기준). 항목별 실패 격리. ③ 유튜브 자막 0자 → 영상 자체를 미디어 이해로. ④ 등급 `S-즉시적용` → C 강등 버그 수정 (gotcha 48). ⑤ 실패/누락 재처리 — 캡션만으로 만든 릴스 스킬 3건 합병 보강, 엉뚱한 1건 교체(백업 `logs/backup_media_20260913/`), 차단됐던 피드 2건 신규, 등급 버그 1건 재수집. 삭제된 게시물 3건(DW_asMNk8wG·DYYyIEqACDx·DZPjiWcD6t2)은 복구 불가. 발견: `gemini-2.5-flash` 는 company-hq 와 키를 공유해 하루 20회가 매일 첫 호출에 소진되고, **flash-lite 도 하루 20회**(429 실측, env 기본값 1000 → 20 정정) — 재처리 10건 중 후반은 Gemma 로컬로 넘어갔다. 미디어 이해까지 제대로 쓰려면 aiskillbox 전용 프로젝트 키가 필요하다. 테스트 279 → **312건**. 설계: `docs/superpowers/specs/2026-09-12-media-understanding-design.md` |
 | 2026-08-30 | v5.0 | **원격 MCP 커넥터 — claude.ai 웹·모바일·Cowork 에서 스킬 라이브러리를 꺼내 쓴다.** 기존 `mcp_server.py` 는 **stdio 전용**이라 claude.ai 커스텀 커넥터로 못 붙었다(커넥터는 원격 MCP만 받는다). ① **`POST /mcp` Streamable HTTP** — stdio 서버의 순수 디스패치 `handle(msg)` 를 그대로 재사용해 읽기 전용 3종(`search_skills`/`get_skill`/`list_skills`) 노출. stateless(SSE·세션ID 없음 — 도구가 전부 즉답형). 같은 프로세스에서 부르므로 `use_local_backend()` 로 자기호출 루프 차단(안 하면 `_http_get` 이 자기 서버를 때리고 v4.6 게이트에 401). ② **OAuth 2.1 인가서버** — RFC 9728/8414 메타데이터, RFC 7591 동적 등록(config 토글, 기본 off), authorization_code + PKCE S256, refresh 회전, RFC 7009 폐기. ③ **폐기 모델에 새 개념을 안 만들었다** — 모든 grant 에 승인한 초대코드를 박고 검증 때마다 그 코드 생존을 확인(지연 폐기). **초대코드 삭제 = 그 코드로 붙은 커넥터도 즉시 끊김** — 기존 cascade 멘탈 모델 그대로, 폐기 UI 불필요. ④ 게이트 예외를 prefix→**exact-match** 로(gotcha 43, fail-open→fail-closed). ⑤ **리뷰가 잡은 실제 결함 4건** — 남의 인가코드를 파괴하는 무흔적 DoS(gotcha 45), refresh 토큰이 클라이언트에 바인딩 안 됨(RFC 6749 §6), `/oauth/revoke` 가 브루트포스 잠금을 씻어냄, 축출 로직이 새 잠금을 영원히 못 만들게 함(gotcha 44 — 뒤 둘은 수정 웨이브가 스스로 만든 회귀). 구현자의 "단일 클라이언트라 저위험" 논거는 기각됐고, **연결 첫날 클라이언트가 2개 등록되며 그 판단이 옳았음이 실증됐다.** ⑥ 실 HTTP 검증 — 임시 서버로 401 챌린지→메타데이터→동의→PKCE 토큰 교환→Bearer `/mcp initialize` 200 완주, 이후 공개 URL 에서 CF Tunnel 통과 확인. 테스트 181 → **275건**. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md` |
 | 2026-08-25 | v4.9 | **텍스트 직접 입력 + 최근 실패 3종 근절.** ① **[✍️ 텍스트] 탭** — 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 로그인 벽 뉴스레터)를 위해 본문 붙여넣기 경로 신설. 예전엔 실패 안내가 "직접 텍스트로 옮겨 등록하세요" 라고 하면서 정작 `/api/collect` 가 non-URL 을 400 으로 튕겨 **안내대로 해도 막히는 상태**였다 (gotcha 36). `scripts/scraper/plain_text.py` 가 본문을 `ScrapeResult(source_type="text")` 로 포장해 기존 파이프라인(분석 → 중복 합병 → SKILL.md → 라이브러리)을 그대로 태운다. 출처는 본문 SHA-256 기반 `paste://<sha16>` — 같은 글 재등록 시 중복으로 잡힌다 (실측 확인). 원본 URL 을 같이 주면 그게 출처가 된다. 임계는 200자 (스크랩용 500 은 '렌더 실패로 껍데기만 잡힘' 방어라 사람이 고른 본문엔 과하다). CLI `--text` / `--text-file` / `--title`, 링크칸 본문 붙여넣기 자동 전환, 모드 기억(localStorage). ② **paste 식별자 링크 누수 3곳 차단** (gotcha 37) — SKILL.md 출처 줄·카탈로그 [원본 ↗]·**LLM 이 본문에 직접 박은 `[제목](paste://...)`**. 셋 다 실측으로 발견, 프롬프트에서 식별자를 감추고 `_scrub_paste_links` 2차 방어. ③ **router 가 최선의 스크랩을 버리던 버그** (gotcha 38, 실사고 8/25) — 459자 확보해놓고 임계 미달이라 통째로 버린 뒤 폴백 103자를 채택. `pick_best()` 도입, 실 URL 재측 103자 → **459자**. ④ **analyze() 무방어 재폴백** (gotcha 39) — 2차 `_extract_json` 이 except 안에서 안 감싸여 `job failed: JSON 블록 없음` traceback 3건. ok=False + 한글 사유로 정상 종료. ⑤ **`[hidden]` 무력화** (gotcha 40) — `.text-wrap{display:flex}` 가 UA 의 `[hidden]{display:none}` 을 이겨 두 패널이 동시 렌더. 헤드리스에서만 잡힌 종류. ⑥ **회수(꺼내 쓰기) 경로 전수 실측 중 발견한 기존 버그 2건** — `auth.json` 을 한 번만 읽어 **CLI 발급 코드가 거부되고 CLI 삭제가 회수되지 않던 문제** (gotcha 41, 보안 영향), CLI 검색이 `.env` 미로딩으로 **의미 검색이 조용히 꺼지던 문제** + `semantic_skip_reason` 노출 (gotcha 42). 실측: 로그인→탭 전환→카운터→붙여넣기 자동전환→모드 기억→제출→큐 라벨, 모바일 폭 가로스크롤 0, 콘솔 에러 0. 회수 5경로(라이브러리 검색·HTTP API·MCP·게시판·ECC 글로벌) 전부 1위 검출 확인. 테스트 121 → **181건**. |

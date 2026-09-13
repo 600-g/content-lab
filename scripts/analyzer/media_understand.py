@@ -25,6 +25,7 @@ from typing import Callable, Optional
 import requests
 
 from . import gemini as _gem
+from . import claude_cli as _claude
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ YOUTUBE_PROMPT = (
 )
 
 _MIME_BY_EXT = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+_EXT_BY_MIME = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 
 
 class MediaSkip(Exception):
@@ -195,6 +197,12 @@ def _mime_for(url: str) -> str:
     return "image/jpeg"
 
 
+def _default_read_images(files: list[tuple[bytes, str]], prompt: str) -> Optional[str]:
+    """Claude(claude -p, Read 도구만) 로 슬라이드 판독. 비활성·한도·실패면 None → 호출측이 Gemini 로."""
+    named = [(f"slide_{i}.{_EXT_BY_MIME.get(mime, 'jpg')}", data) for i, (data, mime) in enumerate(files, 1)]
+    return _claude.call_claude_read_files(prompt, named)
+
+
 # ── 본체 ──────────────────────────────────────────────────────────
 def enrich(
     scrape_res,
@@ -202,12 +210,18 @@ def enrich(
     fetch: Callable[[str], bytes] | None = None,
     upload: Callable[[bytes, str], str] | None = None,
     generate: Callable[[list[dict]], str] | None = None,
+    read_images: Callable[[list[tuple[bytes, str]], str], Optional[str]] | None = None,
     cache_path: Optional[Path | str] = None,
 ) -> dict:
-    """meta["media"] 를 읽어 본문에 섹션을 덧붙인다. 반환: {"ok", "items", "added_chars"}."""
+    """meta["media"] 를 읽어 본문에 섹션을 덧붙인다. 반환: {"ok", "items", "added_chars"}.
+
+    generate    = Gemini generateContent (영상·유튜브·이미지 폴백)
+    read_images = 이미지 1차 판독기 (기본 Claude). (bytes, mime) 목록 + 프롬프트 → 텍스트 또는 None
+    """
     fetch = fetch or _default_fetch
     upload = upload or _default_upload
     generate = generate or _default_generate
+    read_images = read_images or _default_read_images
     cache_file = Path(cache_path) if cache_path else CACHE_FILE
 
     media = list(((getattr(scrape_res, "meta", None) or {}).get("media")) or [])
@@ -225,7 +239,7 @@ def enrich(
     for item in media:
         kind = item.get("kind")
         key = item.get("key") or item.get("url") or ""
-        rec = {"key": key, "kind": kind, "ok": False, "cached": False, "error": None, "chars": 0}
+        rec = {"key": key, "kind": kind, "ok": False, "cached": False, "error": None, "chars": 0, "provider": ""}
         result["items"].append(rec)
         if kind == "image":
             if len(image_items) >= MAX_IMAGES:
@@ -235,7 +249,7 @@ def enrich(
             continue
         hit = cache.get(key)
         if hit and hit.get("text"):
-            rec.update(ok=True, cached=True, chars=len(hit["text"]))
+            rec.update(ok=True, cached=True, chars=len(hit["text"]), provider=hit.get("provider", ""))
             video_texts.append(hit["text"])
             continue
         try:
@@ -252,8 +266,8 @@ def enrich(
             text = (text or "").strip()
             if not text:
                 raise RuntimeError("빈 응답")
-            rec.update(ok=True, chars=len(text))
-            cache[key] = {"text": text, "ts": time.time(), "kind": kind}
+            rec.update(ok=True, chars=len(text), provider="gemini")
+            cache[key] = {"text": text, "ts": time.time(), "kind": kind, "provider": "gemini"}
             dirty = True
             video_texts.append(text)
         except Exception as e:  # noqa: BLE001 — 항목 실패는 격리
@@ -265,22 +279,33 @@ def enrich(
         hit = cache.get(batch_key)
         if hit and hit.get("text"):
             for rec, _ in image_items:
-                rec.update(ok=True, cached=True, chars=len(hit["text"]))
+                rec.update(ok=True, cached=True, chars=len(hit["text"]), provider=hit.get("provider", ""))
             image_texts.append(hit["text"])
         else:
             try:
-                parts: list[dict] = []
-                for _, item in image_items:
-                    data = fetch(item["url"])
-                    parts.append({"inline_data": {"mime_type": _mime_for(item["url"]),
-                                                  "data": base64.b64encode(data).decode("ascii")}})
-                parts.append({"text": IMAGE_PROMPT})
-                text = (generate(parts) or "").strip()
+                blobs = [(fetch(item["url"]), _mime_for(item["url"])) for _, item in image_items]
+                text, provider = "", ""
+                # 1차: Claude (Read 도구) — 한글 슬라이드 판독 품질이 좋고 Gemini 쿼터를 안 쓴다
+                try:
+                    text = (read_images(blobs, IMAGE_PROMPT) or "").strip()
+                    provider = "claude" if text else ""
+                except Exception as e:  # noqa: BLE001 — Claude 실패는 Gemini 로 흡수
+                    logger.warning("media images: Claude 판독 실패 → Gemini 로: %s", str(e)[:200])
+                # 2차: Gemini inline
+                if not text:
+                    parts: list[dict] = [
+                        {"inline_data": {"mime_type": mime, "data": base64.b64encode(data).decode("ascii")}}
+                        for data, mime in blobs
+                    ]
+                    parts.append({"text": IMAGE_PROMPT})
+                    text = (generate(parts) or "").strip()
+                    provider = "gemini" if text else ""
                 if not text:
                     raise RuntimeError("빈 응답")
                 for rec, _ in image_items:
-                    rec.update(ok=True, chars=len(text))
-                cache[batch_key] = {"text": text, "ts": time.time(), "kind": "images", "n": len(image_items)}
+                    rec.update(ok=True, chars=len(text), provider=provider)
+                cache[batch_key] = {"text": text, "ts": time.time(), "kind": "images",
+                                    "n": len(image_items), "provider": provider}
                 dirty = True
                 image_texts.append(text)
             except Exception as e:  # noqa: BLE001

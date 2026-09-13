@@ -1,11 +1,14 @@
-"""LLM 호출 (Gemini → Gemma 4) + JSON 파싱.
+"""LLM 호출 (Claude → Gemini → Gemma 4) + JSON 파싱.
 
-폴백 체인 (v2.6.1):
+폴백 체인 (v5.2):
+0. Claude Sonnet 5 (구독, claude -p — analyzer/claude_cli.py) — 성공하면 Gemini 쿼터를 아예 안 쓴다.
+   비활성(ANALYZER_CLAUDE=0 / config analyzer.claude_enabled)·한도 쿨다운·타임아웃이면 다음으로
 1. Gemini 2.5 Flash (cloud, 무료 20 RPD/model) — quota 80% 도달 시 자동 스킵
-2. Gemini 2.5 Flash Lite (cloud, 무료 1000 RPD/model) — 한도 50배 큰 폴백
+2. Gemini 2.5 Flash Lite (cloud, 실측 20 RPD/model)
 3. Gemma 4 26B (local Ollama, 무제한, 약 15-30초)
 
-검증 retry 와 body_too_short 보강은 Gemma 로만. cloud quota 보존.
+검증 재요청·body_too_short 보강은 1차가 Claude 였으면 Claude 로 (Gemma 로 품질 강등 X),
+Claude 가 막히면 Gemma. Gemini 가 1차였으면 종전대로 Gemma 만 (cloud quota 보존).
 """
 from __future__ import annotations
 
@@ -24,6 +27,7 @@ from .prompt import (
     build_prompt, CATEGORIES, GRADES, TARGETS, AI_TOOLS, DIFFICULTIES,
     BANNED_HEADINGS, ALLOWED_HEADINGS,
 )
+from .claude_cli import call_claude_json, SKILL_SCHEMA
 
 logger = logging.getLogger(__name__)
 
@@ -166,9 +170,11 @@ class AnalysisResult:
     raw: dict = field(default_factory=dict)
     ok: bool = True
     error: Optional[str] = None
+    provider: str = ""   # v5.2 — 본문을 만든 LLM: claude / gemini-2.5-flash(-lite) / gemma
 
     def to_dict(self) -> dict:
         return {
+            "provider": self.provider,
             "skill_name": self.skill_name,
             "skill_title_ko": self.skill_title_ko,
             "tldr": self.tldr,
@@ -489,61 +495,47 @@ def _gemini_gen_config() -> dict:
     }
 
 
-def analyze(scrape_dict: dict) -> AnalysisResult:
-    """ScrapeResult.to_dict() → AnalysisResult.
+def _fail(error: str) -> AnalysisResult:
+    return AnalysisResult(
+        skill_name="", skill_title_ko="", category="기타", grade="C",
+        grade_reason="", targets=[], summary="", when_to_use="", memo="",
+        ai_tools=[], tags=[], difficulty="", body_content="",
+        ok=False, error=error,
+    )
 
-    v2.6.1:
-    - Cloud quota 게이트 — 80% 도달한 모델은 호출 자체를 스킵 (logs/gemini_quota.json)
-    - 검증 retry 는 무조건 Gemma — URL 당 Cloud 호출 최대 2회로 절반 절감
-    - body_too_short 발생 시 Gemma 에 num_predict 8192·temperature 0.4 로 1회 보강 재요청
-    """
+
+def _call_gemini_chain(prompt: str) -> tuple[str, str, str]:
+    """Gemini 1-2단계. 반환 (raw_text, provider, 실패 사유). SDK/키가 없으면 빈 텍스트 + 사유 (잡은 안 죽는다)."""
     try:
         import google.generativeai as genai
     except ImportError:
-        return AnalysisResult(
-            skill_name="", skill_title_ko="", category="기타", grade="C",
-            grade_reason="", targets=[], summary="", when_to_use="", memo="",
-            ai_tools=[], tags=[], difficulty="", body_content="",
-            ok=False, error="google-generativeai 미설치",
-        )
-
+        return "", "", "Gemini: google-generativeai 미설치"
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        return AnalysisResult(
-            skill_name="", skill_title_ko="", category="기타", grade="C",
-            grade_reason="", targets=[], summary="", when_to_use="", memo="",
-            ai_tools=[], tags=[], difficulty="", body_content="",
-            ok=False, error="GEMINI_API_KEY 미설정 (.env 확인)",
-        )
-
+        return "", "", "Gemini: GEMINI_API_KEY 미설정 (.env 확인)"
     genai.configure(api_key=api_key)
-    prompt = build_prompt(scrape_dict)
 
-    last_err: Exception | None = None
-    raw_text: str = ""
-
-    # 1-2단계: Gemini cloud — quota 80% 도달 모델은 호출 자체를 스킵
+    last_err = ""
     for model_name in (MODEL_PRIMARY, MODEL_FALLBACK):
         if _quota_should_skip(model_name):
             logger.info("Gemini %s quota 임계(>=%.0f%%) — 호출 스킵",
                         model_name, QUOTA_SOFT_THRESHOLD * 100)
+            last_err = last_err or f"{model_name}: quota 임계"
             continue
         if model_name in _UNSUPPORTED_MODELS:
             logger.info("Gemini %s — 이번 세션에서 SDK 비호환으로 비활성화 상태", model_name)
             continue
         try:
-            model = genai.GenerativeModel(
-                model_name,
-                generation_config=_gemini_gen_config(),
-            )
+            model = genai.GenerativeModel(model_name, generation_config=_gemini_gen_config())
             resp = model.generate_content(prompt)
             raw_text = resp.text or ""
             _quota_increment(model_name)
             if raw_text:
-                break
+                return raw_text, model_name, ""
+            last_err = f"{model_name}: 빈 응답"
         except Exception as e:  # noqa: BLE001
             logger.warning("Gemini %s 실패: %s", model_name, e)
-            last_err = e
+            last_err = f"{model_name}: {e}"
             if _is_429(e):
                 _quota_increment(model_name, hit_429=True)
             elif _is_thinking_config_reject(e):
@@ -552,65 +544,91 @@ def analyze(scrape_dict: dict) -> AnalysisResult:
                     "%s thinking_config 미지원 — 세션 내 비활성 (다음 호출부터 스킵)",
                     model_name,
                 )
+    return "", "", f"Gemini: {last_err or '사용 가능 모델 없음'}"
 
-    # 3단계: Gemma 4 로컬 폴백 (Gemini 둘 다 실패 또는 빈 응답 또는 quota 도달)
+
+def _retry_llm(prompt: str, provider: str, **gemma_kwargs) -> tuple[str, str]:
+    """검증 재요청·보강. 1차가 Claude 였으면 Claude 로 (품질 유지), 막히면 Gemma. 반환 (text, provider)."""
+    if provider == "claude":
+        text = call_claude_json(prompt, schema=SKILL_SCHEMA)
+        if text:
+            return text, "claude"
+        logger.info("Claude 재요청 불가 → Gemma 로")
+    return call_gemma_json(prompt, **gemma_kwargs) or "", "gemma"
+
+
+def analyze(scrape_dict: dict) -> AnalysisResult:
+    """ScrapeResult.to_dict() → AnalysisResult.
+
+    v5.2: Claude(구독) → Gemini → Gemma. 어느 단계가 본문을 만들었는지 `provider` 에 남긴다.
+    v2.6.1: Cloud quota 게이트 (logs/gemini_quota.json) · 검증 retry · body_too_short 보강 1회.
+    """
+    prompt = build_prompt(scrape_dict)
+    raw_text, provider = "", ""
+    errors: list[str] = []
+
+    # 0단계: Claude 구독 — 성공하면 Gemini 쿼터를 아예 안 쓴다
+    claude_text = call_claude_json(prompt, schema=SKILL_SCHEMA)
+    if claude_text:
+        try:
+            _extract_json(claude_text)
+            raw_text, provider = claude_text, "claude"
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"Claude: JSON 파싱 실패 ({str(e)[:80]})")
+            logger.warning("Claude 응답 JSON 파싱 실패 → Gemini 로: %s", e)
+    else:
+        errors.append("Claude: 비활성·한도·실패")
+
+    # 1-2단계: Gemini cloud — quota 80% 도달 모델은 호출 자체를 스킵
     if not raw_text:
-        logger.info("Gemini 사용 불가 → Gemma 4 로컬 시도")
+        raw_text, provider, gem_err = _call_gemini_chain(prompt)
+        if gem_err:
+            errors.append(gem_err)
+
+    # 3단계: Gemma 4 로컬 폴백
+    if not raw_text:
+        logger.info("Claude·Gemini 사용 불가 → Gemma 4 로컬 시도")
         raw_text = call_gemma_json(prompt) or ""
+        provider = "gemma" if raw_text else ""
+        if not raw_text:
+            errors.append("Gemma: 빈 응답/실패")
 
     if not raw_text:
-        return AnalysisResult(
-            skill_name="", skill_title_ko="", category="기타", grade="C",
-            grade_reason="", targets=[], summary="", when_to_use="", memo="",
-            ai_tools=[], tags=[], difficulty="", body_content="",
-            ok=False, error=f"모든 LLM 호출 실패 (Gemini + Gemma): {last_err}",
-        )
+        return _fail("모든 LLM 호출 실패 (Claude + Gemini + Gemma): " + " / ".join(errors))
 
-    # JSON 파싱 실패 시 Gemma 폴백 1회 — Gemini 응답이 max_output 한도로 잘렸을 때 회복
+    # JSON 파싱 실패 시 Gemma 폴백 1회 — 응답이 max_output 한도로 잘렸을 때 회복
     try:
         data = _extract_json(raw_text)
     except Exception as parse_err:  # noqa: BLE001
-        logger.warning("Gemini 응답 JSON 파싱 실패 (길이=%d) → Gemma 폴백 1회: %s",
-                       len(raw_text), parse_err)
+        logger.warning("%s 응답 JSON 파싱 실패 (길이=%d) → Gemma 폴백 1회: %s",
+                       provider, len(raw_text), parse_err)
         gemma_text = call_gemma_json(prompt) or ""
         if not gemma_text:
-            return AnalysisResult(
-                skill_name="", skill_title_ko="", category="기타", grade="C",
-                grade_reason="", targets=[], summary="", when_to_use="", memo="",
-                ai_tools=[], tags=[], difficulty="", body_content="",
-                ok=False, error=f"JSON 파싱 실패 + Gemma 폴백 실패: {parse_err}",
-            )
-        raw_text = gemma_text
+            return _fail(f"JSON 파싱 실패 + Gemma 폴백 실패: {parse_err}")
+        raw_text, provider = gemma_text, "gemma"
         try:
             data = _extract_json(raw_text)
         except Exception as gemma_err:  # noqa: BLE001
             # 여기서 raise 하면 analyze() 밖으로 전파돼 잡 전체가 traceback 으로 죽는다
             # (실사고: "job failed: JSON 블록 없음" 3건 — 사용자에겐 한글 사유가 안 감).
-            # 두 모델 모두 파싱 불가면 실패 사유를 담은 AnalysisResult 로 정상 종료한다.
             logger.warning("Gemma 폴백 응답도 파싱 실패 (길이=%d): %s", len(raw_text), gemma_err)
-            return AnalysisResult(
-                skill_name="", skill_title_ko="", category="기타", grade="C",
-                grade_reason="", targets=[], summary="", when_to_use="", memo="",
-                ai_tools=[], tags=[], difficulty="", body_content="",
-                ok=False,
-                error=(
-                    "AI 응답을 JSON 으로 해석하지 못했습니다 "
-                    f"(Gemini: {parse_err} / Gemma: {gemma_err})"
-                ),
+            return _fail(
+                "AI 응답을 JSON 으로 해석하지 못했습니다 "
+                f"(1차: {parse_err} / Gemma: {gemma_err})"
             )
 
     try:
         data = _validate(data)
 
-        # v2.6 검증 3종 + 1회 retry (Cloud quota 보존 위해 Gemma 만 사용)
+        # v2.6 검증 3종 + 1회 retry — 1차 프로바이더 유지 (Claude) 또는 Gemma
         scraped_text = scrape_dict.get("text") or ""
         issues = validate_output(data, scraped_text)
         retry_needed = [i for i in issues if i["severity"] == "retry"]
         if retry_needed:
-            logger.info("검증 실패 %d건 → Gemma 재요청: %s",
-                        len(retry_needed), [i["kind"] for i in retry_needed])
+            logger.info("검증 실패 %d건 → 재요청 (%s): %s",
+                        len(retry_needed), provider, [i["kind"] for i in retry_needed])
             retry_prompt = _retry_prompt(prompt, raw_text, issues)
-            retry_text = call_gemma_json(retry_prompt) or ""
+            retry_text, _ = _retry_llm(retry_prompt, provider)
             if retry_text:
                 try:
                     data2 = _validate(_extract_json(retry_text))
@@ -623,20 +641,18 @@ def analyze(scrape_dict: dict) -> AnalysisResult:
                 except Exception as e:  # noqa: BLE001
                     logger.warning("재요청 응답 파싱 실패 — 원본 유지: %s", e)
 
-        # v2.6.1 — body_too_short 발생 시 Gemma 에 보강 재요청 1회
+        # v2.6.1 — body_too_short 발생 시 보강 재요청 1회
         warns = [i for i in issues if i["severity"] == "warn"]
         if any(w["kind"] == "body_too_short" for w in warns):
             cur_body = (data.get("body_md") or "").strip()
-            logger.info("body_too_short(%d자) → Gemma 보강 재요청", len(cur_body))
+            logger.info("body_too_short(%d자) → 보강 재요청 (%s)", len(cur_body), provider)
             boost_prompt = (
                 prompt
                 + "\n\n[직전 응답 본문이 너무 짧음 — 원본 결을 살려 더 풍부하게 작성. "
                 "최소 1200자 이상. 코드/명령어/링크 보존. JSON 만 출력]\n"
                 + "\n[직전 본문]\n" + cur_body[:3000]
             )
-            boost_text = call_gemma_json(
-                boost_prompt, num_predict=8192, temperature=0.4
-            ) or ""
+            boost_text, _ = _retry_llm(boost_prompt, provider, num_predict=8192, temperature=0.4)
             if boost_text:
                 try:
                     data3 = _validate(_extract_json(boost_text))
@@ -679,11 +695,7 @@ def analyze(scrape_dict: dict) -> AnalysisResult:
             caveats=data.get("caveats", ""),
             body_content=data["body_content"],
             raw=data,
+            provider=provider,
         )
     except Exception as e:  # noqa: BLE001
-        return AnalysisResult(
-            skill_name="", skill_title_ko="", category="기타", grade="C",
-            grade_reason="", targets=[], summary="", when_to_use="", memo="",
-            ai_tools=[], tags=[], difficulty="", body_content="",
-            ok=False, error=f"JSON 파싱 실패: {e}",
-        )
+        return _fail(f"JSON 파싱 실패: {e}")
