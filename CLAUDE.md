@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **aiskillbox** (콘텐츠랩 v5.0) — URL 한 줄 **또는 붙여넣은 텍스트** 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
 
-- **v4.6 전체 잠금**: 사이트 전체(수집 UI·카탈로그·라이브러리 API)가 초대코드 로그인 필요. 예외는 `/login`·`/healthz`(112 모니터)·`/static/*`·`/sw.js` 뿐. 첫 진입/복구는 `/login` 의 "관리자 첫 등록(PIN)". 설계: `docs/superpowers/specs/2026-08-22-invite-auth-design.md`
+- **v4.6 전체 잠금**: 사이트 전체(수집 UI·카탈로그·라이브러리 API)가 초대코드 로그인 필요. 예외는 `/login`·`/api/auth/redeem|bootstrap`·`/healthz`(112 모니터)·`/static/*`·`/sw.js`·`/favicon.ico` 와 v5.0 원격 MCP 경로(`/mcp`·`/oauth/*` 4종·`/.well-known/*` 3종) 뿐 — 목록의 단일 진실은 `scripts/auth_routes.py:_ALLOW_EXACT`(정확 일치, gotcha 43). 첫 진입/복구는 `/login` 의 "관리자 첫 등록(PIN)". 설계: `docs/superpowers/specs/2026-08-22-invite-auth-design.md`
 - 게시판(도서관): https://aiskillbox.600g.net/catalog — 카테고리 섹션 + 칩 필터 + 카드/목록 전환. **제목 클릭 = 사이트 안 게시글** `/skill/<slug>` (본문 전문·SKILL.md 복사·같은 카테고리 글), 외부로 나가는 링크는 [원본 ↗] 하나뿐 · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
 - 채팅(v4.8): **Opus 5 · SSE 실시간 스트리밍 · 대화 기억**. `POST /api/chat/stream` 이 `status/delta/tool/done` 이벤트를 흘리고, `conv_id` 로 `claude --resume` 세션을 이어 앞 턴을 기억한다. `POST /api/chat/reset` = 새 대화.
 - 입력(v4.9): 메인 폼이 **[🔗 링크] / [✍️ 텍스트] 2탭**. 텍스트 탭은 스크랩을 건너뛰고 붙여넣은 본문을 바로 분석한다 (최소 200자). 로그인 벽 때문에 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 뉴스레터, 워크스페이스 전용 노션)의 정식 경로. 링크칸에 본문을 붙여넣어도 자동으로 텍스트 탭으로 넘어간다.
+- **미디어 이해 (v5.1)**: 인스타 릴스·피드 캐러셀·자막 없는 유튜브의 **내용**을 읽는다. 인스타는 공개 embed 엔드포인트(로그인·yt-dlp 불필요)에서 캡션 + 영상/슬라이드 URL 을 얻고, `analyzer/media_understand.py` 가 Gemini 멀티모달(flash-lite 우선)로 음성·화면 텍스트를 본문에 덧붙인다. 설계: `docs/superpowers/specs/2026-09-12-media-understanding-design.md`
 - **원격 MCP (v5.0)**: `POST /mcp` (Streamable HTTP) + OAuth 2.1 인가서버. claude.ai 웹·모바일·Cowork 에 커스텀 커넥터로 붙는다. 읽기 전용 3종 도구. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md`
 - 설계: `docs/superpowers/specs/2026-08-20-skill-library-design.md`
 
@@ -36,6 +37,10 @@ python -m scripts.collect --text-file ./본문.md --title "제목"
 pbpaste | python -m scripts.collect --text -                       # 클립보드 그대로
 python -m scripts.collect "https://chatgpt.com/share/x" --text-file ./본문.md   # 원본 URL 을 출처로 기록
 
+# 미디어 이해 (v5.1) — 릴스/피드/자막 없는 유튜브. 결과 캐시는 key(shortcode:순번, yt:id) 기준
+python3 -c "import json;d=json.load(open('logs/media_cache.json'));print(len(d),'건');[print(k,len(v['text']),'자') for k,v in list(d.items())[-5:]]"
+venv/bin/python -m unittest tests.test_instagram_embed tests.test_media_understand -v   # 네트워크 0
+
 # 컴파일 사전 검증 (변경 후 항상)
 python -m py_compile app.py scripts/**/*.py
 
@@ -57,9 +62,12 @@ curl -s "http://localhost:5050/api/library/search?q=인스타+릴스&k=5" | pyth
 curl -s "http://localhost:5050/api/library/skills/<slug>?format=raw"   # SKILL.md 전문
 claude mcp add --scope user skill-library -- python3 ~/Developer/my-company/content-lab/scripts/library/mcp_server.py
 #   외부 기기: -e AISKILLBOX_URL=https://aiskillbox.600g.net (표준 라이브러리만 — venv 불필요)
-venv/bin/python -m unittest discover -s tests -t .          # 라이브러리 테스트 47건 (네트워크 0)
+# 테스트 — unittest 전용 (★ pytest 는 venv 에 없다). 279건 · ~1.7초 · 네트워크 0
+venv/bin/python -m unittest discover -s tests -t .
+venv/bin/python -m unittest tests.test_mcp_transport -v                                   # 파일 하나
+venv/bin/python -m unittest tests.test_mcp_transport.TransportTest.test_bad_token_is_401   # 메서드 하나
 
-# 헬스 + 외부 검증
+# 헬스 + 외부 검증 (응답의 version 은 app.py:/healthz 하드코딩 — 릴리스마다 손으로 올린다. 2026-09-10 현재 "4.8" 로 v5.0 과 어긋남)
 curl -s http://localhost:5050/healthz | python3 -m json.tool
 curl -s https://aiskillbox.600g.net/healthz | python3 -m json.tool
 
@@ -94,11 +102,20 @@ python -m scripts.restore_from_backup --apply "키워드"           # 백업에�
 # 원격 MCP 커넥터 (claude.ai 웹/모바일/Cowork) — v5.0
 curl -s https://aiskillbox.600g.net/.well-known/oauth-protected-resource | python3 -m json.tool
 venv/bin/python -m scripts.mcp_remote client list          # 붙어있는 커넥터
-venv/bin/python -m scripts.mcp_remote client delete <id>   # 커넥터 끊기
+venv/bin/python -m scripts.mcp_remote client delete <id>   # 커넥터 끊기 (딸린 토큰까지 폐기)
 #   커넥터 연결은 초대코드에 묶인다 → 초대코드 삭제하면 그 커넥터도 즉시 끊긴다
-#   새 커넥터 붙일 때만 config.json 의 mcp_remote.dynamic_registration 을 true 로 켰다가 되돌린다.
-#   ★ 되돌린 직후 반드시 `client list` 로 낯선 클라이언트가 등록되지 않았는지 확인할 것
-#     (창이 열린 동안에는 인터넷 누구나 클라이언트를 등록할 수 있다)
+#   (묶이는 코드 = 동의 화면에서 로그인한 코드. 재연결 때 커넥터 전용 코드로 로그인해야 이 설계가 유지된다)
+grep -a "POST /oauth/token" logs/launchd_stderr.log | tail -5              # ★ 생사 진단 1순위 — 갱신이 오면 살아있다
+grep -a "POST /mcp" logs/launchd_stderr.log | grep -a '" 401 ' | tail -5   # 401 뒤에 /oauth/token 이 안 오면 진짜 단절, 요청 자체가 없으면 idle
+#
+#   ★ 새 커넥터를 붙일 때는 dynamic_registration 을 켜지 말고 클라이언트를 손으로 발급한다.
+#     켜는 동안 인터넷 누구나 등록할 수 있고 등록 개수 상한이 없다. 아래가 그 안전한 경로:
+venv/bin/python -m scripts.mcp_remote client create "Claude" \
+  --redirect-uri https://claude.ai/api/mcp/auth_callback \
+  --redirect-uri https://claude.com/api/mcp/auth_callback
+#   → 출력된 client_id/secret 을 claude.ai 커넥터 추가 화면의 [고급 설정] 에 넣는다.
+#     secret 은 이때 한 번만 보인다. 비워두면 claude.ai 가 동적 등록을 시도하다 404 로 실패한다.
+#   부득이 dynamic_registration 을 켰다면 되돌린 직후 반드시 `client list` 로 낯선 클라이언트 확인.
 ```
 
 ## High-level architecture
@@ -112,6 +129,9 @@ scripts/scraper/router.py                 scripts/scraper/plain_text.py
   ── detect_source() → 전용 스크래퍼          ── 스크랩 생략, 본문을 ScrapeResult 로 포장
      → Playwright → requests 폴백 (3단)         출처 = paste://<sha16> (또는 사용자가 준 원본 URL)
   ↓ ScrapeResult                            ↓ ScrapeResult (source_type="text")
+scripts/analyzer/media_understand.py ── (meta["media"] 가 있을 때만) 영상 → Files API, 슬라이드 → inline, 유튜브 → URL 직접
+  ── flash-lite → flash 로 음성·화면 텍스트를 본문 끝 [영상 내용]/[슬라이드 텍스트] 섹션으로. 캐시 logs/media_cache.json
+  ↓ 텍스트가 보강된 ScrapeResult (500자 게이트는 그 뒤)
 scripts/analyzer/gemini.py ── Gemini 2.5 Flash → 2.0 Flash → Gemma 4 26B(로컬) 3단 폴백
   ↓ AnalysisResult (8섹션 + 메타)
 중복 검사 (mirror + 글로벌 슬러그 + Notion URL) → 있으면 scripts/analyzer/merger.py 로 합병
@@ -204,6 +224,10 @@ LLM 재작성 시 코드블록/인라인 코드/단축키 손실 방지:
 `md_generator.render_skill_md()` 는 YAML 프론트매터 + H1 + 8섹션 (SKILL.md 표준).
 **Notion 본문에 넣을 때는 `register.py:_strip_for_notion()` 이 프론트매터 + 최상위 H1 자동 제거**. 이걸 안 하면 YAML이 Notion 페이지 본문에 paragraph로 박혀버림 (실제 발생했던 버그).
 
+### 테스트 구조 (unittest, 네트워크 0)
+
+`tests/` 는 평면 구조 — `fixtures.py` 의 `render_skill_md(slug, spec)` + `make_mirror(skills)` 가 tmpdir 에 일회용 mirror 트리를 만든다. 서버 모듈은 전부 **주입 kwargs** 로 테스트한다: `register_library_routes(app, mirror_root=, embed_fn=, vectors_loader=)` · `register_transport(app, store=, cfg=)` · `register_auth(app, store=, login_template=)`. 상태를 가진 가드는 모듈 싱글턴이 아니라 register 함수 지역 변수여야 테스트 간 잠금이 새지 않는다 (gotcha 44). pytest 는 venv 에 없고 필요도 없다 — Makefile·pyproject 도 없다.
+
 ## Module map
 
 ```
@@ -213,6 +237,9 @@ app.py                              ── Flask 진입점. 순차 잡 큐(단�
 scripts/
   collect.py                        ── 메인 파이프라인 (단계별 한글 에러 + 부분 성공 처리). Notion 등록 기본값은 config
                                         notion.register_on_collect (CLI --notion/--no-notion 우선). summary.catalog_url 반환
+  notion_paging.py                  ── query_all_pages() — Notion DB 조회의 유일한 경로 (gotcha 23). 새 DB 스크립트는 예외 없이 이걸 쓴다
+  config_store.py                   ── config.json dotted-key 읽기/쓰기 (채팅 write_config · mcp_remote/config 가 사용)
+  aiskillbox_start.sh               ── launchd 진입 스크립트 — venv 없으면 생성·의존성 설치, .env 로드, exec venv/bin/python app.py
   library/                          ── v4.5 스킬 라이브러리 (도서관). 설계: docs/superpowers/specs/2026-08-20-skill-library-design.md
     index.py                        ──   skills/*/SKILL.md → frozen SkillRecord 인덱스. frontmatter 파서(외부 의존 0), 누락 필드 보정,
                                           (파일수·mtime·crc32) 버전으로 2초 스로틀 재빌드, 서빙 전 시크릿 패턴 마스킹
@@ -227,6 +254,11 @@ scripts/
   auth_store.py                     ── v4.6 초대코드/기기토큰 저장소 (logs/auth.json 0600 — 코드 평문·토큰 해시,
                                         cascade 회수, CLI create|list|delete)
   auth_routes.py                    ── v4.6 전체 잠금 게이트(before_request, allowlist) + /login + /api/auth/redeem|bootstrap|codes
+  chat/engine.py                    ── 운영 채팅 엔진 (v4.4~4.8) — 프로바이더 체인 Anthropic API → claude CLI(기본: --output-format json
+                                        --json-schema --resume, gotcha 19·20·35) → Ollama. cli_normalize() 가 CLI 스키마 이탈을 흡수 (gotcha 34)
+  chat/routes.py                    ── POST /api/chat/stream (SSE status/delta/tool/done/ping) · /api/chat/reset · /api/fix/status
+  chat/tools.py                     ── 도구 REGISTRY 화이트리스트 (recent_jobs / tail_log / search_library / write_config / edit_skill_md / escalate_fix …).
+                                        mutating 도구는 safety.py PIN 세션(logs/chat_sessions.json, 30분) 필수. history.py 가 inbox/*.jsonl 기록
   chat/fixer.py                     ── v4.4 escalate_fix — fix 잡 생성/조회 (logs/fix_jobs.json), 러너 detached spawn
   chat/fix_runner.py                ── v4.4 fix 러너 (서버와 분리 프로세스). 스냅샷 → claude -p (기본 claude-sonnet-5,
                                         .env FIX_CLAUDE_MODEL override · ~/.claude-aibox 폴더 존재 시 CLAUDE_CONFIG_DIR
@@ -238,17 +270,25 @@ scripts/
   curate_db.py                      ── DB 전수 큐레이션 CLI (analyze/fix-emoji/fix-meta/polish-body/find-dupes/all)
   scraper/
     router.py                       ── detect_source() + 3단 폴백 + 80자 미만 시 자동 폴백
-    youtube.py                      ── yt-dlp 자막(ko→en) + 메타
+    youtube.py                      ── yt-dlp 자막(ko→en) + 메타. 자막 0자면 meta["media"]=[youtube] 로 영상 자체를 미디어 이해로 (≤30분)
     github.py                       ── GitHub REST API (Playwright보다 10배 빠름, README+stars+topics)
-    social.py                       ── Instagram/TikTok/Twitter (yt-dlp 우선, X는 로그인 벽 명시)
+    instagram_embed.py              ── v5.1 인스타 공개 embed(/embed/captioned/) 스크래퍼 — contextJSON(이중 JSON 인코딩) 에서 캡션·작성자·
+                                          video_url·캐러셀 자식 이미지·accessibility_caption. 미디어는 meta["media"] 로만 넘김. 실패는 ok=False
+    social.py                       ── Instagram/TikTok/Twitter yt-dlp (IG 는 v5.1 부터 embed 실패 시 폴백 전용 — 릴스는 항상 login required)
     web.py                          ── Playwright + trafilatura + UA 회전 4종 (mobile UA 1종 포함)
     plain_text.py                   ── v4.9 붙여넣은 텍스트 → ScrapeResult (네트워크 0). paste://<sha16> 식별자,
                                         제목 자동 추출(마크다운 헤딩 > 첫 의미 줄), TEXT_MIN_LEN=200
     mcp_fallback.py                 ── requests 최후 폴백 (정적 페이지만)
   analyzer/
     prompt.py                       ── ANALYSIS_PROMPT_TEMPLATE (enum 강제 + 외부 도구 대체 매핑 14종)
-    gemini.py                       ── analyze() + call_gemma_json() + AnalysisResult 데이터클래스
+    gemini.py                       ── analyze() + call_gemma_json() + AnalysisResult 데이터클래스. 일별 호출 수를 logs/gemini_quota.json 에
+                                          기록하고 GEMINI_FLASH_RPD(기본 20)·GEMINI_QUOTA_SOFT(0.80) 에 닿은 모델은 호출 자체를 스킵
     merger.py                       ── merge_with_existing() — 중복 시 기존+신규 합병 (출처 URL 누적)
+    embedder.py                     ── Gemini 임베딩 (x-goog-api-key 헤더 — gotcha 22). dedup 캐시 scripts/skills/embeddings.json 이
+                                          라이브러리 의미검색과 공용. 키/쿼터 없으면 None → 호출측이 키워드로 강등 (gotcha 42)
+    media_understand.py             ── v5.1 미디어 이해 단계 — enrich(scrape_res, fetch=, upload=, generate=, cache_path=). 영상은 Files API
+                                          resumable 업로드+ACTIVE 대기, 이미지 ≤10장 inline 일괄, 유튜브는 file_data URL. 항목별 실패 격리, 예외 불출
+    dedup_finder.py                 ── 의미 dedup 후보 탐색 (임계 config dedup.threshold, GENERIC_SLUGS 제외 — gotcha 28)
   skill_builder/
     md_generator.py                 ── render_skill_md() — SKILL.md 프론트매터 + 8섹션
     installer.py                    ── 글로벌(~/.claude/skills/) + mirror(./skills/) 동시 설치
@@ -283,10 +323,15 @@ scripts/
     cli.py / __main__.py            ──   python -m scripts.mcp_remote client create|list|delete
 templates/oauth_consent.html        ── OAuth 동의 화면 (읽기 전용 고지, 승인/거부)
 templates/index.html                ── 단일 페이지 — Hero + 입력 + 작업 큐 리스트 + 설정 모달 + 드로어
+templates/login.html                ── v4.6 초대코드 로그인 + 관리자 첫 등록(PIN) 페이지
 static/{app.js, style.css}          ── 클라이언트 — 비차단 제출, 다중 잡 큐 UI, PIN 설정창, Web Push 구독
+static/chat.js                      ── 채팅 클라이언트 — SSE 스트리밍, PIN 모달, 모바일 바텀시트
 static/sw.js                        ── 서비스워커 — push/notificationclick 핸들러 (백그라운드 알림)
 logs/{recent.json, jobs.json}       ── 영속화 (running 잡은 재시작 시 interrupted, queued 잡은 재투입)
 logs/push_subscriptions.json        ── Web Push 구독 (브라우저 PushSubscription JSON 목록, gitignore)
+logs/{auth.json, oauth.json, chat_sessions.json} ── 0600 상태 저장소. CLI 와 상주 서버가 같이 만지므로 mtime 재로드 필수 (gotcha 41)
+logs/gemini_quota.json              ── 일별 Gemini 호출 카운트/소진 플래그 (analyzer/gemini.py 쿼터 게이트, media_understand 도 공유)
+logs/media_cache.json               ── 미디어 이해 결과 캐시 (key → text). 합병·재수집 때 Gemini 재호출 0회
 logs/backup_v{25,26,27}_{date}/     ── 단계별 백업. v27 은 raw_blocks JSON 포함 (복원용)
 logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 ({pid}__{slug}.md). --use-cache 시 재사용
 ```
@@ -300,6 +345,26 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 - `NOTION_HUB_PAGE_ID=35f14362-1b4b-8103-940d-cd81547feda4` (📒 AI 스킬 수집소)
 - `SKILL_INSTALL_DIR=~/.claude/skills` (변경 시 ECC 환경과 분리됨 — 권장 X)
 - `GEMMA_MODEL=gemma4:e4b` / `GEMMA_TIMEOUT=300` (튜닝)
+- 그 외 코드가 읽는 env (이름만, 기본값은 코드): `ADMIN_PIN`(설정창·PIN bootstrap) · `AISKILLBOX_PORT`(5050) · `SCRAPER_MIN_TEXT_LEN` · `GEMINI_FLASH_RPD`/`GEMINI_FLASH_LITE_RPD`/`GEMINI_QUOTA_SOFT` · `GEMMA_NUM_CTX`/`GEMMA_NUM_PREDICT`/`OLLAMA_URL` · `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`(Web Push) · `AISKILLBOX_URL`/`AISKILLBOX_TOKEN`(stdio MCP 클라이언트 쪽) · `FIX_CLAUDE_MODEL`/`FIX_CLAUDE_CONFIG_DIR` · `NOTION_ARCHIVE_DB_ID` · `SKILL_LIBRARY_ROOT`. `.env.example` 은 첫 실행용 7개만 담는다.
+
+
+### 원격 MCP 커넥터가 끊기는 이유 (전수)
+
+커넥터는 **액세스 토큰 1시간 / 리프레시 토큰 90일** 로 돈다. 90일은 카운트다운이 아니라 **"90일 연속 미사용" 타이머**다 — `rotate_refresh` 가 갱신 때마다 리프레시를 새로 발급하며 만료를 다시 90일 뒤로 민다. grant 에 최초 발급시각 기반의 절대 상한은 없다. 즉 90일에 한 번만 써도 영구 유지된다. 이 TTL(`config.json mcp_remote.refresh_ttl_seconds`)이 하는 일은 "방치된 커넥터를 언제 끊을까" 하나뿐이니 늘릴 이유가 없다 — 늘리면 안 쓰는 자격증명의 수명만 길어진다. 끊기는 경로는 아래가 전부다 — 진단은 항상 `grep -a "POST /oauth/token" logs/launchd_stderr.log | tail` 부터. **갱신 요청이 오고 있으면 커넥터는 살아있다.**
+
+| # | 원인 | 증상 | 대응 |
+|---|---|---|---|
+| 1 | **초대코드 삭제** (설계된 폐기 경로) | 즉시 전부 401. `client list` 엔 남아있음 | 의도한 것. 되살리려면 재연결 |
+| 2 | **`client delete`** | 즉시 401, `client list` 에서 사라짐 | 재발급 후 재연결 |
+| 3 | **90일 연속 미사용** | 조용히 401 | 재연결. 쓰면 만료가 계속 밀리므로 실사용 중엔 해당 없음 |
+| 4 | **claude.ai 가 갱신을 멈춤** — 만료 액세스 토큰으로 시도당 1~2회 401 만 받고 `/oauth/token` 을 안 침 | 서버·터널·초대코드·리프레시 토큰 다 정상인데 401 반복, 갱신 요청 **뚝 끊김** | 2026-09-05 `transport.py` 가 401 챌린지에 `error="invalid_token"` 추가 (RFC 6750 §3.1, 회귀 테스트 4건). **그래도 09-06→09-08 재발**(36시간) — 헤더는 필요조건일 뿐, 원인은 claude.ai 쪽. 복구는 claude.ai 설정에서 재연결뿐 |
+| 5 | **커넥터를 지웠다가 재추가** | 추가 화면에서 실패 | `dynamic_registration:false` 라 `POST /oauth/register` 가 404. 위의 수동 발급 경로로 |
+| 6 | **FailGuard 잠금** | 올바른 secret 인데 429 | client_id 당 5회 실패 → 300초. 기다리면 풀림 |
+| 7 | **서버/터널 다운** | 401 아니라 502·타임아웃 | `claude_112.sh` 가 자동 복구 |
+
+**4번이 위험한 이유**: 1·2·3은 원인이 명확한데 4는 모든 헬스체크를 통과한다. 서버 살아있고, 터널 정상이고, 초대코드 멀쩡하고, 리프레시 토큰도 12월까지 유효한데 claude.ai 만 죽은 액세스 토큰으로 401 을 반복했다 (2026-09-03 → 09-05, 이틀 방치). 그래서 `claude_112.sh` 에 **갱신 정체 감지**를 넣었다 — 리프레시가 살아있는데 액세스 토큰이 4시간 넘게 만료 상태면 텔레그램 알림 (하루 1회, `~/.claude_112_mcp_stale`). **이 감지는 idle 도 잡는다** — claude.ai 는 실사용 때만 갱신하므로 5시간(TTL 1h + 4h) 이상 안 쓰면 같은 경보가 온다 (2026-09-09 대조: 경보 7건 중 4건이 idle 오탐, 경보 직후 첫 사용에서 재인증 없이 정상 갱신). 진짜 단절의 시그니처는 **`/mcp` 401 이 찍히는데 그 뒤 `/oauth/token` 이 안 오는 것** — idle 은 401 자체가 없다. 경보를 받으면 재연결 전에 위 Common commands 의 grep 두 줄부터.
+
+**도구는 읽기 전용 3종이 전부다** (`search_skills`/`get_skill`/`list_skills`, scope `skills:read`). 커넥터로 스킬을 수정·생성·삭제할 수는 없다 — 설계상 그렇다. 쓰기가 필요하면 사이트(`/collect`)나 CLI 를 쓴다.
 
 ## Operational gotchas (실 운영 중 발견한 함정)
 
@@ -367,9 +432,9 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 32-b. **사람 링크와 AI 링크를 섞지 말 것** (v4.7) — 같은 SKILL.md 를 세 경로로 낸다: 사람은 `/skill/<slug>`(게시글 HTML), AI 는 `/api/library/skills/<slug>`(JSON) 또는 `?format=raw`(마크다운 전문), MCP 는 `get_skill`. 검색 응답은 셋을 각각 `page_url` / `detail_url` / slug 로 내려주므로 **UI 는 page_url, 도구는 detail_url** 을 쓴다. 카드 제목이 외부 원본을 가리키면 게시판에서 이탈하므로 금지 — 외부 링크는 [원본 ↗] 버튼과 상세 페이지의 출처 목록에만 둔다.
 
-32-a. **전체 잠금(v4.6) allowlist 를 함부로 늘리지 말 것** — 게이트 예외는 `/login` · `/api/auth/redeem|bootstrap` · `/healthz` · `/static/*` · `/sw.js` · OPTIONS 뿐이다 (`scripts/auth_routes.py:_ALLOW_EXACT/_ALLOW_PREFIX`). 새 공개 엔드포인트가 필요하면 진짜 비밀이 없는지 확인 후 여기에만 추가. `register_auth` 는 **의도적으로 try/except 없이** 등록 — 게이트 실패 시 무보호로 뜨는 대신 기동 실패(healthz 죽음 → 112 감지). MCP/에이전트는 `AISKILLBOX_TOKEN` env (401 이면 MCP 는 로컬 인덱스 폴백). 전 기기 로그아웃 사고 복구 = `/login` 관리자 첫 등록(PIN) 또는 `python -m scripts.auth_store create`.
+32-a. **전체 잠금(v4.6) allowlist 를 함부로 늘리지 말 것** — 게이트 예외는 `/login` · `/api/auth/redeem|bootstrap` · `/healthz` · `/static/*` · `/sw.js` · `/favicon.ico` · OPTIONS 와 v5.0 원격 MCP 경로(`/mcp` · `/oauth/*` 4종 · `/.well-known/*` 3종, gotcha 43) 뿐이다 (`scripts/auth_routes.py:_ALLOW_EXACT/_ALLOW_PREFIX`). 새 공개 엔드포인트가 필요하면 진짜 비밀이 없는지 확인 후 여기에만 추가. `register_auth` 는 **의도적으로 try/except 없이** 등록 — 게이트 실패 시 무보호로 뜨는 대신 기동 실패(healthz 죽음 → 112 감지). MCP/에이전트는 `AISKILLBOX_TOKEN` env (401 이면 MCP 는 로컬 인덱스 폴백). 전 기기 로그아웃 사고 복구 = `/login` 관리자 첫 등록(PIN) 또는 `python -m scripts.auth_store create`.
 
-32. **라이브러리 인덱스는 mirror(`skills/`)만 본다** — `~/.claude/skills/` 는 수동 설치 스킬 112건이 섞여 있어 검색 corpus 로 부적합 (origin 이 content-lab 인 79건만이 라이브러리). 수집 파이프라인은 두 곳에 동시에 쓰므로 mirror 만 읽어도 같은 내용. 손으로 `~/.claude/skills/<slug>/SKILL.md` 만 고치면 라이브러리엔 반영 안 됨 — mirror 도 같이 고치거나 채팅 `edit_skill_md` 사용.
+32. **라이브러리 인덱스는 mirror(`skills/`)만 본다** — `~/.claude/skills/` 는 수동 설치 스킬이 절반 가까이 섞여 있어 검색 corpus 로 부적합 (2026-09 기준 221건 중 origin 이 content-lab 인 mirror 111건만이 라이브러리 — 정확한 수는 `/healthz` 의 `library.total`). 수집 파이프라인은 두 곳에 동시에 쓰므로 mirror 만 읽어도 같은 내용. 손으로 `~/.claude/skills/<slug>/SKILL.md` 만 고치면 라이브러리엔 반영 안 됨 — mirror 도 같이 고치거나 채팅 `edit_skill_md` 사용.
 
 33. **카탈로그/상세는 메인 사이트와 다른 HTML 이다 — 모바일 규약을 따로 심어야 한다** (v4.8) — `templates/index.html` 의 viewport(`maximum-scale=1, user-scalable=no`)·safe-area(`--safe-top`) 규약이 `catalog_template.py` 이식 때 빠져서, ① 게시판에서만 핀치/더블탭 확대가 되고 ② `viewport-fit=cover` + 노치 조합에서 톱바가 상태바 밑으로 잘렸다. **상세 페이지는 standalone PWA 로 열리면 브라우저 뒤로가기 버튼이 아예 없어** 그 잘린 톱바가 유일한 탈출구였다 (사용자 신고 "글 들어가면 뒤로가기 어려움"). 지금은 톱바 `← 목록` + 스크롤 시 뜨는 플로팅 FAB + 글 끝 버튼 + 왼쪽 엣지 스와이프 4중. 카탈로그 → 글 → 뒤로 왕복은 `sessionStorage` 로 검색어·필터·스크롤을 복원한다 (`html{scroll-behavior:smooth}` 때문에 복원은 `behavior:'auto'` 명시 + 레이아웃 완성 전 clamp 대비 rAF 재시도). **새 페이지를 이 템플릿에 추가할 때 `MobileUxTest` 를 통과시킬 것.**
 
@@ -391,7 +456,7 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 42. **의미 검색이 조용히 꺼져도 아무 표시가 없었다** (v4.9) — `python -m scripts.library search` 는 `.env` 를 로드하지 않아 `GEMINI_API_KEY` 가 파일에 멀쩡히 있어도 embedder 가 키를 못 찾았고, 임베딩이 None → hybrid 가 **조용히 keyword 로 강등**됐다 (CLAUDE.md 는 이걸 '터미널 하이브리드 검색' 이라고 안내). 서버 경로(app.py)는 `.env` 를 읽으므로 정상이라 비교하지 않으면 안 드러난다. `catalog.main()` 안에서만 `.env` 를 로드(import 경로인 `routes.py` 에는 무영향)하고, 검색 응답에 **`semantic_skip_reason`** 을 추가해 "왜 빠졌는지"(키 없음 / 캐시 빔 / 후보 없음 / keyword 요청)가 드러나게 했다. **`semantic_used: false` 같은 bool 만 두면 원인 구분이 안 된다 — degrade 는 사유까지 실어야 한다.**
 
-43. **인증 게이트 예외를 prefix 로 두면 fail-open 이다** (v5.0) — v4.6 전체 잠금의 allowlist 에 원격 MCP 경로를 넣을 때 처음엔 `_ALLOW_PREFIX` 에 `"/oauth/"` 를 넣었다. 그러면 **그 아래 새 라우트를 추가하는 순간 자동으로 게이트 밖이 된다** — 인증을 깜빡한 엔드포인트가 아무 테스트도 실패시키지 않고 무보호로 공개된다. 지금은 `_ALLOW_EXACT` 에 7개 경로를 정확 일치로 나열한다(fail-closed: 여기 적기 전까지 게이트 안). `/static/` 만 prefix 로 남았다. **새 OAuth·MCP 엔드포인트를 추가하면 자체 인증을 넣고 이 목록에도 반드시 추가할 것** — 안 넣으면 302 로 막혀서 바로 드러난다(그게 옳은 방향이다). 회귀 가드: `test_unknown_oauth_subpath_is_gated`.
+43. **인증 게이트 예외를 prefix 로 두면 fail-open 이다** (v5.0) — v4.6 전체 잠금의 allowlist 에 원격 MCP 경로를 넣을 때 처음엔 `_ALLOW_PREFIX` 에 `"/oauth/"` 를 넣었다. 그러면 **그 아래 새 라우트를 추가하는 순간 자동으로 게이트 밖이 된다** — 인증을 깜빡한 엔드포인트가 아무 테스트도 실패시키지 않고 무보호로 공개된다. 지금은 `_ALLOW_EXACT` 에 경로를 정확 일치로 나열한다(fail-closed: 여기 적기 전까지 게이트 안 — 2026-09 기준 login·auth 2·healthz·sw.js·favicon·/mcp·oauth 4·well-known 3, 목록은 코드가 단일 진실). `/static/` 만 prefix 로 남았다. **새 OAuth·MCP 엔드포인트를 추가하면 자체 인증을 넣고 이 목록에도 반드시 추가할 것** — 안 넣으면 302 로 막혀서 바로 드러난다(그게 옳은 방향이다). 회귀 가드: `test_unknown_oauth_subpath_is_gated`.
 
 44. **상태를 들고 있는 가드는 모듈 레벨에 두지 말고, 축출할 때 카운터를 통째로 비우지 마라** (v5.0 — 같은 클래스에서 세 번 틀렸다) — ① `_GUARD = FailGuard()` 를 **모듈 싱글턴**으로 두면 테스트마다 새 Flask 앱을 만들어도 가드 객체가 재사용돼, 잠금 테스트가 키를 5분 잠근 뒤 알파벳순 다음 테스트들이 400 대신 **429** 를 받아 실패한다(실측). 이 repo 관례는 원래 함수 지역 변수 + closure 다 (`auth_routes.py:register_auth` 의 `guard = _RedeemGuard()`) — 등록 함수가 기동 시 1회만 불리므로 운영에선 동일하게 공유된다. ② 키 상한을 걸 때 **`_fails` 를 통째로 `clear()` 하면 잠금이 영원히 안 생긴다** — `_fails` 는 `_until` 로 들어가는 **입구**라, 입구를 씻으면 어떤 키도 `max_fails` 에 도달하지 못한다. 무인증 `GET /oauth/authorize?client_id=<임의값>` 플러딩으로 도달 가능했고, 같은 가드를 token·revoke 가 공유하므로 **authorize 플러딩이 token 잠금까지 껐다**(PoC 재현). ③ 두 버킷에 **공유 예산**을 쓰면 한쪽 플러딩이 다른 쪽을 굶겨 활성 잠금이 축출된다 — 버킷별로 독립 상한을 건다. 그리고 `/oauth/token` 에서 "클라이언트 인증 성공 = 카운터 리셋" 을 없앴으면 **같은 가드를 쓰는 옆 엔드포인트(`/oauth/revoke`)에도 같은 패턴이 남아있지 않은지** 확인할 것 — 남아 있으면 그게 우회로가 된다(실측: 24회 시도에 429 0건). **교훈: 잠금/축출 상태기계는 머릿속으로 설계하지 말고 PoC 부터 돌릴 것.**
 
@@ -399,12 +464,17 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 46. **CF Tunnel 이 TLS 를 종단하므로 Flask 는 자기를 http 로 본다** (v5.0) — `request.url_root` 는 `http://` 를 준다. OAuth 메타데이터·`WWW-Authenticate`·issuer 에 `http://` 가 **한 번이라도** 새면 Claude 가 연결을 거부한다. 그래서 절대 URL 은 전부 `config.json` 의 `mcp_remote.public_base_url` 에서만 만들고, `mcp_remote/config.py:load()` 가 https 아닌 값을 **캐시 갱신 전에** `ValueError` 로 거부한다(잘못된 설정이 캐시에 눌러앉지 않게). 회귀 가드: `test_no_http_urls_anywhere` 가 메타데이터 응답 전문을 훑는다. **원격 클라이언트에 URL 을 내보내는 새 엔드포인트는 전부 이 규칙을 따를 것.**
 
+47. **인스타는 embed 엔드포인트가 답이다 — yt-dlp·Playwright 는 캡션도 못 뜯거나 캡션만 뜯는다** (v5.1, 2026-09-12 실측) — `instagram.com/<p|reel>/<sc>/embed/captioned/` 는 로그인·쿠키 없이 200 이고 `"contextJSON":"…"`(JSON 문자열을 한 번 더 JSON 인코딩 — `raw_decode` 로 문자열을 풀고 다시 `json.loads`) 안에 캡션·`video_url`·캐러셀 자식이 있다. 함정 셋: ① `video_url` 이 **없는 릴스도 있다** (실측 Dc01G4vJP_5 — `is_video:true` 인데 URL 없음 → 썸네일만 이미지로 읽힘). 그런 릴스의 영상 본문이 꼭 필요하면 이 맥 크롬 쿠키로 `yt-dlp --cookies-from-browser chrome`. ② 삭제된 게시물은 embed 에 contextJSON 이 없고 본 페이지는 프로필로 302 — `ok=False` 로 기존 경로에 넘기되 재시도 무의미. ③ **미디어 URL 에는 서명·만료가 붙어 매번 다르다** — 캐시 키는 URL 이 아니라 `ig:<shortcode>:<idx>` / `yt:<id>` 로. 영상 이해 결과를 URL 로 캐시하면 재수집마다 Gemini 를 다시 태운다.
+
+48. **프롬프트에 enum 라벨을 풀어 쓰면 모델이 라벨을 그대로 돌려준다** (v5.1) — `prompt.py` 가 등급 기준을 `S-즉시적용 / A-참고가치` 로 설명하니 Gemini 가 `"grade": "S-즉시적용"` 을 반환했고, `_validate` 는 `GRADES` 밖이라며 **C 로 강등** → "스킬 가치 없음" 으로 안내되고 미등록됐다 (실사고 2026-08-28 fieldby). 이제 첫 글자가 enum 이면 그 글자로 정규화한다(`tests/test_grade_normalize.py`). **enum 을 검증하는 파서는 프롬프트가 보여주는 표기 전부를 받아야 한다** — 프롬프트를 고칠 때 파서를 같이 보라.
+
 ## Related docs in this repo
 
 - **`TEMPLATE.md`** — 스킬 페이지 표준 템플릿 v2.1 (단일 진실, enum/구조/외부 도구 매핑 14종 정의)
 - **`README.md`** — 사용자 facing 빠른 시작 가이드
 - **`DEPLOY.md`** — Cloudflare Tunnel + LaunchAgent 배포 가이드
-- **`lessons.md`** — 운영 중 발견한 패턴/실수 누적 (새 패턴 발견 시 추가)
+- **`lessons.md`** — 2026-05-14 이후 갱신 없음. 실제 함정 누적은 이 파일의 Operational gotchas 섹션
+- **`docs/superpowers/specs/`** — 설계 스펙 5건 (06-12 self-service · 07-15 remote-fix/pixel UX · 08-20 skill-library · 08-22 invite-auth · 08-27 remote-mcp-oauth) + `plans/2026-08-27-remote-mcp-oauth.md`. v4.5 이후 기능은 스펙 → 계획 → 구현 순으로 들어왔다
 
 ---
 
@@ -441,6 +511,7 @@ URL 하나를 던지거나 본문을 그대로 붙여넣으면:
 
 | 날짜 | 버전 | 변경 |
 |------|------|----------|
+| 2026-09-13 | v5.1 | **미디어 이해 — 릴스·피드·자막 없는 유튜브의 내용을 읽는다.** 로그 전수(05-14~09-12) 에서 인스타 릴스 5건은 yt-dlp 가 매번 "login required" 로 실패해 Playwright 가 **캡션만** 뜯었고 그걸로 스킬이 만들어졌다 (실사례 DdGu4P0MjXk: 영상은 "AI Office 8가지 대시보드", 스킬은 "AI 정보 큐레이션 마인드셋"). 피드 `/p/` 4건은 시도조차 없이 차단. ① `scraper/instagram_embed.py` — 공개 embed 엔드포인트의 contextJSON 에서 캡션·`video_url`·캐러셀 슬라이드 URL 을 로그인 없이 확보 (gotcha 47), router 가 IG 를 embed 우선으로. ② `analyzer/media_understand.py` — 스크랩과 분석 사이의 새 단계. 릴스 mp4 → Files API → flash-lite 가 8초·8k 토큰으로 음성+화면 자막 정리, 캐러셀 5장 inline 7초, 유튜브는 URL 을 file_data 로 직접(87초 영상 11초). 결과는 본문 끝 섹션으로 덧붙고 500자 게이트는 그 뒤. 캐시 `logs/media_cache.json` (key 기준). 항목별 실패 격리. ③ 유튜브 자막 0자 → 영상 자체를 미디어 이해로. ④ 등급 `S-즉시적용` → C 강등 버그 수정 (gotcha 48). ⑤ 실패/누락 재처리 — 캡션만으로 만든 릴스 스킬 3건 합병 보강, 엉뚱한 1건 교체(백업 `logs/backup_media_20260913/`), 차단됐던 피드 2건 신규, 등급 버그 1건 재수집. 삭제된 게시물 3건(DW_asMNk8wG·DYYyIEqACDx·DZPjiWcD6t2)은 복구 불가. 발견: `gemini-2.5-flash` 는 company-hq 와 키를 공유해 하루 20회가 매일 첫 호출에 소진되고, **flash-lite 도 하루 20회**(429 실측, env 기본값 1000 → 20 정정) — 재처리 10건 중 후반은 Gemma 로컬로 넘어갔다. 미디어 이해까지 제대로 쓰려면 aiskillbox 전용 프로젝트 키가 필요하다. 테스트 279 → **312건**. 설계: `docs/superpowers/specs/2026-09-12-media-understanding-design.md` |
 | 2026-08-30 | v5.0 | **원격 MCP 커넥터 — claude.ai 웹·모바일·Cowork 에서 스킬 라이브러리를 꺼내 쓴다.** 기존 `mcp_server.py` 는 **stdio 전용**이라 claude.ai 커스텀 커넥터로 못 붙었다(커넥터는 원격 MCP만 받는다). ① **`POST /mcp` Streamable HTTP** — stdio 서버의 순수 디스패치 `handle(msg)` 를 그대로 재사용해 읽기 전용 3종(`search_skills`/`get_skill`/`list_skills`) 노출. stateless(SSE·세션ID 없음 — 도구가 전부 즉답형). 같은 프로세스에서 부르므로 `use_local_backend()` 로 자기호출 루프 차단(안 하면 `_http_get` 이 자기 서버를 때리고 v4.6 게이트에 401). ② **OAuth 2.1 인가서버** — RFC 9728/8414 메타데이터, RFC 7591 동적 등록(config 토글, 기본 off), authorization_code + PKCE S256, refresh 회전, RFC 7009 폐기. ③ **폐기 모델에 새 개념을 안 만들었다** — 모든 grant 에 승인한 초대코드를 박고 검증 때마다 그 코드 생존을 확인(지연 폐기). **초대코드 삭제 = 그 코드로 붙은 커넥터도 즉시 끊김** — 기존 cascade 멘탈 모델 그대로, 폐기 UI 불필요. ④ 게이트 예외를 prefix→**exact-match** 로(gotcha 43, fail-open→fail-closed). ⑤ **리뷰가 잡은 실제 결함 4건** — 남의 인가코드를 파괴하는 무흔적 DoS(gotcha 45), refresh 토큰이 클라이언트에 바인딩 안 됨(RFC 6749 §6), `/oauth/revoke` 가 브루트포스 잠금을 씻어냄, 축출 로직이 새 잠금을 영원히 못 만들게 함(gotcha 44 — 뒤 둘은 수정 웨이브가 스스로 만든 회귀). 구현자의 "단일 클라이언트라 저위험" 논거는 기각됐고, **연결 첫날 클라이언트가 2개 등록되며 그 판단이 옳았음이 실증됐다.** ⑥ 실 HTTP 검증 — 임시 서버로 401 챌린지→메타데이터→동의→PKCE 토큰 교환→Bearer `/mcp initialize` 200 완주, 이후 공개 URL 에서 CF Tunnel 통과 확인. 테스트 181 → **275건**. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md` |
 | 2026-08-25 | v4.9 | **텍스트 직접 입력 + 최근 실패 3종 근절.** ① **[✍️ 텍스트] 탭** — 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 로그인 벽 뉴스레터)를 위해 본문 붙여넣기 경로 신설. 예전엔 실패 안내가 "직접 텍스트로 옮겨 등록하세요" 라고 하면서 정작 `/api/collect` 가 non-URL 을 400 으로 튕겨 **안내대로 해도 막히는 상태**였다 (gotcha 36). `scripts/scraper/plain_text.py` 가 본문을 `ScrapeResult(source_type="text")` 로 포장해 기존 파이프라인(분석 → 중복 합병 → SKILL.md → 라이브러리)을 그대로 태운다. 출처는 본문 SHA-256 기반 `paste://<sha16>` — 같은 글 재등록 시 중복으로 잡힌다 (실측 확인). 원본 URL 을 같이 주면 그게 출처가 된다. 임계는 200자 (스크랩용 500 은 '렌더 실패로 껍데기만 잡힘' 방어라 사람이 고른 본문엔 과하다). CLI `--text` / `--text-file` / `--title`, 링크칸 본문 붙여넣기 자동 전환, 모드 기억(localStorage). ② **paste 식별자 링크 누수 3곳 차단** (gotcha 37) — SKILL.md 출처 줄·카탈로그 [원본 ↗]·**LLM 이 본문에 직접 박은 `[제목](paste://...)`**. 셋 다 실측으로 발견, 프롬프트에서 식별자를 감추고 `_scrub_paste_links` 2차 방어. ③ **router 가 최선의 스크랩을 버리던 버그** (gotcha 38, 실사고 8/25) — 459자 확보해놓고 임계 미달이라 통째로 버린 뒤 폴백 103자를 채택. `pick_best()` 도입, 실 URL 재측 103자 → **459자**. ④ **analyze() 무방어 재폴백** (gotcha 39) — 2차 `_extract_json` 이 except 안에서 안 감싸여 `job failed: JSON 블록 없음` traceback 3건. ok=False + 한글 사유로 정상 종료. ⑤ **`[hidden]` 무력화** (gotcha 40) — `.text-wrap{display:flex}` 가 UA 의 `[hidden]{display:none}` 을 이겨 두 패널이 동시 렌더. 헤드리스에서만 잡힌 종류. ⑥ **회수(꺼내 쓰기) 경로 전수 실측 중 발견한 기존 버그 2건** — `auth.json` 을 한 번만 읽어 **CLI 발급 코드가 거부되고 CLI 삭제가 회수되지 않던 문제** (gotcha 41, 보안 영향), CLI 검색이 `.env` 미로딩으로 **의미 검색이 조용히 꺼지던 문제** + `semantic_skip_reason` 노출 (gotcha 42). 실측: 로그인→탭 전환→카운터→붙여넣기 자동전환→모드 기억→제출→큐 라벨, 모바일 폭 가로스크롤 0, 콘솔 에러 0. 회수 5경로(라이브러리 검색·HTTP API·MCP·게시판·ECC 글로벌) 전부 1위 검출 확인. 테스트 121 → **181건**. |
 | 2026-08-23 | v4.8 | **모바일 UX 수리 + 채팅 실시간화(Opus 5).** ① **게시판 모바일** — v4.7 이식 때 빠진 확대 잠금(`maximum-scale=1, user-scalable=no`)·safe-area 톱바 패딩 복원(gotcha 33). 필터바 `top` 하드코딩(52/48px) → JS 실측 `--topbar-h`. 모바일은 칩 4줄을 **[필터] 로 접고** 활성 개수 배지. ② **뒤로가기 4중화** — standalone PWA 엔 브라우저 뒤로가기가 없다: 톱바 `← 목록`(40px) + 스크롤 시 플로팅 FAB(← 목록 / ↑ 위로) + 글 끝 버튼 + 왼쪽 엣지 스와이프. 목록에서 들어왔으면 `history.back()` 으로 **검색어·필터·스크롤 위치까지 복원**(sessionStorage). ③ **채팅 실시간** — `POST /api/chat/stream` SSE (`status/delta/tool/done/ping`), `input_json_delta` 를 파싱해 **토큰 단위 스트리밍**(`partial_reply`), 도구 실행이 라이브로 보이고 [중지] 가능. 모델 기본 Sonnet 5 → **Opus 5** (`--fallback-model claude-sonnet-5`). ④ **대화 기억** — `conv_id` → `claude --resume` (gotcha 35). [새 대화] 버튼 = `POST /api/chat/reset`. ⑤ **실측 버그 4건** — 스키마 이탈로 답 유실(gotcha 34) · `list_skills` 슬러그가 전부 `SKILL.md`(`p.name` → `p.parent.name`) · 본문 `#앵커` 목차가 새 탭으로 열림 · 안 닫힌 ``` 펜스로 프롬프트 전문이 벽글 렌더(`close_open_fence`). 헤드리스 실측: 로그인→카드→상세→뒤로(스크롤 복원)→필터 유지→채팅 스트리밍, 콘솔 에러 0. 테스트 86 → **121건**. |

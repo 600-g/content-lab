@@ -9,6 +9,9 @@ from .router import ScrapeResult
 logger = logging.getLogger(__name__)
 
 
+MAX_MEDIA_SECONDS = 1800  # 자막 없는 영상을 Gemini 로 직접 볼 때의 길이 상한 (30분)
+
+
 def _run_yt_dlp(url: str) -> dict:
     """yt-dlp --dump-json --skip-download. 자막은 따로 가져옴."""
     cmd = [
@@ -95,6 +98,12 @@ def scrape(url: str) -> ScrapeResult:
         "thumbnail": meta_raw.get("thumbnail", ""),
         "tags": meta_raw.get("tags", []) or [],
     }
+    # 자막이 없으면 설명문만으로 스킬이 만들어진다 → 영상 자체를 미디어 이해 단계로 넘긴다
+    # (Gemini 가 URL 을 file_data 로 직접 본다 — 다운로드 불필요). 너무 긴 영상은 토큰 폭탄이라 제외.
+    if not subtitles:
+        duration = meta_raw.get("duration") or 0
+        if not duration or duration <= MAX_MEDIA_SECONDS:
+            meta["media"] = [{"kind": "youtube", "url": url, "key": f"yt:{meta_raw.get('id', '')}"}]
 
     return ScrapeResult(
         url=url,

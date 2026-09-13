@@ -218,7 +218,19 @@ def scrape(url: str) -> ScrapeResult:
     source = detect_source(url)
     logger.info("scraping url=%s source=%s", url, source)
 
-    # IG 피드 포스트 사전 차단 — 로그인 벽 때문에 본문 추출 불가능.
+    # IG — 공개 embed 엔드포인트 먼저 (로그인·쿠키·yt-dlp 불필요, 캡션 + 영상/슬라이드 URL).
+    # 캡션이나 미디어가 하나라도 잡히면 채택. 실패 시에만 아래 기존 경로 (사전 차단 → yt-dlp → Playwright).
+    if source == "instagram":
+        try:
+            from . import instagram_embed
+            r = instagram_embed.scrape(url)
+            if r.ok and (r.text.strip() or (r.meta or {}).get("media")):
+                return r
+            logger.info("IG embed 실패(%s) → 기존 경로", r.error)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("IG embed 예외 → 기존 경로: %s", e)
+
+    # IG 피드 포스트 사전 차단 — 로그인 벽 때문에 본문 추출 불가능 (embed 도 실패한 경우에만).
     if source == "instagram":
         blocked = _ig_guard(url)
         if blocked is not None:

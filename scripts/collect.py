@@ -65,6 +65,19 @@ def _humanize_scrape_error(scrape_res) -> tuple[str, str]:
             "URL 확인 후 재시도. 지속 시 다른 출처 또는 텍스트 직접 입력")
 
 
+def _min_text_len(*, is_paste: bool, media_added: int) -> int:
+    """분석에 들어갈 최소 본문 길이.
+
+    스크랩용 500 은 '렌더 실패로 껍데기만 잡힘' 방어다. 붙여넣기(사람이 고른 본문)와
+    미디어 이해가 실제로 영상/슬라이드를 읽어 붙인 본문에는 그 위험이 없으므로 200 을 쓴다
+    (실사고 2026-09-13: 릴스 캡션 260 + 전사 209 = 469자가 500 게이트에 걸려 분석 생략).
+    미디어 단계가 돌았어도 한 글자도 못 읽었으면(media_added=0) 스크랩 기준 그대로.
+    """
+    if is_paste or media_added > 0:
+        return plain_text.TEXT_MIN_LEN
+    return MIN_TEXT_LEN
+
+
 def _short_text_hint(scrape_res) -> str:
     """본문 부족의 출처별 우회 안내 — 사용자가 다음에 뭘 하면 되는지까지."""
     url = (scrape_res.url or "").lower()
@@ -221,6 +234,27 @@ def collect(
         summary["hint"] = PASTE_FALLBACK_HINT
         return summary
 
+    # ── 1.5 미디어 이해 (릴스·피드 슬라이드·자막 없는 유튜브) ────────
+    # 캡션/설명문만으로 스킬이 만들어지던 문제의 해법. 길이 게이트 **앞**에서 돌아야
+    # 영상 내용이 더해진 본문으로 500자 판정을 받는다. 실패는 항목별로 격리되고 예외를 내지 않는다.
+    media_added = 0
+    if not is_paste and scrape_res.ok and (scrape_res.meta or {}).get("media"):
+        from scripts.analyzer import media_understand
+        n_media = len(scrape_res.meta["media"])
+        log.info("[1.5/5] 미디어 이해 시작 — %d건", n_media)
+        mres = media_understand.enrich(scrape_res)
+        failed = [i for i in mres["items"] if not i["ok"]]
+        media_added = int(mres.get("added_chars") or 0)
+        summary["stages"]["media"] = {
+            "stage": "미디어 이해",
+            "ok": mres["ok"],
+            "items": len(mres["items"]),
+            "added_chars": mres["added_chars"],
+            "cached": sum(1 for i in mres["items"] if i.get("cached")),
+            "errors": [i["error"] for i in failed][:3],
+        }
+        log.info("[1.5/5] 미디어 이해 완료 — +%d자, 실패 %d/%d", mres["added_chars"], len(failed), n_media)
+
     text_len = len(scrape_res.text or "")
     # 붙여넣기 경로는 위에서 이미 stage 를 채웠다 — 덮어쓰면 '텍스트 입력' 라벨이 날아간다.
     if not is_paste:
@@ -248,7 +282,7 @@ def collect(
     # (실사고 2026-08-13: ChatGPT 공유 링크 106자 → 등급 C). 사유를 정확히 알려주고 쿼터도 아낀다.
     # 붙여넣기는 사람이 의도적으로 넣은 본문이라 '렌더 실패로 껍데기만 잡힘' 위험이 없다.
     # 스크랩용 임계(500)보다 낮은 기준을 쓴다.
-    min_len = plain_text.TEXT_MIN_LEN if is_paste else MIN_TEXT_LEN
+    min_len = _min_text_len(is_paste=is_paste, media_added=media_added)
     if text_len < min_len:
         summary["stages"]["scrape"]["ok"] = False
         if is_paste:

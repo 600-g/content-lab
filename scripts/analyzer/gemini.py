@@ -38,7 +38,9 @@ GEMMA_TIMEOUT = int(os.getenv("GEMMA_TIMEOUT", "120"))
 QUOTA_FILE = Path(__file__).resolve().parents[2] / "logs" / "gemini_quota.json"
 QUOTA_DAILY_LIMITS = {
     "gemini-2.5-flash": int(os.getenv("GEMINI_FLASH_RPD", "20")),
-    "gemini-2.5-flash-lite": int(os.getenv("GEMINI_FLASH_LITE_RPD", "1000")),
+    # 실측 (2026-09-13 429 본문): flash-lite 도 프로젝트당 하루 20회. 1000 으로 두면 80% 사전 스킵이
+    # 영원히 안 걸려 매번 429 왕복 후에야 Gemma 로 넘어간다.
+    "gemini-2.5-flash-lite": int(os.getenv("GEMINI_FLASH_LITE_RPD", "20")),
 }
 QUOTA_SOFT_THRESHOLD = float(os.getenv("GEMINI_QUOTA_SOFT", "0.80"))
 
@@ -354,8 +356,15 @@ def _validate(d: dict) -> dict:
     if d["category"] not in CATEGORIES:
         logger.warning("unknown category %s → 기타", d["category"])
         d["category"] = "기타"
+    # 프롬프트가 'S-즉시적용 / A-참고가치' 표기를 가르치므로 모델이 그 라벨을 그대로 돌려줄 때가 있다.
+    # 첫 글자가 enum 이면 그 글자로 정규화 (실사고 2026-08-28: "S-즉시적용" → C 강등 → 미등록).
+    g = str(d.get("grade") or "").strip()
+    if g not in GRADES and g[:1].upper() in GRADES:
+        logger.info("등급 표기 정규화 %r → %s", g, g[:1].upper())
+        g = g[:1].upper()
+    d["grade"] = g or "C"
     if d["grade"] not in GRADES:
-        # 이름/카테고리와 일관되게 graceful degrade — enum 밖 값(B+, 중 등)이면 C
+        # 이름/카테고리와 일관되게 graceful degrade — enum 밖 값(중 등)이면 C
         logger.warning("등급 값 이상 %s → C", d["grade"])
         d["grade"] = "C"
 

@@ -565,7 +565,7 @@ def healthz():
     return jsonify({
         "ok": True,
         "service": "aiskillbox",
-        "version": "4.8",
+        "version": "5.1",
         "library": _library_health(),
         "notion_enabled": _notion_enabled(),
         "last_failure": _last_failure(),
