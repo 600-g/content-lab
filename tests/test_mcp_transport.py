@@ -62,6 +62,37 @@ class TransportTest(unittest.TestCase):
         r = self._post({"jsonrpc": "2.0", "id": 1, "method": "ping"}, token="nope")
         self.assertEqual(r.status_code, 401)
 
+    def test_invalid_token_challenge_carries_error_code(self):
+        """RFC 6750 §3.1 — 만료/위조 토큰의 챌린지에는 error="invalid_token" 이 있어야 한다.
+
+        클라이언트는 이 값을 보고 '리프레시하면 되는 상황'과 '처음부터 재인증해야 하는
+        상황'을 가른다. 없으면 만료된 액세스 토큰을 그대로 재시도하는 401 루프에 갇힌다
+        (2026-09-03 커넥터 단절 사고 — 리프레시 토큰이 12월까지 살아있었는데도
+        /oauth/token 호출이 한 번도 오지 않았다).
+        """
+        r = self._post({"jsonrpc": "2.0", "id": 1, "method": "ping"}, token="nope")
+        www = r.headers.get("WWW-Authenticate", "")
+        self.assertIn('error="invalid_token"', www)
+        self.assertIn("/.well-known/oauth-protected-resource", www)
+
+    def test_expired_token_challenge_carries_error_code(self):
+        expired, _, _ = self.st.issue_tokens(
+            {"client_id": "c1", "resource": RESOURCE, "scope": "skills:read",
+             "invite_code": self.code}, access_ttl=-1, refresh_ttl=600)
+        r = self._post({"jsonrpc": "2.0", "id": 1, "method": "ping"}, token=expired)
+        self.assertEqual(r.status_code, 401)
+        self.assertIn('error="invalid_token"', r.headers.get("WWW-Authenticate", ""))
+
+    def test_missing_token_challenge_has_no_error_code(self):
+        """RFC 6750 §3 — 인증 정보를 아예 안 보낸 요청에는 오류 코드를 넣지 않는다."""
+        r = self._post({"jsonrpc": "2.0", "id": 1, "method": "ping"})
+        self.assertNotIn("error=", r.headers.get("WWW-Authenticate", ""))
+
+    def test_challenge_header_is_ascii_only(self):
+        """error_description 은 RFC 6750 quoted-string — 한글을 넣으면 안 된다."""
+        r = self._post({"jsonrpc": "2.0", "id": 1, "method": "ping"}, token="nope")
+        r.headers.get("WWW-Authenticate", "").encode("ascii")   # 예외 나면 실패
+
     def test_revoked_invite_code_is_401(self):
         self.auth.delete_code(self.code)
         r = self._post({"jsonrpc": "2.0", "id": 1, "method": "ping"}, token=self.access)

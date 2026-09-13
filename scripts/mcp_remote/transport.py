@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 
 PROTECTED_RESOURCE_PATH = "/.well-known/oauth-protected-resource"
 
+# RFC 6750 §3 의 error_description 은 quoted-string (ASCII) 이다 — 한글 사유는 JSON 본문으로만
+# 보내고, 헤더에는 아래 ASCII 문구를 쓴다.
+ERROR_DESCRIPTIONS = {
+    "invalid_token": "The access token is expired, revoked, or otherwise invalid",
+}
+
 
 def _rpc_error(req_id, code: int, message: str, status: int):
     return jsonify({"jsonrpc": "2.0", "id": req_id,
@@ -37,14 +43,30 @@ def register_transport(app: Flask, *, store=None, cfg: Optional[dict] = None) ->
     def _store():
         return store if store is not None else store_mod.get_store()
 
-    def _challenge() -> str:
-        url = mcp_config.abs_url(PROTECTED_RESOURCE_PATH, _cfg())
-        return f'Bearer resource_metadata="{url}"'
+    def _challenge(error: Optional[str] = None) -> str:
+        """RFC 9728 resource_metadata + RFC 6750 §3.1 error 파라미터.
 
-    def _unauthorized(msg: str):
+        error 를 붙이는 기준이 곧 클라이언트의 분기점이다: `error="invalid_token"` 이
+        있으면 "리프레시하면 되는 상황", 없으면 "처음부터 인증하라"로 읽힌다. 만료된
+        액세스 토큰에 이 값을 안 주면 클라이언트가 죽은 토큰을 그대로 재시도하는 401
+        루프에 갇힌다 (2026-09-03 커넥터 단절 — 리프레시 토큰이 12월까지 살아있었는데도
+        /oauth/token 요청이 한 번도 오지 않았다).
+
+        반대로 토큰을 아예 안 보낸 요청에는 오류 코드를 넣지 않는다 (RFC 6750 §3).
+        """
+        url = mcp_config.abs_url(PROTECTED_RESOURCE_PATH, _cfg())
+        parts = [f'resource_metadata="{url}"']
+        if error:
+            parts.append(f'error="{error}"')
+            desc = ERROR_DESCRIPTIONS.get(error)
+            if desc:
+                parts.append(f'error_description="{desc}"')
+        return "Bearer " + ", ".join(parts)
+
+    def _unauthorized(msg: str, *, error: Optional[str] = None):
         resp = jsonify({"error": "invalid_token", "error_description": msg})
         resp.status_code = 401
-        resp.headers["WWW-Authenticate"] = _challenge()
+        resp.headers["WWW-Authenticate"] = _challenge(error)
         return resp
 
     def _origin_ok(c: dict) -> bool:
@@ -67,7 +89,8 @@ def register_transport(app: Flask, *, store=None, cfg: Optional[dict] = None) ->
             return _unauthorized("Bearer 토큰이 필요합니다")
         grant = _store().validate_access(token, resource=mcp_config.resource_id(c))
         if grant is None:
-            return _unauthorized("토큰이 유효하지 않거나 만료되었습니다")
+            return _unauthorized("토큰이 유효하지 않거나 만료되었습니다",
+                                 error="invalid_token")
 
         raw = request.get_data(as_text=True)
         try:
