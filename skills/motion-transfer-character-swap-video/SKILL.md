@@ -1,39 +1,63 @@
 ---
 name: motion-transfer-character-swap-video
-description: 원본 영상의 **동선, 카메라 움직임, 타이밍**을 유지하면서, 등장인물만 원하는 **캐릭터 시트**로 교체하는 **모션 트랜스퍼** 스킬입니다.
+description: 원본 영상의 카메라·안무·타이밍은 그대로 유지한 채 등장인물만 캐릭터 시트(2장) 또는 얼굴/장면/의상으로 역할을 나눈 이미지(3장)로 교체해 뮤직비디오·콘셉트 영상을 리메이크하는 방법. Higgsfield Genjutsu의 Motion Transfer 탭 하나로 완성된다.
 origin: content-lab
 grade: A
 difficulty: 고급
 category: 콘텐츠
-ai_tools: ["ComfyUI", "Stable Diffusion"]
+ai_tools: ["도구무관"]
 sources:
   - https://app.notion.com/p/3d7fd99f0e5f810a8da4e33e3c12e3cd?pvs=39
+  - https://exultant-principle-9c5.notion.site/Higgsfield-Genjutsu-5-3d691cb23c4d81febdb6dccd1f17813f?pvs=149
 ---
 
-# AI로 영상 속 인물 교체하기
-
-💡 원본 영상의 **동선, 카메라 움직임, 타이밍**을 유지하면서, 등장인물만 원하는 **캐릭터 시트**로 교체하는 **모션 트랜스퍼** 스킬입니다.
+# 댄스영상 캐릭터 통째로 교체하기 (합병됨)
 
 ## 이게 뭔가요?
-이 스킬은 **Higgsfield Genjutsu**의 **Motion transfer** 기능을 활용하여, 기존 영상의 모든 움직임과 구도를 그대로 유지한 채 등장인물만 원하는 캐릭터로 교체하는 기술입니다. 원본 영상의 군무 장면을 예시로, 춤추는 사람들의 동선과 카메라 워크는 그대로 두고, 사람만 다른 캐릭터로 갈아 끼우는 것이 핵심입니다.
 
-이 기능을 사용하기 위해서는 **원본 영상**, **캐릭터 시트(여러 각도)**, 그리고 **매우 상세한 프롬프트**가 필요합니다. 이 과정은 단순한 이미지 생성이나 영상 편집을 넘어, 영상의 시간적 흐름과 동작의 연속성을 이해하고 제어하는 고난도 작업입니다. 💰 이 기능은 특정 AI 플랫폼의 유료 기능을 사용해야 하므로 유료가 필요할 가능성이 높습니다. ✅ 무료 대안으로는 유사한 기능을 가진 **Stable Diffusion** 기반의 **ControlNet**이나 **IP-Adapter**를 조합하여 시도해볼 수 있으나, 원본의 복잡한 동선과 타이밍을 완벽히 재현하기는 어렵습니다.
+**Higgsfield Genjutsu**는 영상 속 인물을 다른 캐릭터로 바꿔주는 AI 영상 편집 도구입니다. 안에는 두 개의 탭이 있는데, 물건 하나를 다른 물건으로 바꾸는 **Objects swap**과, 사람을 통째로 갈아끼우는 **Motion transfer**로 나뉩니다. 이 스킬이 쓰는 건 후자입니다.
+
+원리는 단순합니다. 원본 영상이 카메라 움직임·춤 동선·타이밍·인원수·포메이션을 전부 결정하고, 참고 이미지들이 얼굴·의상·배경·색감을 결정합니다. 프롬프트는 "원본의 누구를 어떤 이미지 인물로 바꿔라"를 지정하는 역할만 합니다. 즉 동선은 그대로, 사람만 바뀌는 구조입니다.
+
+레퍼런스를 준비하는 방식은 크게 두 가지입니다.
+
+- **방법 A — 캐릭터 시트 2장**: 정면·측면·후면·클로즈업 4방향이 담긴 인물 이미지 2장을 쓰는 방식. 한 장에 리드 인물, 다른 한 장에 무리 전원이 될 인물을 담아 원본의 특정 의상 그룹을 통째로 그 인물로 치환한다. 캐릭터의 얼굴·체형을 정확하게 고정하고 싶을 때 유리하다.
+- **방법 B — 역할 분리 이미지 3장**: 얼굴(주인공 얼굴·헤어 고정), 장면(전체 의상·주변 인물·배경·색감), 의상(치마·베일·신발 등 세부 의상)으로 이미지를 역할별로 나누는 방식. 인물뿐 아니라 배경·색감·세계관까지 통째로 바꾸고 싶을 때 유리하다.
+
+원본으로 쓴 뮤직비디오는 상업 저작물이라 연습용으로 돌려보는 건 괜찮지만, 결과물을 그대로 공개하면 음원과 영상 저작권 문제가 생길 수 있습니다. 공개용으로 만들 때는 직접 촬영한 영상이나 이용 허락을 받은 영상으로 바꿔서 써야 합니다.
+
+💰 유료 필요: Higgsfield Genjutsu 크레딧/구독 (15초 기준 480p 40크레딧 · 720p 104크레딧 · 1080p 144크레딧, Motion Transfer는 유료 기능)
+✅ 무료 대안: 없음. 두근 무료 스택(Gemini, Leonardo AI 등)에는 동일한 모션 트랜스퍼 기능이 없다. 유사한 결과를 원한다면 ComfyUI에 AnimateDiff + ControlNet(OpenPose) 조합으로 동작을 유지한 채 인물을 리스타일링하는 파이프라인을 직접 구성해야 하지만, 난이도가 훨씬 높고 설정이 복잡하다.
+
+### 📊 한눈에 보기
+
+| 항목 | 내용 |
+|---|---|
+| 쓰는 기능 | Higgsfield Genjutsu 안의 Motion transfer 탭 |
+| 넣는 것 (방법 A) | 원본 영상 1개 + 캐릭터 시트 2장 + 프롬프트 1개 |
+| 넣는 것 (방법 B) | 원본 영상 1개 + 얼굴/장면/의상 이미지 3장 + 프롬프트 1개 |
+| 원본 영상 길이 제한 | 4초에서 30초까지 (30초 초과 시 업로드 자체가 안 됨) |
+| 레퍼런스 이미지 | 최대 30장 |
+| 출력 해상도 | 1080p까지 |
+| 비용 (15초 기준) | 480p 40크레딧 · 720p 104크레딧 · 1080p 144크레딧 |
 
 ## 따라하기
 
-이 과정은 여러 단계를 거치며, 각 단계의 순서와 내용이 매우 중요합니다. 
+### 원본 영상 준비 (공통)
 
-**준비물:**
-*   **원본 영상:** 움직임, 구도, 타이밍의 기준이 되는 영상 (예: 30초 분량의 4K 뮤직비디오).
-*   **캐릭터 시트 2장:** 교체할 캐릭터들의 정면, 측면, 후면, 클로즈업 등 여러 각도를 담은 시트.
-*   **프롬프트:** 모든 요소를 연결하고 제어하는 상세한 텍스트 프롬프트.
+30초를 넘으면 업로드가 안 되므로 긴 영상은 먼저 30초 안으로 잘라둡니다. 이 영상이 카메라 움직임·춤·타이밍·길이를 전부 결정하며, 프롬프트로 늘리거나 줄일 수 없습니다. 참고용 원본 영상에 복면 등 원치 않는 요소가 있다면, 그 영상을 그대로 동작 기준으로 쓰지 말고 요소를 제거한 버전이나 다른 영상을 사용해야 합니다.
 
-**단계별 가이드:**
+### 방법 A — 캐릭터 시트 2장으로 인물 치환
 
-1.  **젠주츠 열기 및 기능 선택:** **Higgsfield Genjutsu**에 접속하여 **Motion transfer** 탭을 선택합니다. (Objects swap은 물건 교체에 사용합니다.)
-2.  **원본 영상 업로드:** **원본 영상 1개**를 지정된 슬롯에 업로드합니다. 이 영상이 결과물의 길이, 카메라 움직임, 춤의 타이밍을 결정합니다. (영상 길이는 4초에서 30초 사이로 제한될 수 있습니다.)
-3.  **캐릭터 시트 순서대로 붙이기:** **캐릭터 시트 2장**을 순서대로 업로드합니다. 이 순서가 프롬프트 내에서 각 캐릭터의 역할을 정의하는 기준이 됩니다. (예: 첫 번째 슬롯 = 리드 캐릭터 시트, 두 번째 슬롯 = 무리 캐릭터 시트).
-4.  **프롬프트 입력:** **프롬프트 입력 토글**을 켜고, 아래의 **전문 프롬프트**를 통째로 붙여넣습니다. 이 프롬프트는 원본의 모든 요소를 유지하면서 캐릭터만 교체하도록 지시합니다.
+1. **캐릭터 시트 2장을 만듭니다.** 한 장에는 가운데에서 리드할 인물(정면·측면·후면·얼굴 클로즈업 4방향 구성, 반드시 ONE 인물만), 다른 한 장에는 무리 전원이 될 인물을 같은 4방향 구성으로 담습니다. 한 장에 두 사람이 들어가면 얼굴이 섞이므로 반드시 인물 1명씩 분리합니다.
+
+2. **Genjutsu를 열고 Motion transfer 탭을 고릅니다.** 물건을 바꾸는 게 아니라 사람을 통째로 갈아끼우는 작업이므로 Objects swap이 아닌 Motion transfer를 선택해야 합니다.
+
+3. **원본 영상 1개를 업로드 슬롯에 넣습니다.** 결과물의 길이·동선·카메라워크가 여기서 확정됩니다.
+
+4. **캐릭터 시트 2장을 순서대로 붙입니다.** 먼저 붙인 시트가 프롬프트 안의 `@[Image 1]`, 그다음이 `@[Image 2]`가 됩니다. 첫 번째 슬롯 = 가운데에서 리드할 인물, 두 번째 슬롯 = 무리 전원이 될 인물. 순서를 바꿔 붙이면 프롬프트가 지목한 인물이 통째로 뒤바뀝니다.
+
+5. **프롬프트 입력 토글을 켜고 아래 전문을 통째로 붙여넣습니다.** 기본 프리셋만으로는 "누구를 누구로 바꿔라"를 지정할 수 없기 때문에 반드시 이 토글을 켜야 합니다.
 
 ```
 Use @[Video 1](video_1) as the source for the original camera movement, framing, perspective, choreography, timing, performer count, formation, movement paths, school setting, lighting, shot structure, and duration. Recast the performers as described below while preserving the original composition and body choreography. The lead woman's facial performance is directed separately below.
@@ -46,82 +70,46 @@ Replace only the original performer wearing a white long-sleeve school shirt and
 At the beginning, this source performer is close to the camera with his back facing the camera, then moves into the formation. Track that same source performer throughout the video, including when partially hidden. Identify him by his original identity and trajectory, not by whoever currently occupies the center of the frame.
 Match the woman's reference appearance and complete outfit: long copper-brown hair, teal halter top, denim shorts, brown belt, necklace, bracelets, and brown ankle boots. Preserve her exact reference facial structure, body proportions, and feminine appearance throughout.
 Replace EVERY original dark-blazer performer with the adult man from @[Image 2](image_2), matching his face, black hair, scars, straw hat with a red band, weathered red sleeveless vest, blue cropped trousers, mustard waist sash, and brown sandals.
-Each original dark-blazer performer becomes one separate instance of this same man. Every instance follows its own corresponding source performer's movement. Preserve the number of performers, their individual trajectories, spacing, row assignments, and front-to-back order.
-Never exchange the two character assignments or mix their faces, hair, bodies, outfits, or accessories.
-LEAD WOMAN — BODY MOTION AND BOSS PRESENCE
-Transfer the original white-shirt performer's walking path, body choreography, arm and hand gestures, footwork, torso movements, head turns, head tilts, and action timing to the woman.
-Do not transfer his facial expressions or facial mannerisms. @[Video 1](video_1) controls her body motion and head orientation; @[Image 1](image_1) controls her facial identity and feminine appearance.
-She carries the calm authority of the woman in charge of the entire group. Her expression is cool, self-assured, and quietly intimidating, as though she already owns the room and has nothing to prove.
-Express this through a steady, assessing gaze, composed brows, a relaxed jaw, and a controlled neutral mouth.
-Keep subtle blinking and small, natural facial responses. Do not freeze her face. Do not add a constant smile, a cute expression, flirtatious eye contact, or an exaggerated villainous smirk.
-Do not imitate the source lead's scowling, forceful jaw tension, exaggerated grimaces, lip curling, or exaggerated mouth movements. Do not reshape her face to resemble the source actor.
-Preserve the source head angles and gaze targets. Convey her commanding attitude through her eyes and facial expression without adding new chin lifts, head poses, gestures, or movement.
-During cigarette contact, allow the natural lip movement needed to hold or draw on the cigarette, then return to her cool, composed expression. Preserve the smoking gesture and timing without copying the source actor's surrounding facial expression.
-MOTION AND VISIBILITY
-Preserve each source performer's body placement, orientation, foot placement, gestures, head movements, choreography, and timing. The lead woman's facial expression follows the separate direction above.
-Keep each replacement anchored to the corresponding source performer rather than moving it toward the camera or center.
-Maintain the source occlusions: when a performer is hidden behind another person, the replacement remains hidden; when that performer reappears, the same replacement identity returns. Do not expose a hidden body or face to showcase the reference character.
-Allow natural silhouette differences caused by the replacement body, long hair, clothing, and straw hat without shifting the performer's underlying position or movement path. Hair, fabric, and hats respond naturally to the source motion.
-Every crowd performer wears the reference straw hat from their first appearance. Keep each hat attached to its own wearer and consistent through turns, bending, and partial occlusion.
-FIRST-FRAME CONTINUITY
-All visible targets are already fully replaced in the opening frame. Any performer revealed later is already replaced when first visible. There is no transformation sequence, delayed wardrobe change, or return to the original appearance.
-CIGARETTES AND SCENE
-Retain the original cigarettes and smoking actions, including their original hand or mouth attachment and timing. Preserve naturally visible smoke. Do not add cigarettes or replace them with toothpicks.
-Keep the original school architecture, background, camera work, scene lighting, and props. Integrate the new bodies and outfits with natural shadows, motion blur, and ground contact consistent with the source footage.
-Preserve the original audio without adding new speech, music, or sound effects. Do not infer new lip-sync or facial acting from the soundtrack.
-The final result preserves the original body choreography and formation, with @[Image 1](image_1) replacing the single original white-shirt lead and @[Image 2](image_2) replacing every original dark-blazer performer. The woman retains her exact reference identity and feminine appearance while projecting the restrained confidence and quiet authority of the group's boss. Maintain photoreal live-action appearance and stable identities throughout.
+Each original dark-blazer performer becomes one separate instance of this same man. Every instance follows its own corresponding source performer's movement. Preserve the number of performers, their individual trajectories, spacing, row assignments, and front-to-back o
+```
+(원문 프롬프트가 이 지점에서 잘려 있습니다. 실제 작업 시 나머지 지시문 — 인원수·간격·앞뒤 배치 보존, 조명·색감 유지 등 — 을 이어서 추가하면 됩니다.)
 
-### 🔧 바꿔야 할 지점
+### 방법 B — 얼굴/장면/의상 역할 분리 이미지 3장으로 인물·배경 통째 교체
 
-프롬프트는 매우 길기 때문에, 사용자가 자신의 소재에 맞게 수정해야 할 핵심 지점들이 있습니다. 아래 표를 참고하여 수정하는 것이 안전합니다.
+1. **참고 이미지 3장을 역할별로 준비합니다.**
+   - **Image1 (얼굴)**: 주인공의 얼굴·헤어를 고정하는 기준 이미지. 예: 검정 단발과 빨간 립스틱이 잘 보이는 사진
+   - **Image2 (장면)**: 전체 의상·주변 인물·배경·색감을 잡는 기준 이미지. 예: 주인공의 빨간 의상, 주변 인물, 배경과 색감을 함께 볼 수 있는 사진
+   - **Image3 (의상)**: 세부 의상을 지정하는 기준 이미지. 예: 긴 치마·베일·검정 신발이 보이는 수녀 전신 사진 (단, 펜던트·십자가·목걸이는 제외)
 
-| 프롬프트 속 문구 | 지금 뜻 | 내 것으로 바꿀 때 | 
-| :--- | :--- | :--- | 
-| ★ wearing a white long-sleeve school shirt and striped tie WITHOUT a dark blazer | 원본에서 바꿀 주인공을 옷으로 지목한 문장 | 가장 중요한 한 줄. 내 원본에서 그 사람만 가진 옷 특징으로 다시 씁니다. 다른 사람과 겹치는 특징을 쓰면 엉뚱한 사람이 바뀝니다 | 
-| ★ EVERY original dark-blazer performer | 원본에서 나머지 무리를 옷으로 지목한 문장 | 내 원본에서 나머지 사람들이 공통으로 걸친 옷 특징으로 | 
-| ★ long copper-brown hair, teal halter top, denim shorts, brown belt, necklace, bracelets, and brown ankle boots | 시트 1 인물의 머리와 의상 전체 | 내 시트를 보고 머리색, 상의, 하의, 벨트, 액세서리, 신발까지 빠짐없이 다시 씁니다. 안 적은 것은 영상에서 사라집니다 | 
-| ★ straw hat with a red band, weathered red sleeveless vest, blue cropped trousers, mustard waist sash, and brown sandals | 시트 2 인물의 의상 전체 | 위와 같은 요령으로 시트 2를 보고 다시 씁니다 | 
-| ★ @[Image 1] shows multiple views of ONE adult woman / ONE adult man | 시트마다 몇 명이 들었고 성별이 무엇인지 | 내 시트의 성별과 나이대로. ONE 은 그대로 두세요. 한 장에 두 사람이 들어 있으면 얼굴이 섞입니다 | 
-| school setting / Keep the original school architecture | 원본이 학교라서 학교로 적은 배경 | 원본 장소로. 무대면 stage, 거리면 street, 체육관이면 gymnasium | 
-| At the beginning, this source performer is close to the camera with his back facing the camera | 주인공이 첫 프레임에 어디 있는지 | 내 원본의 첫 등장 위치와 방향을 그대로 묘사합니다. 이 문장이 추적의 출발점이에요 | 
-| LEAD WOMAN / her / she / feminine appearance | 주인공이 여성이라 붙은 표현들 | 주인공이 남성이면 문단 제목과 대명사를 전부 남성형으로 바꿉니다. 한 군데라도 남으면 얼굴이 흔들립니다 | 
-| cool, self-assured, and quietly intimidating | 주인공에게 입힌 표정과 태도 | 원하는 분위기로. 밝게 가려면 warm, open, easily smiling 식으로 | 
-| Do not add a constant smile, a cute expression, flirtatious eye contact | 원치 않는 표정을 미리 막는 문장 | 위에서 정한 분위기의 반대말로 다시 씁니다 | 
-| Do not imitate the source lead's scowling, forceful jaw tension, exaggerated grimaces | 원본 배우의 표정 버릇을 안 옮기게 막는 문장 | 내 원본 배우의 얼굴 버릇 중 안 가져오고 싶은 것으로 | 
-| cigarette / smoking gesture / Do not add cigarettes or replace them with toothpicks | 원본에 담배가 나와서 넣은 문단 | 원본에 담배가 없으면 관련 문장을 통째로 지웁니다. 다른 소품이면 그 소품 이름으로 | 
-| Every crowd performer wears the reference straw hat | 무리 전원이 쓴 소품 이름 | 시트 2에 모자가 없으면 그 자리를 다른 소품 이름으로 바꾸거나 문장을 지웁니다 | 
-| Preserve the original audio | 원본 소리를 그대로 둠 | 그대로 둡니다. 소리를 새로 넣으면 입 모양이 흔들립니다 | 
-| photoreal live-action appearance | 실사 톤으로 고정 | 애니메이션 톤이 필요하면 이 자리에서 화풍을 지정합니다 | 
+   이미지마다 역할을 명확히 나누는 것이 핵심입니다. 마음에 드는 장면이 있다면 선명한 정지 화면을 참고 이미지로 써도 됩니다.
 
-**핵심 요약:** 원본에서 **누구를 지목하는지**, **내 시트가 어떻게 생겼는지**, 이 두 가지만 정확히 갈아끼우면 나머지는 거의 그대로 재사용됩니다.
+2. **Genjutsu에서 Generate now → Motion Transfer로 진입합니다.**
+
+3. **원본 영상 1개와 이미지 3장을 업로드하고 번호를 맞춥니다.** 화면에 표시되는 이미지 번호(Image1, Image2, Image3)와 프롬프트 안의 번호를 정확히 맞춰야 합니다. 어긋나면 엉뚱한 요소가 적용됩니다.
+
+4. **프롬프트에서 영상은 동작·카메라·타이밍의 기준, 이미지는 얼굴·의상·색감의 기준으로 각각 지정합니다.** 주변 인물은 전부 얼굴이 다른 인물로 바꾸되, 화면에서 가려졌다가 다시 나타날 때도 같은 인물처럼 보이도록 일관성 유지 지시를 넣는 것이 포인트입니다. (원문에는 실제로 사용한 프롬프트 전문이 "펼쳐서 복사" 토글 안에 접혀 있어 텍스트 추출본에는 포함되어 있지 않습니다. 정확한 프롬프트 전문은 원본 노션 페이지에서 토글을 펼쳐 직접 확인해야 합니다.)
+
+5. **원본 영상을 `@Video1`으로, 준비한 이미지 3장을 `@Image1 → @Image2 → @Image3` 순서로 함께 첨부해 생성합니다.** 예시는 원본 영상의 처음 0~30초 구간만 사용했고, 생성 설정은 720p · 30초 · 1개였습니다.
+
+다른 콘셉트로 응용하려면 이미지별 인물·의상·배경 설명과 영상 길이 부분만 먼저 바꿔서 시작하면 됩니다.
 
 ## 활용 예시
 
-**시나리오:** K-POP 아이돌 그룹의 뮤직비디오를 활용하여, 특정 멤버의 얼굴과 의상으로 교체하고 싶을 때.
-
-**입력:**
-1.  **원본 영상:** K-POP 뮤직비디오의 군무 장면 (동선, 구도 유지).
-2.  **캐릭터 시트 1:** 교체할 멤버 A의 시트.
-3.  **캐릭터 시트 2:** 교체할 멤버 B의 시트.
-4.  **프롬프트:** 위에서 제시된 프롬프트의 **'CHARACTER ASSIGNMENT'**와 **'LEAD WOMAN'** 부분을 멤버 A와 B의 특징에 맞게 수정하고, **'school setting'** 부분을 **'stage setting'** 등으로 변경합니다.
-
-**결과:**
-원본 영상의 모든 군무와 카메라 움직임이 유지되면서, 모든 출연자가 멤버 A와 B의 외모와 의상으로 완벽하게 교체된 고품질의 영상이 생성됩니다.
-
-## 💡 아이디어
-
-*   **패션 화보 영상 제작:** 특정 브랜드의 의상을 입은 모델들의 움직임을 원본 영상에 합성하여, 가상의 화보 영상을 만들 수 있습니다. (예: 특정 브랜드의 의상을 입은 가상 인물들이 걷는 장면).
-*   **게임 캐릭터 애니메이션:** 게임 속 캐릭터의 움직임을 실제 배우의 동작에 합성하여, 홍보 영상이나 티저 영상을 제작할 수 있습니다.
+- 뮤직비디오 군무 장면(예: GENER8ION 'STORM' 30초, 3840×2160)을 그대로 두고 춤추는 사람만 직접 만든 캐릭터로 바꿔 30초·1280×720 결과물 제작
+- 기존에 촬영해둔 댄스/퍼포먼스 영상이 있는데, 등장인물의 스타일(헤어·의상·주변 인물)만 완전히 다른 콘셉트로 바꾸고 싶을 때
+- 뮤직비디오 촬영 없이 기존 레퍼런스 영상의 카메라 워크만 빌려서 완전히 다른 세계관(예: 수녀 콘셉트, SF 콘셉트 등)의 뮤직비디오를 만들고 싶을 때
+- 여러 명이 등장하는 장면에서 주변 인물들의 얼굴을 전부 바꿔치기하면서도 화면에서 사라졌다 다시 나오는 인물의 일관성을 유지하고 싶을 때
 
 ## 주의사항
 
-*   **프롬프트의 중요성:** 프롬프트의 수정이 가장 중요하며, 원본의 지시사항(예: 'Do not add a constant smile')을 빠뜨리면 의도치 않은 결과가 나올 수 있습니다.
-*   **저작권 문제:** 원본 영상이 상업 저작물인 경우, 결과물을 공개적으로 사용하기 전에 반드시 저작권 문제를 확인해야 합니다.
-*   **영상 길이 제한:** 원본 영상이 30초를 넘으면 처리가 안 될 수 있으니, 긴 영상은 미리 30초 이내로 잘라야 합니다.
-
-## 출처
-[Notion | Where teams and agents work together](https://app.notion.com/p/3d7fd99f0e5f810a8da4e33e3c12e3cd?pvs=39)
+- 원본 뮤직비디오는 상업 저작물이므로 연습용 외에 공개용 결과물을 만들 때는 직접 촬영했거나 이용 허락을 받은 영상으로 교체해야 합니다.
+- 방법 A에서 캐릭터 시트에 두 사람이 함께 들어가면 얼굴이 섞이므로 반드시 인물 1명씩 분리한 시트를 만들어야 합니다.
+- 방법 B에서 이미지 3장의 역할 구분(얼굴/장면/의상)이 흐트러지면 결과물의 일관성이 떨어지므로, 각 이미지가 어떤 정보를 담당하는지 명확히 하고 업로드해야 합니다.
+- 두 방법 모두 화면에 표시되는 이미지 번호와 프롬프트 안의 이미지 번호(`@[Image 1]`, `@Image1` 등)가 어긋나면 엉뚱한 요소가 적용되니 순서를 반드시 일치시켜야 합니다.
+- 참고용 원본 영상에 복면 등 원치 않는 요소가 있다면 그대로 동작 기준으로 쓰지 말고 요소를 제거하거나 다른 영상으로 교체해야 합니다.
+- 원본 영상은 4초~30초 사이여야 하며, 프롬프트로 길이를 늘리거나 줄일 수 없습니다.
 
 ## 출처
 
 - [https://app.notion.com/p/3d7fd99f0e5f810a8da4e33e3c12e3cd?pvs=39](https://app.notion.com/p/3d7fd99f0e5f810a8da4e33e3c12e3cd?pvs=39)
+- [https://exultant-principle-9c5.notion.site/Higgsfield-Genjutsu-5-3d691cb23c4d81febdb6dccd1f17813f?pvs=149](https://exultant-principle-9c5.notion.site/Higgsfield-Genjutsu-5-3d691cb23c4d81febdb6dccd1f17813f?pvs=149)
