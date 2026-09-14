@@ -83,6 +83,66 @@ def _parse_existing_skill_md(path: Path) -> dict:
     return meta
 
 
+MERGE_BODY_CAP_CLAUDE = 20000   # Claude 는 긴 컨텍스트 — 합병의 목적이 "둘 다 보존" 이라 원문을 통째로
+MERGE_BODY_CAP_LOCAL = 4000     # Gemini/Gemma 컨텍스트 절약 (기존 8000 자는 24k+ 토큰)
+
+
+def _merge_prompt(existing: dict, new_result: AnalysisResult, new_body_full: str, cap: int) -> str:
+    """v2.3 합병 prompt — body_md 단일 필드, 새 헤딩 강제, 1500자 이상. cap 은 프로바이더별 본문 상한."""
+    return f"""너는 두근컴퍼니의 AI 스킬 큐레이터다.
+
+같은 주제로 기존 스킬과 신규 분석이 들어왔다. **두 출처의 모든 핵심 정보를 보존**하면서 더 풍부한 단일 스킬로 합병하라.
+
+[기존 스킬 — {existing.get('collected_at','?')} 수집]
+- 슬러그: {existing.get('name','?')}
+- 카테고리: {existing.get('category','?')}
+- 등급: {existing.get('grade','?')}
+- 본문:
+{existing.get('body','')[:cap]}
+
+[신규 분석 — 오늘 추가]
+- 슬러그(제안): {new_result.skill_name}
+- 카테고리(제안): {new_result.category}
+- 등급(제안): {new_result.grade}
+- callout: {new_result.callout or new_result.tldr}
+- 본문:
+{new_body_full[:cap]}
+
+[🚨 최우선 규칙]
+1. **코드/프롬프트/명령어 절대 요약 금지** — 둘 중 하나에 있던 것은 합병 본문에도 반드시 보존
+2. **본문 body_md 최소 1500자** — 추상 요약 가득한 짧은 결과는 실패로 간주
+3. **빈 출처 없음** — 두 출처를 다 흡수했을 때 자연스러운 분량이 나와야 함
+
+[합병 규칙]
+1. 중복 문장 제거, 누락된 통찰 통합.
+2. 등급/카테고리는 더 정확한 것 택.
+3. 슬러그는 **기존 그대로** 유지.
+4. body_md 구조 — 새 v2.3 헤딩만 사용:
+   ## 이게 뭔가요?  /  ## 따라하기  /  ## 활용 예시  /  ## 💡 아이디어 (선택)  /  ## 주의사항 (선택)
+5. 옛 헤딩 금지: "두근컴퍼니 적용", "두근 환경", "핵심 패턴", "적용 단계", "How it works", "Steps".
+6. callout 별도 필드 (1~2문장, body_md 안에 또 박지 말 것).
+7. 출처는 body_md 안에 박지 말 것 (md_generator 가 자동 추가).
+
+[응답 — JSON only, 코드블록 펜스 없이]
+{{
+  "skill_name": "{existing.get('name', new_result.skill_name)}",
+  "skill_title_ko": "8-15자 동사형 한국어 제목 (이모지 X)",
+  "callout": "이 스킬이 뭔지 1~2문장. 핵심 키워드 **굵게**",
+  "category": "프롬프트/자동화/콘텐츠/디자인/개발/업무/기타 중 1",
+  "grade": "S/A/B/C",
+  "grade_reason": "재평가 사유 1줄",
+  "targets": ["적용대상"],
+  "summary": "통합된 2-3줄 요약",
+  "when_to_use": "통합된 트리거 조건",
+  "memo": "통합된 적용 메모",
+  "ai_tools": ["통합된 도구 14종 중 일치"],
+  "tags": ["통합된 태그 5개 이내"],
+  "difficulty": "초급/중급/고급",
+  "body_md": "## 이게 뭔가요?\\n... (1500자 이상, 코드/프롬프트 전문 보존, 위 v2.3 헤딩만)"
+}}
+"""
+
+
 def _gemini_merge(prompt: str) -> tuple[str, str, str]:
     """Gemini 1-2단계. 반환 (raw_text, provider, 실패 사유). SDK/키 없음은 사유만 남기고 다음 단계로."""
     try:
@@ -143,61 +203,9 @@ def merge_with_existing(
     else:
         merged_urls = existing_urls
 
-    # v2.3 합병 prompt — body_md 단일 필드, 새 헤딩 강제, 1500자 이상.
-    # existing/new 본문은 Gemma 컨텍스트 절약 위해 4000자로 cap (기존 8000 자는 24k+ 토큰).
+    # 합병 prompt 는 프로바이더별 본문 cap 이 다르다 — Claude 는 통째로, Gemini/Gemma 는 4000자
     new_body_full = (new_result.raw.get("body_md") or new_result.body_content or "")
-    prompt = f"""너는 두근컴퍼니의 AI 스킬 큐레이터다.
-
-같은 주제로 기존 스킬과 신규 분석이 들어왔다. **두 출처의 모든 핵심 정보를 보존**하면서 더 풍부한 단일 스킬로 합병하라.
-
-[기존 스킬 — {existing.get('collected_at','?')} 수집]
-- 슬러그: {existing.get('name','?')}
-- 카테고리: {existing.get('category','?')}
-- 등급: {existing.get('grade','?')}
-- 본문:
-{existing.get('body','')[:4000]}
-
-[신규 분석 — 오늘 추가]
-- 슬러그(제안): {new_result.skill_name}
-- 카테고리(제안): {new_result.category}
-- 등급(제안): {new_result.grade}
-- callout: {new_result.callout or new_result.tldr}
-- 본문:
-{new_body_full[:4000]}
-
-[🚨 최우선 규칙]
-1. **코드/프롬프트/명령어 절대 요약 금지** — 둘 중 하나에 있던 것은 합병 본문에도 반드시 보존
-2. **본문 body_md 최소 1500자** — 추상 요약 가득한 짧은 결과는 실패로 간주
-3. **빈 출처 없음** — 두 출처를 다 흡수했을 때 자연스러운 분량이 나와야 함
-
-[합병 규칙]
-1. 중복 문장 제거, 누락된 통찰 통합.
-2. 등급/카테고리는 더 정확한 것 택.
-3. 슬러그는 **기존 그대로** 유지.
-4. body_md 구조 — 새 v2.3 헤딩만 사용:
-   ## 이게 뭔가요?  /  ## 따라하기  /  ## 활용 예시  /  ## 💡 아이디어 (선택)  /  ## 주의사항 (선택)
-5. 옛 헤딩 금지: "두근컴퍼니 적용", "두근 환경", "핵심 패턴", "적용 단계", "How it works", "Steps".
-6. callout 별도 필드 (1~2문장, body_md 안에 또 박지 말 것).
-7. 출처는 body_md 안에 박지 말 것 (md_generator 가 자동 추가).
-
-[응답 — JSON only, 코드블록 펜스 없이]
-{{
-  "skill_name": "{existing.get('name', new_result.skill_name)}",
-  "skill_title_ko": "8-15자 동사형 한국어 제목 (이모지 X)",
-  "callout": "이 스킬이 뭔지 1~2문장. 핵심 키워드 **굵게**",
-  "category": "프롬프트/자동화/콘텐츠/디자인/개발/업무/기타 중 1",
-  "grade": "S/A/B/C",
-  "grade_reason": "재평가 사유 1줄",
-  "targets": ["적용대상"],
-  "summary": "통합된 2-3줄 요약",
-  "when_to_use": "통합된 트리거 조건",
-  "memo": "통합된 적용 메모",
-  "ai_tools": ["통합된 도구 14종 중 일치"],
-  "tags": ["통합된 태그 5개 이내"],
-  "difficulty": "초급/중급/고급",
-  "body_md": "## 이게 뭔가요?\\n... (1500자 이상, 코드/프롬프트 전문 보존, 위 v2.3 헤딩만)"
-}}
-"""
+    prompt = _merge_prompt(existing, new_result, new_body_full, MERGE_BODY_CAP_CLAUDE)
 
     last_err: Exception | None = None
     raw_text: str = ""
@@ -208,8 +216,9 @@ def merge_with_existing(
     if claude_text:
         raw_text, provider = claude_text, "claude"
 
-    # 1-2단계: Gemini cloud — quota 임계 도달 모델은 스킵, 429 시 카운터 마킹
+    # 1-2단계: Gemini cloud — quota 임계 도달 모델은 스킵, 429 시 카운터 마킹. 본문 cap 4000 으로 재구성
     if not raw_text:
+        prompt = _merge_prompt(existing, new_result, new_body_full, MERGE_BODY_CAP_LOCAL)
         raw_text, provider, gem_err = _gemini_merge(prompt)
         if gem_err:
             last_err = RuntimeError(gem_err)

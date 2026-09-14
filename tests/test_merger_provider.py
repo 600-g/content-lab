@@ -79,5 +79,46 @@ class MergeChainTest(unittest.TestCase):
         self.assertFalse(res.raw.get("_is_merged"))
 
 
+class MergeBodyCapTest(unittest.TestCase):
+    """Claude 는 긴 컨텍스트라 두 본문을 통째로 넣는다 (4000자 cap 은 Gemini/Gemma 전용).
+
+    실사고 2026-09-14: 16.8k자 Claude 본문 + 5k자 신규를 합병했더니 12.4k자로 줄었다 — 합병기가
+    양쪽을 4000자에서 잘라 Claude 에 넘겼기 때문. 합병의 목적이 '둘 다 보존' 인데 입력에서 잃으면 끝.
+    """
+
+    def _run(self, *, claude, gemini_text=""):
+        big_existing = dict(EXISTING, body=("기존 " * 2000) + " MARKER_EXISTING_FAR " + ("기존 " * 500))
+        new = _new()
+        far_new = ("신규 " * 2000) + " MARKER_NEW_FAR " + ("신규 " * 500)
+        new.raw["body_md"] = far_new
+        new.body_md = new.body_content = far_new
+        fake_model = mock.Mock()
+        fake_model.generate_content.return_value = mock.Mock(text=gemini_text)
+        fake_genai = mock.Mock()
+        fake_genai.GenerativeModel.return_value = fake_model
+        claude_mock = mock.Mock(return_value=claude)
+        with mock.patch.dict(sys.modules, {"google.generativeai": fake_genai}), \
+             mock.patch.dict(os.environ, {"GEMINI_API_KEY": "k"}), \
+             mock.patch.object(merger, "_parse_existing_skill_md", return_value=big_existing), \
+             mock.patch.object(merger, "call_claude_json", claude_mock), \
+             mock.patch.object(merger, "call_gemma_json", mock.Mock(return_value="")), \
+             mock.patch.object(merger, "_quota_should_skip", return_value=False), \
+             mock.patch.object(merger, "_quota_increment"):
+            merger.merge_with_existing(Path("/nonexistent/SKILL.md"), new, "https://b.example/2", "web")
+        return claude_mock, fake_model
+
+    def test_claude_prompt_keeps_full_bodies(self):
+        claude, _ = self._run(claude=MERGED)
+        prompt = claude.call_args.args[0]
+        self.assertIn("MARKER_EXISTING_FAR", prompt)
+        self.assertIn("MARKER_NEW_FAR", prompt)
+
+    def test_gemini_prompt_stays_capped(self):
+        _, gem_model = self._run(claude=None, gemini_text=MERGED)
+        prompt = gem_model.generate_content.call_args.args[0]
+        self.assertNotIn("MARKER_EXISTING_FAR", prompt, "Gemini/Gemma 는 4000자 cap 유지")
+        self.assertNotIn("MARKER_NEW_FAR", prompt)
+
+
 if __name__ == "__main__":
     unittest.main()
