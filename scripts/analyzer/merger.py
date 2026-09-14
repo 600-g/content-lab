@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .claude_cli import call_claude_json, MERGE_SCHEMA
 from .gemini import (
     AnalysisResult, _extract_json, _validate,
     MODEL_PRIMARY, MODEL_FALLBACK, call_gemma_json,
@@ -82,29 +83,56 @@ def _parse_existing_skill_md(path: Path) -> dict:
     return meta
 
 
+def _gemini_merge(prompt: str) -> tuple[str, str, str]:
+    """Gemini 1-2단계. 반환 (raw_text, provider, 실패 사유). SDK/키 없음은 사유만 남기고 다음 단계로."""
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return "", "", "google-generativeai 미설치"
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return "", "", "GEMINI_API_KEY 없음"
+    genai.configure(api_key=api_key)
+    last_err = ""
+    for model_name in (MODEL_PRIMARY, MODEL_FALLBACK):
+        if _quota_should_skip(model_name):
+            logger.info("Gemini merge %s quota 임계 — 스킵", model_name)
+            last_err = last_err or f"{model_name}: quota 임계"
+            continue
+        if model_name in _UNSUPPORTED_MODELS:
+            logger.info("Gemini merge %s — SDK 비호환으로 세션 내 비활성 상태", model_name)
+            continue
+        try:
+            model = genai.GenerativeModel(model_name, generation_config=_gemini_gen_config())
+            resp = model.generate_content(prompt)
+            raw_text = resp.text or ""
+            _quota_increment(model_name)
+            if raw_text:
+                return raw_text, model_name, ""
+            last_err = f"{model_name}: 빈 응답"
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Gemini merge %s 실패: %s", model_name, e)
+            last_err = f"{model_name}: {e}"
+            if _is_429(e):
+                _quota_increment(model_name, hit_429=True)
+            elif _is_thinking_config_reject(e):
+                _UNSUPPORTED_MODELS.add(model_name)
+                logger.warning("%s thinking_config 미지원 — 세션 내 비활성", model_name)
+    return "", "", last_err or "사용 가능 모델 없음"
+
+
 def merge_with_existing(
     existing_path: Path,
     new_result: AnalysisResult,
     new_source_url: str,
     new_source_type: str,
 ) -> AnalysisResult:
-    """기존 SKILL.md + 신규 분석을 Gemini로 합병.
+    """기존 SKILL.md + 신규 분석을 LLM 으로 합병 — v5.2: Claude(구독) → Gemini → Gemma.
 
-    실패 시 신규 결과 그대로 반환 (덮어쓰기 효과).
+    합병 결과가 곧 최종본이라 analyze() 와 같은 순서를 지킨다 (여기만 Gemma 면 품질이 다시 떨어진다).
+    실패 시 신규 결과 그대로 반환 (덮어쓰기 효과). 결과 .provider 에 어느 LLM 이 합병했는지 남긴다.
     """
-    try:
-        import google.generativeai as genai
-    except ImportError:
-        logger.warning("google-generativeai 미설치 → 신규 결과만 사용")
-        return new_result
-
     existing = _parse_existing_skill_md(existing_path)
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        logger.warning("GEMINI_API_KEY 없음 → 신규 결과만 사용")
-        return new_result
-
-    genai.configure(api_key=api_key)
 
     # 출처 URL 누적 — 정규화 비교 (fbclid/utm 만 다른 같은 URL 이 중복 누적되지 않게)
     from scripts.skill_builder.installer import normalize_url
@@ -173,40 +201,24 @@ def merge_with_existing(
 
     last_err: Exception | None = None
     raw_text: str = ""
+    provider: str = ""
+
+    # 0단계: Claude 구독 — 성공하면 Gemini 쿼터를 안 쓴다
+    claude_text = call_claude_json(prompt, schema=MERGE_SCHEMA)
+    if claude_text:
+        raw_text, provider = claude_text, "claude"
 
     # 1-2단계: Gemini cloud — quota 임계 도달 모델은 스킵, 429 시 카운터 마킹
-    for model_name in (MODEL_PRIMARY, MODEL_FALLBACK):
-        if _quota_should_skip(model_name):
-            logger.info("Gemini merge %s quota 임계 — 스킵", model_name)
-            continue
-        if model_name in _UNSUPPORTED_MODELS:
-            logger.info("Gemini merge %s — SDK 비호환으로 세션 내 비활성 상태", model_name)
-            continue
-        try:
-            model = genai.GenerativeModel(
-                model_name,
-                generation_config=_gemini_gen_config(),
-            )
-            resp = model.generate_content(prompt)
-            raw_text = resp.text or ""
-            _quota_increment(model_name)
-            if raw_text:
-                break
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Gemini merge %s 실패: %s", model_name, e)
-            last_err = e
-            if _is_429(e):
-                _quota_increment(model_name, hit_429=True)
-            elif _is_thinking_config_reject(e):
-                _UNSUPPORTED_MODELS.add(model_name)
-                logger.warning(
-                    "%s thinking_config 미지원 — 세션 내 비활성", model_name,
-                )
+    if not raw_text:
+        raw_text, provider, gem_err = _gemini_merge(prompt)
+        if gem_err:
+            last_err = RuntimeError(gem_err)
 
     # 3단계: Gemma 4 로컬 폴백
     if not raw_text:
-        logger.info("Gemini merge 사용 불가 → Gemma 4 로컬")
+        logger.info("Claude·Gemini merge 사용 불가 → Gemma 4 로컬")
         raw_text = call_gemma_json(prompt) or ""
+        provider = "gemma" if raw_text else ""
 
     if raw_text:
         try:
@@ -219,7 +231,7 @@ def merge_with_existing(
             # len=0(빈 응답)도 포함 — opt-in 트리거가 못 잡으면 본문이 완전히 비어버림
             cur_body = (data.get("body_md") or data.get("body_content") or "").strip()
             if len(cur_body) < MIN_MERGED_BODY:
-                logger.info("합병 본문 %d자 — Gemma 보강 재요청", len(cur_body))
+                logger.info("합병 본문 %d자 — 보강 재요청 (%s)", len(cur_body), provider)
                 boost_prompt = (
                     prompt
                     + "\n\n[직전 합병 본문이 너무 짧음 — 두 출처의 누락된 통찰을 모두 살려 "
@@ -227,9 +239,13 @@ def merge_with_existing(
                     "코드/명령어/링크는 보존. JSON 만 출력]\n"
                     + "\n[직전 본문]\n" + cur_body[:3000]
                 )
-                boost_text = call_gemma_json(
-                    boost_prompt, num_predict=8192, temperature=0.4
-                ) or ""
+                boost_text = ""
+                if provider == "claude":
+                    boost_text = call_claude_json(boost_prompt, schema=MERGE_SCHEMA) or ""
+                if not boost_text:
+                    boost_text = call_gemma_json(
+                        boost_prompt, num_predict=8192, temperature=0.4
+                    ) or ""
                 if boost_text:
                     try:
                         data3 = _extract_json(boost_text)
@@ -260,12 +276,13 @@ def merge_with_existing(
                 body_md=data.get("body_md", ""),
                 body_content=data["body_content"],
                 raw=data,
+                provider=provider,
             )
             # merged 결과에 누적된 source_urls 정보를 raw로 전달
             merged.raw["_merged_source_urls"] = merged_urls
             merged.raw["_merged_collected_at"] = existing.get("collected_at") or datetime.date.today().isoformat()
             merged.raw["_is_merged"] = True
-            logger.info("스킬 합병 완료: %s (출처 %d→%d)", merged.skill_name, len(existing_urls), len(merged_urls))
+            logger.info("스킬 합병 완료: %s (출처 %d→%d, provider=%s)", merged.skill_name, len(existing_urls), len(merged_urls), provider)
             return merged
         except Exception as e:  # noqa: BLE001
             logger.warning("합병 JSON 파싱 실패: %s", e)

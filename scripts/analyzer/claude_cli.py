@@ -67,6 +67,20 @@ SKILL_SCHEMA: dict = {
                  "grade_reason", "difficulty", "ai_tools", "body_md"],
 }
 
+# 합병(merger) 응답 — 분석 스키마 + legacy 메타 5종(있으면 받고 없어도 통과)
+MERGE_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        **SKILL_SCHEMA["properties"],
+        "targets": {"type": "array", "items": {"type": "string"}},
+        "summary": {"type": "string"},
+        "when_to_use": {"type": "string"},
+        "memo": {"type": "string"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": list(SKILL_SCHEMA["required"]),
+}
+
 Runner = Callable[..., tuple[int, str, str]]
 _paused_until: float = 0.0
 
