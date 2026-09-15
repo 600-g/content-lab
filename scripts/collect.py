@@ -27,6 +27,7 @@ from scripts.scraper import scrape, detect_source
 from scripts.scraper.router import MIN_TEXT_LEN
 from scripts.scraper import plain_text
 from scripts.analyzer import analyze
+from scripts.analyzer.claude_cli import call_claude_json
 from scripts.analyzer.merger import merge_with_existing
 from scripts.skill_builder import render_skill_md, install_skill, mirror_skill
 from scripts.skill_builder.installer import find_existing_by_url, find_global_by_slug, find_mirror_by_slug
@@ -125,12 +126,19 @@ GENERIC_SLUGS = {
 }
 
 
+_SAME_SCHEMA = {
+    "type": "object",
+    "properties": {"same": {"type": "boolean"}, "reason": {"type": "string"}},
+    "required": ["same", "reason"],
+}
+
+
 def _confirm_semantic_merge(analysis, slug: str, cand_path: Path, log) -> bool:
     """의미 dedup 후보를 LLM 으로 최종 확인 (v4.4.5).
 
     전수 페어 계측 결과 임베딩 점수만으로는 '실질 동일 스킬'(0.94~0.96)과
-    '같은 주제·다른 스킬'(0.91~0.94)이 안 갈림 → 임계값 통과 후 로컬 Gemma 로
-    같은 스킬인지 yes/no 확정. 실패/불확실 시 보수적으로 신규 등록 (오합병 방지).
+    '같은 주제·다른 스킬'(0.91~0.94)이 안 갈림 → 임계값 통과 후 LLM 으로
+    같은 스킬인지 yes/no 확정. v5.3 부터 Claude 우선, 없으면 Gemma. 실패/불확실 시 보수적으로 신규 등록.
     """
     try:
         from scripts.analyzer.gemini import call_gemma_json, _extract_json
@@ -139,20 +147,31 @@ def _confirm_semantic_merge(analysis, slug: str, cand_path: Path, log) -> bool:
         cand_desc = m.group(1).strip() if m else ""
         m = re.search(r"^# (.+)$", text, re.MULTILINE)
         cand_title = m.group(1).strip() if m else slug
+        m = re.search(r"^category:\s*(.+)$", text, re.MULTILINE)
+        cand_cat = m.group(1).strip() if m else "?"
         new_desc = (getattr(analysis, "callout", "") or getattr(analysis, "summary", "") or "")
+        new_cat = getattr(analysis, "category", "") or "?"
+        # 사용자 원칙 (2026-09-16): 정확히 유사하고 카테고리가 겹치면 합쳐 간소화. 관점이 다르면 분리.
         prompt = (
             "두 AI 스킬 문서가 '같은 스킬'인지 판정하라.\n"
-            "같은 스킬 = 한쪽만 남기고 다른 쪽을 지워도 정보 손실이 거의 없는 관계.\n"
-            f"[기존] {cand_title} — {cand_desc[:400]}\n"
-            f"[신규] {analysis.skill_title_ko} — {new_desc[:400]}\n"
+            "같은 스킬 = 한쪽만 남기고 다른 쪽을 지워도 정보 손실이 거의 없는 관계. "
+            "같은 주제를 다른 출처로 또 받은 경우가 흔하고, 그때는 합쳐서 하나로 간소화하는 것이 원칙이다.\n"
+            f"[기존] ({cand_cat}) {cand_title} — {cand_desc[:400]}\n"
+            f"[신규] ({new_cat}) {analysis.skill_title_ko} — {new_desc[:400]}\n"
             "판정 기준:\n"
             "- 제목과 표현이 달라도 다루는 대상(도구·기능)과 목표가 같으면 same=true. "
             "같은 자료를 다르게 요약한 경우가 흔하므로 문구 차이는 근거가 못 된다.\n"
             "- 다루는 도구가 다르거나, 목표·결과물이 다르거나, 한쪽에만 있는 핵심 절차가 있으면 same=false.\n"
             "- '포괄적 vs 특정 기능' 같은 서술 범위 차이만으로 판단하지 말고 핵심 대상이 같은지를 봐라.\n"
+            "- 괄호 안은 카테고리다. 카테고리가 같으면 합치는 쪽으로, 다르면 같은 대상·같은 목표가 분명할 때만 same=true.\n"
             'JSON only: {"same": true, "reason": "1줄"}'
         )
-        raw = call_gemma_json(prompt) or ""
+        raw = call_claude_json(prompt, schema=_SAME_SCHEMA)
+        if not raw:
+            raw = call_gemma_json(prompt) or ""
+        if not raw:
+            log.warning("의미 dedup LLM 확인 불가 (Claude·Gemma 모두 응답 없음) — 보수적으로 신규 처리")
+            return False
         data = _extract_json(raw)
         same = bool(data.get("same"))
         log.info("의미 dedup LLM 확인: %s → same=%s (%s)", slug, same, str(data.get("reason", ""))[:80])
@@ -328,16 +347,12 @@ def collect(
         return summary
 
     if analysis.grade == "C":
-        # 여기 도달했다는 건 본문은 충분히 확보됐다는 뜻 (위 MIN_TEXT_LEN 게이트 통과).
-        # 즉 진짜로 '내용은 읽었는데 스킬 가치가 없다' 는 판정이므로 그렇게 안내한다.
+        # v5.3: 등급은 활용도이지 소장 가치가 아니다 — C 도 등록한다 (사용자 원칙 2026-09-16:
+        # "내가 준 스킬은 어느 정도 다 소장 가치가 있다"). 본문 부족은 위 게이트가 이미 걸렀으므로
+        # 여기의 C 는 '읽었는데 따라 할 절차가 없다' 는 뜻 → 참고용 표시만 남기고 파이프라인을 계속 탄다.
         reason = (analysis.grade_reason or "").strip()
-        summary["stages"]["analyze"]["note"] = f"등급 C — 활용 불가 ({reason})"
-        summary["ok"] = True  # 분석 자체는 성공
-        summary["message_ko"] = (
-            f"본문 {text_len}자를 읽었지만 스킬로 등록할 가치가 없다고 판정했습니다 (등급 C). DB에 안 올라감."
-            + (f" 사유: {reason}" if reason else "")
-        )
-        return summary
+        summary["stages"]["analyze"]["note"] = "등급 C — 참고용 (활용도 낮음)" + (f": {reason}" if reason else "")
+        log.info("등급 C — 참고용으로 등록 진행: %s", reason[:100])
 
     # ── 3. 중복 감지 → 합병 ────────────────────────────────────────
     def _lab_origin(p) -> bool:

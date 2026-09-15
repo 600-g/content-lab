@@ -425,7 +425,7 @@ def _block(btype: str, text: str) -> dict:
 
 
 def _grade_label(g: str) -> str:
-    return {"S": "즉시적용", "A": "참고가치", "B": "나중에", "C": "스킵"}.get(g, "")
+    return {"S": "즉시실행", "A": "절차형", "B": "개념", "C": "참고"}.get(g, "")
 
 
 # TEMPLATE v2 (2026-05-15) — 카테고리 7개 단순화 매핑
@@ -560,8 +560,6 @@ def register_skill(
             "hint": ".env에 NOTION_API_KEY + NOTION_DB_ID 설정",
         }
 
-    if result.grade == "C":
-        return {"ok": False, "error_ko": "등급 C — Notion 등록 안 함", "code": "grade_c", "hint": ""}
 
     properties = _properties(result, source_url, source_type)
     blocks = _markdown_to_blocks(skill_md_content)

@@ -286,7 +286,7 @@ def _gemini_reclassify(title: str, summary: str, body_md: str) -> Optional[dict]
 
 [허용 옵션 — 정확히 일치해야 함]
 - category: {cats}
-- grade: S(즉시적용)/A(참고가치)/B(나중에)/C(스킵)
+- grade: S(즉시실행)/A(절차형)/B(개념·방법론)/C(정보·소개, 참고용)
 - difficulty: 초급 / 중급 / 고급
 - targets: 두근펫 / 매매봇 / 검은별 / 클로드코드 / AI900 / 첼시인스타 / 이모티콘 / 공통
 - tags: {tags_list}
@@ -359,7 +359,7 @@ def cmd_fix_meta(pages: list[dict], dry: bool = False) -> int:
         if new_cat != cur_cat:
             changes.append(f"카테고리 {cur_cat} → {new_cat}")
             props_update["카테고리"] = {"select": {"name": new_cat}}
-        grade_label = {"S": "즉시적용", "A": "참고가치", "B": "나중에", "C": "스킵"}.get(new_grade, "")
+        grade_label = {"S": "즉시실행", "A": "절차형", "B": "개념", "C": "참고"}.get(new_grade, "")
         new_grade_full = f"{new_grade}-{grade_label}" if grade_label else None
         if new_grade_full and new_grade_full.split("-")[0] != cur_grade:
             changes.append(f"등급 {cur_grade} → {new_grade}")

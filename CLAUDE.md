@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**aiskillbox** (콘텐츠랩 v5.2) — URL 한 줄 **또는 붙여넣은 텍스트** 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
+**aiskillbox** (콘텐츠랩 v5.3) — URL 한 줄 **또는 붙여넣은 텍스트** 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
 
 - **v4.6 전체 잠금**: 사이트 전체(수집 UI·카탈로그·라이브러리 API)가 초대코드 로그인 필요. 예외는 `/login`·`/api/auth/redeem|bootstrap`·`/healthz`(112 모니터)·`/static/*`·`/sw.js`·`/favicon.ico` 와 v5.0 원격 MCP 경로(`/mcp`·`/oauth/*` 4종·`/.well-known/*` 3종) 뿐 — 목록의 단일 진실은 `scripts/auth_routes.py:_ALLOW_EXACT`(정확 일치, gotcha 43). 첫 진입/복구는 `/login` 의 "관리자 첫 등록(PIN)". 설계: `docs/superpowers/specs/2026-08-22-invite-auth-design.md`
 - 게시판(도서관): https://aiskillbox.600g.net/catalog — 카테고리 섹션 + 칩 필터 + 카드/목록 전환. **제목 클릭 = 사이트 안 게시글** `/skill/<slug>` (본문 전문·SKILL.md 복사·같은 카테고리 글), 외부로 나가는 링크는 [원본 ↗] 하나뿐 · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
@@ -12,6 +12,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 입력(v4.9): 메인 폼이 **[🔗 링크] / [✍️ 텍스트] 2탭**. 텍스트 탭은 스크랩을 건너뛰고 붙여넣은 본문을 바로 분석한다 (최소 200자). 로그인 벽 때문에 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 뉴스레터, 워크스페이스 전용 노션)의 정식 경로. 링크칸에 본문을 붙여넣어도 자동으로 텍스트 탭으로 넘어간다.
 - **미디어 이해 (v5.1)**: 인스타 릴스·피드 캐러셀·자막 없는 유튜브의 **내용**을 읽는다. 인스타는 공개 embed 엔드포인트(로그인·yt-dlp 불필요)에서 캡션 + 영상/슬라이드 URL 을 얻고, `analyzer/media_understand.py` 가 Gemini 멀티모달(flash-lite 우선)로 음성·화면 텍스트를 본문에 덧붙인다. 설계: `docs/superpowers/specs/2026-09-12-media-understanding-design.md`
 - **분석 1순위 = Claude 구독 (v5.2)**: SKILL.md 본문을 만드는 `analyze()` 가 **Claude Sonnet 5(`claude -p`) → Gemini → Gemma** 순으로 돈다 (`analyzer/claude_cli.py`). 슬라이드(카드뉴스) 판독도 Claude(Read 도구) 가 먼저, 영상·유튜브는 Claude 가 입력을 못 받아 계속 Gemini. 한도 메시지가 뜨면 30분 쿨다운 후 Gemini/Gemma. 스위치 `config.json analyzer.claude_enabled` (재시작 불필요) · 긴급 env `ANALYZER_CLAUDE=0`. 어느 LLM 이 만들었는지 잡 summary `stages.analyze.provider` 와 로그 `AI 분석 완료 — provider=…` 에 남는다.
+- **등급 = 활용도, 소장은 전부 (v5.3)**: S 즉시 실행(복붙 가능한 프롬프트·명령·코드로 그대로 결과) / A 절차형(단계는 있으나 사용자가 채울 부분) / B 개념·방법론(원리·체크리스트, 실행은 스스로 설계) / C 정보·소개(도구 소개·기능 목록·뉴스, 따라 할 절차 없음). **C 도 등록한다** — 활용도가 낮다는 표시일 뿐 제외 사유가 아니다 (v5.2 까지는 C 면 미등록). rubric 은 `analyzer/prompt.py` 와 `library/regrade.py` 두 곳에 같은 문장으로 — 어긋나면 안 된다.
+- **중복은 합쳐 간소화 (v5.3)**: 같은 주제를 다른 출처로 또 받는 게 정상 흐름이라 매번 쌓지 않는다. 수집 시 의미 dedup(0.90+) 의 최종 확인이 Claude(→Gemma) 로 바뀌었고 두 카테고리를 근거로 넘긴다. 이미 쌓인 중복은 `python -m scripts.library.consolidate <keeper> <absorbed>` 로 흡수 (백업 후 삭제, 출처 합집합). 원칙: 정확히 유사 + 카테고리 겹침이면 합침, 관점이 다르면 분리.
 - **원격 MCP (v5.0)**: `POST /mcp` (Streamable HTTP) + OAuth 2.1 인가서버. claude.ai 웹·모바일·Cowork 에 커스텀 커넥터로 붙는다. 읽기 전용 3종 도구. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md`
 - 설계: `docs/superpowers/specs/2026-08-20-skill-library-design.md`
 
@@ -54,6 +56,11 @@ tail -f logs/launchd_stdout.log
 #   끄기/모델/쿨다운은 config.json analyzer.* (mtime 재적재 — 재시작 불필요). 실측: 스킬 1건 50초·~20k 토큰, 슬라이드 2장 6초
 grep -a "AI 분석 완료\|Claude 한도" logs/launchd_stderr.log | tail -5   # provider=claude|gemini-2.5-…|gemma · 한도 쿨다운 이력
 
+# 라이브러리 큐레이션 (v5.3)
+venv/bin/python -m scripts.library.regrade                        # 활용도 등급 재판정 dry-run (Claude, 6건/호출, 20초 간격)
+venv/bin/python -m scripts.library.regrade --apply --recategorize # 적용 (grade 항상, category 도 교체, 비어있는 난이도·도구 채움)
+venv/bin/python -m scripts.library.consolidate <keeper> <absorbed> [<absorbed2>…]   # 중복 스킬 흡수 (백업 logs/backup_consolidate_*)
+
 # 초대코드 (v4.6 전체 잠금) — 발급/목록/삭제(삭제 = 그 코드 기기 전부 로그아웃)
 python -m scripts.auth_store create "폰" && python -m scripts.auth_store list
 # 첫 진입/전기기 로그아웃 복구: /login → "관리자 첫 등록" 에 ADMIN_PIN
@@ -67,7 +74,7 @@ curl -s "http://localhost:5050/api/library/search?q=인스타+릴스&k=5" | pyth
 curl -s "http://localhost:5050/api/library/skills/<slug>?format=raw"   # SKILL.md 전문
 claude mcp add --scope user skill-library -- python3 ~/Developer/my-company/content-lab/scripts/library/mcp_server.py
 #   외부 기기: -e AISKILLBOX_URL=https://aiskillbox.600g.net (표준 라이브러리만 — venv 불필요)
-# 테스트 — unittest 전용 (★ pytest 는 venv 에 없다). 350건 · ~1.7초 · 네트워크 0
+# 테스트 — unittest 전용 (★ pytest 는 venv 에 없다). 369건 · ~2.3초 · 네트워크 0
 venv/bin/python -m unittest discover -s tests -t .
 venv/bin/python -m unittest tests.test_mcp_transport -v                                   # 파일 하나
 venv/bin/python -m unittest tests.test_mcp_transport.TransportTest.test_bad_token_is_401   # 메서드 하나
@@ -299,6 +306,10 @@ scripts/
                                           Files API resumable 업로드+ACTIVE 대기, 이미지 ≤10장은 v5.2 부터 Claude(Read) 먼저 → 실패 시 Gemini inline 일괄,
                                           유튜브는 file_data URL. 항목별 실패 격리, 예외 불출. 캐시·items 에 provider 기록
     dedup_finder.py                 ── 의미 dedup 후보 탐색 (임계 config dedup.threshold, GENERIC_SLUGS 제외 — gotcha 28)
+  library/regrade.py                ── v5.3 활용도 등급 재판정 — load_all → build_batches(6) → Claude JUDGE_SCHEMA → apply_meta(프론트매터만).
+                                          grade 항상 교체, category 는 --recategorize, 난이도·도구는 비었을 때. 보고 logs/regrade_<date>.jsonl
+  library/consolidate.py            ── v5.3 스킬 통합 — result_from_skill(absorbed) → merger(Claude) → keeper 에 쓰고 absorbed 백업·삭제.
+                                          합병 LLM 실패면 무변경. 출처 합집합, 임베딩 갱신
   skill_builder/
     md_generator.py                 ── render_skill_md() — SKILL.md 프론트매터 + 8섹션
     installer.py                    ── 글로벌(~/.claude/skills/) + mirror(./skills/) 동시 설치
@@ -523,6 +534,7 @@ URL 하나를 던지거나 본문을 그대로 붙여넣으면:
 
 | 날짜 | 버전 | 변경 |
 |------|------|----------|
+| 2026-09-16 | v5.3 | **등급 기준 재정립 + 중복 간소화 도구 + C 도 등록.** 라이브러리 전수 검토(119건)에서 S 68/A 39 로 등급이 정보를 못 줬고, 같은 PDF 에서 나온 삼중 중복·같은 URL 이중 등록·오합병 덩어리(`loop-engineering.archived`)가 있었으며, 오합병·비공개 오탐·429 로 사라진 요청 5건이 있었다. 사용자 원칙: "유사·연관이면 묶어 간소화, 등급은 활용도이지 소장 가치가 아니다, B 이하도 버리지 않는다". ① rubric 을 활용도 4단계(S 즉시 실행/A 절차형/B 개념/C 정보)로 교체 — `prompt.py` 와 `library/regrade.py` 동일 문장. ② `collect.py` 등급 C 도 등록 (종전 "DB 에 안 올라감" 폐지, `register.py` 의 C 차단도 제거), 카탈로그에 C 필터 칩. ③ 의미 dedup 최종 확인 `_confirm_semantic_merge` Claude 우선 + 두 카테고리를 근거로. ④ `library/regrade.py` (6건/호출 배치 판정, 프론트매터 패치, dry-run 기본) · `library/consolidate.py` (keeper ← absorbed 흡수, 백업·출처 합집합·실패 시 무변경). ⑤ 데이터: 누락 5건 재수집, 300~700자 껍데기 10건 Claude 재생성, 중복군 통합(맥락 프롬프트 3→1, 커넥터 2→1, NVIDIA 2→1, Claude API 2→1, 빈티지 포스터 2→1), `.archived` 2건 정리, 전수 등급 재판정. 테스트 350 → **369건**. |
 | 2026-09-14 | v5.2 | **분석 1순위 = Claude 구독 — SKILL.md 품질을 Max 플랜으로 올린다.** 그동안 본문을 쓰는 건 Gemini 2.5 Flash 였고 하루 20회 뒤엔 Gemma 26B 로컬이었다 (09-13 재처리 10건 중 후반이 Gemma). Claude 는 채팅·fix 러너에만 쓰고 있었는데, 영상만 못 받을 뿐 텍스트·이미지는 Claude 가 낫고 스킬 1건 ~20k 토큰이라 플랜 여유도 충분. ① `analyzer/claude_cli.py` — `claude -p` 래퍼 2종: `call_claude_json`(도구 0개 + `--json-schema SKILL_SCHEMA`, enum 을 스키마로 강제) · `call_claude_read_files`(Read 만, 임시 폴더 cwd). `--setting-sources ""`·`--strict-mcp-config`·stdin DEVNULL. 한도 메시지 → 30분 쿨다운. runner 주입으로 프로세스 0 테스트. ② `analyze()` 순서 Claude → Gemini → Gemma, 결과 `provider` 필드 + 잡 summary/로그에 기록. Gemini SDK/키가 없어도 Claude 로 분석된다 (종전엔 키 없으면 즉시 실패). 검증 재요청·body_too_short 보강은 1차가 Claude 면 Claude 로 (Gemma 로 품질 강등 X). ③ 슬라이드 판독 Claude 우선 (`read_images=` 주입점), 영상·유튜브는 Gemini 유지. ④ config `analyzer.*` 블록 (enabled/model/timeout/cooldown, 재시작 불필요), 긴급 env `ANALYZER_CLAUDE=0`. ⑤ **합병기도 같은 순서** — `merger.merge_with_existing` 이 Claude(`MERGE_SCHEMA`) → Gemini → Gemma. 합병 결과가 최종본이라 여기만 Gemma 면 analyze 를 올린 의미가 없다. Gemini 키 없이도 합병된다 (종전엔 키 없으면 합병 없이 신규로 덮어씀). **본문 cap 은 프로바이더별** — Claude 20,000자·Gemini/Gemma 4,000자 (`MERGE_BODY_CAP_*`). 실사고: 16.8k Claude 본문을 4,000자 cap 으로 합병해 12.4k 로 줄었다 — 합병 입력에서 잃으면 '둘 다 보존' 이 성립 안 한다. ⑥ 09-13 쿼터 소진(03:19 flash-lite 429) 뒤 Gemma 가 만든 6건을 백업(`logs/backup_claude_20260914/`) 후 Claude 로 재생성 (`regen.sh`, 건당 120초 간격으로 119 가드 아래). 결과: claude-agent-session → **claude-code-session-mention-handoff**(S, 6.6k→14.1k자) · vintage-photo-field-notes-generator → **vintage-field-notes-poster-prompt**(S, 18.9k→19.2k) · loop-engineering-ai(S, 8.5k→8.9k) · motion-transfer-character-swap-video → **higgsfield-genjutsu-motion-transfer-character-swap**(A, 15.3k→17.0k). higgsfield-genjutsu-music-video-guide 는 그것과 같은 스킬로 판정(0.945)돼 **Claude 합병기(전문 cap)로 흡수** — 합병본 21.0k자·출처 2건 — 후 삭제. ai-office 는 Claude 가 **C(기능명 나열뿐, 따라할 절차 없음)** 로 판정 — 옛 A 버전을 복원해 두었으니 지울지는 사람이 결정. 슬러그가 바뀐 2건은 옛 글로벌 설치본도 제거됨. 실측: 기존 스킬 본문 재분석 50초·S 등급·본문 2.8k자·경고 0, 슬라이드 2장 판독 6초·한글 100% (gotcha 49). 테스트 316 → **350건**. |
 | 2026-09-13 | v5.1 | **미디어 이해 — 릴스·피드·자막 없는 유튜브의 내용을 읽는다.** 로그 전수(05-14~09-12) 에서 인스타 릴스 5건은 yt-dlp 가 매번 "login required" 로 실패해 Playwright 가 **캡션만** 뜯었고 그걸로 스킬이 만들어졌다 (실사례 DdGu4P0MjXk: 영상은 "AI Office 8가지 대시보드", 스킬은 "AI 정보 큐레이션 마인드셋"). 피드 `/p/` 4건은 시도조차 없이 차단. ① `scraper/instagram_embed.py` — 공개 embed 엔드포인트의 contextJSON 에서 캡션·`video_url`·캐러셀 슬라이드 URL 을 로그인 없이 확보 (gotcha 47), router 가 IG 를 embed 우선으로. ② `analyzer/media_understand.py` — 스크랩과 분석 사이의 새 단계. 릴스 mp4 → Files API → flash-lite 가 8초·8k 토큰으로 음성+화면 자막 정리, 캐러셀 5장 inline 7초, 유튜브는 URL 을 file_data 로 직접(87초 영상 11초). 결과는 본문 끝 섹션으로 덧붙고 500자 게이트는 그 뒤. 캐시 `logs/media_cache.json` (key 기준). 항목별 실패 격리. ③ 유튜브 자막 0자 → 영상 자체를 미디어 이해로. ④ 등급 `S-즉시적용` → C 강등 버그 수정 (gotcha 48). ⑤ 실패/누락 재처리 — 캡션만으로 만든 릴스 스킬 3건 합병 보강, 엉뚱한 1건 교체(백업 `logs/backup_media_20260913/`), 차단됐던 피드 2건 신규, 등급 버그 1건 재수집. 삭제된 게시물 3건(DW_asMNk8wG·DYYyIEqACDx·DZPjiWcD6t2)은 복구 불가. 발견: `gemini-2.5-flash` 는 company-hq 와 키를 공유해 하루 20회가 매일 첫 호출에 소진되고, **flash-lite 도 하루 20회**(429 실측, env 기본값 1000 → 20 정정) — 재처리 10건 중 후반은 Gemma 로컬로 넘어갔다. 미디어 이해까지 제대로 쓰려면 aiskillbox 전용 프로젝트 키가 필요하다. 테스트 279 → **312건**. 설계: `docs/superpowers/specs/2026-09-12-media-understanding-design.md` |
 | 2026-08-30 | v5.0 | **원격 MCP 커넥터 — claude.ai 웹·모바일·Cowork 에서 스킬 라이브러리를 꺼내 쓴다.** 기존 `mcp_server.py` 는 **stdio 전용**이라 claude.ai 커스텀 커넥터로 못 붙었다(커넥터는 원격 MCP만 받는다). ① **`POST /mcp` Streamable HTTP** — stdio 서버의 순수 디스패치 `handle(msg)` 를 그대로 재사용해 읽기 전용 3종(`search_skills`/`get_skill`/`list_skills`) 노출. stateless(SSE·세션ID 없음 — 도구가 전부 즉답형). 같은 프로세스에서 부르므로 `use_local_backend()` 로 자기호출 루프 차단(안 하면 `_http_get` 이 자기 서버를 때리고 v4.6 게이트에 401). ② **OAuth 2.1 인가서버** — RFC 9728/8414 메타데이터, RFC 7591 동적 등록(config 토글, 기본 off), authorization_code + PKCE S256, refresh 회전, RFC 7009 폐기. ③ **폐기 모델에 새 개념을 안 만들었다** — 모든 grant 에 승인한 초대코드를 박고 검증 때마다 그 코드 생존을 확인(지연 폐기). **초대코드 삭제 = 그 코드로 붙은 커넥터도 즉시 끊김** — 기존 cascade 멘탈 모델 그대로, 폐기 UI 불필요. ④ 게이트 예외를 prefix→**exact-match** 로(gotcha 43, fail-open→fail-closed). ⑤ **리뷰가 잡은 실제 결함 4건** — 남의 인가코드를 파괴하는 무흔적 DoS(gotcha 45), refresh 토큰이 클라이언트에 바인딩 안 됨(RFC 6749 §6), `/oauth/revoke` 가 브루트포스 잠금을 씻어냄, 축출 로직이 새 잠금을 영원히 못 만들게 함(gotcha 44 — 뒤 둘은 수정 웨이브가 스스로 만든 회귀). 구현자의 "단일 클라이언트라 저위험" 논거는 기각됐고, **연결 첫날 클라이언트가 2개 등록되며 그 판단이 옳았음이 실증됐다.** ⑥ 실 HTTP 검증 — 임시 서버로 401 챌린지→메타데이터→동의→PKCE 토큰 교환→Bearer `/mcp initialize` 200 완주, 이후 공개 URL 에서 CF Tunnel 통과 확인. 테스트 181 → **275건**. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md` |
