@@ -2,7 +2,7 @@
 name: ai-office-automation-zip
 description: 이 스킬은 **AI 오피스 자동화** 관련 도구 및 프롬프트를 포함하는 zip 파일을 다운로드하고 실행하는 방법을 안내합니다.
 origin: content-lab
-grade: B
+grade: C
 difficulty: 초급
 category: 자동화
 ai_tools: ["도구무관"]

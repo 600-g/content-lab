@@ -2,7 +2,7 @@
 name: pikapet-file-management
 description: Pikapet V3는 **파일을 업로드, 다운로드, 관리**할 수 있는 도구입니다. Google Drive와 유사한 인터페이스를 제공합니다.
 origin: content-lab
-grade: S
+grade: B
 difficulty: 초급
 category: 업무
 ai_tools: ["도구무관"]
@@ -37,7 +37,12 @@ sources:
     - **최종 수정일 (Date)**: 파일의 마지막 수정 시점.
     - **파일 크기 (Number)**: 파일의 크기 정보.
     - **담당자 (Person)**: 해당 파일의 현재 담당자 또는 검토자.
-3. **워크플로우 시뮬레이션**: 특정 파일을 생성한 후, **상태** 속성을 변경하며 워크플로우를 시뮬레이션합니다. 예를 들어, '초안' $ightarrow$ '검토 요청' $ightarrow$ (담당자 A가 검토) $ightarrow$ '승인 대기' $ightarrow$ (관리자가 승인) $ightarrow$ '승인 완료' 순서로 속성을 업데이트합니다.
+3. **워크플로우 시뮬레이션**: 특정 파일을 생성한 후, **상태** 속성을 변경하며 워크플로우를 시뮬레이션합니다. 예를 들어, '초안' $
+ightarrow$ '검토 요청' $
+ightarrow$ (담당자 A가 검토) $
+ightarrow$ '승인 대기' $
+ightarrow$ (관리자가 승인) $
+ightarrow$ '승인 완료' 순서로 속성을 업데이트합니다.
 4. **메타데이터 추출 및 기록**: 파일의 세부 정보(예: `mimeType`, `id`)를 별도의 텍스트 속성에 기록하여, 시스템 레벨의 메타데이터를 관리하는 연습을 합니다.
 
 ```markdown

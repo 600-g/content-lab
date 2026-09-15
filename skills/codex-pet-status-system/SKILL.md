@@ -2,6 +2,10 @@
 name: codex-pet-status-system
 description: OpenAI Codex 데스크톱 앱 내장 플로팅 AI 동반자(Pet) UI를 활용해 Codex의 현재 상태(Running/Waiting/Review)를 한눈에 파악하고, hatch-pet 스킬로 커스텀 캐릭터를 제작해 멀티태스킹 인지 부담을 해결하는 워크플로우 가이드
 origin: content-lab
+grade: A
+category: 자동화
+difficulty: 초급
+ai_tools: ["Codex"]
 sources:
   - https://resonant-frog-df5.notion.site/Codex-Pet-AI-35c3a1a3234381fb9b8bd2ca7adb8d29
 ---

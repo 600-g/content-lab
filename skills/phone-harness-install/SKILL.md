@@ -2,7 +2,7 @@
 name: phone-harness-install
 description: 이 스킬은 **AI 에이전트가 실제 아이폰을 조작**하여 앱 실행, 터치, 입력, 스크롤 등 **자동화된 작업**을 수행하도록 설정하는 가이드입니다.
 origin: content-lab
-grade: S
+grade: A
 difficulty: 초급
 category: 자동화
 ai_tools: ["Codex"]

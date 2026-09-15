@@ -2,10 +2,10 @@
 name: save-and-organize-ai-content
 description: AI 콘텐츠를 **빠르게 저장하고 체계적으로 관리**하여 실행력을 높이는 스킬입니다.
 origin: content-lab
-grade: S
+grade: C
 difficulty: 초급
 category: 업무
-ai_tools: []
+ai_tools: ["도구무관"]
 sources:
   - https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149
 ---

@@ -5,7 +5,7 @@ origin: content-lab
 grade: S
 difficulty: 초급
 category: 콘텐츠
-ai_tools: []
+ai_tools: ["도구무관"]
 sources:
   - https://app.notion.com/p/1-3c5fd99f0e5f81fd8c14e97ad96f6d1f?source=copy_link
 ---

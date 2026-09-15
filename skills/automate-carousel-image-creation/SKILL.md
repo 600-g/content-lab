@@ -2,7 +2,7 @@
 name: automate-carousel-image-creation
 description: AI를 활용하여 **복잡한 프롬프트 없이** 프로필 사진이나 카드 뉴스 형태의 캐러셀 이미지를 **자동으로 제작**하는 스킬입니다.
 origin: content-lab
-grade: S
+grade: A
 difficulty: 초급
 category: 디자인
 ai_tools: ["Claude"]

@@ -2,7 +2,7 @@
 name: download-drive-zip
 description: 이 스킬은 **구글 드라이브에 저장된 zip 파일을 다운로드**하여 로컬 컴퓨터에서 활용할 수 있도록 하는 스킬입니다. 압축 파일을 안전하게 내려받아 압축 해제 후 내용을 확인해야 할 때 사용됩니다.
 origin: content-lab
-grade: S
+grade: A
 difficulty: 초급
 category: 기타
 ai_tools: ["도구무관"]

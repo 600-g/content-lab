@@ -2,10 +2,10 @@
 name: autonomous-coding-agent
 description: 이 스킬은 Claude Agent SDK를 기반으로 자율 코딩 에이전트를 구축하고, 나아가 macOS 데스크톱 환경에서 다양한 작업을 수행하는 AI 에이전트 개발의 모범 사례를 통합 제공합니다. 명시적 도구 정의, 효율적인 시각 정보 처리, 프롬프트 캐싱 등 신뢰성 높고 비용 효율적인 에이전트 개발 패턴을 학습하여, 자율적인 애플리케이션 개발 및 실제 컴퓨터 작업 자동화를 구현할 수 있습니다. Use when: AI 에이전트가 특정 기능이나 작은 애플리케이션을 자율적으로 개발하고 진행 상황을...
 origin: content-lab
-grade: A
+grade: B
 difficulty: 중급
-category: 기타
-ai_tools: []
+category: 개발
+ai_tools: ["Claude", "Claude Code"]
 sources:
   - https://github.com/anthropics/anthropic-quickstarts
 ---

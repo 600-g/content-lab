@@ -5,7 +5,7 @@ origin: content-lab
 grade: A
 difficulty: 중급
 category: 기타
-ai_tools: []
+ai_tools: ["도구무관"]
 sources:
   - https://joowonkoh.com/playground/webswing?fbclid=PAVERFWATld71wZG9mAmZkaWQWUMKVlajuz_FkwWfv_CISbvn90Q6JbGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwFYoSVao__eu75-GVkCux6sksglj8gGLC7o0yO9YPThstkhxKZJqptaidC7_aem_UXMcK1WEfr1r-QfyfwYCIg
 ---

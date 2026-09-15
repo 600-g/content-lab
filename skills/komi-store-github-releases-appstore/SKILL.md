@@ -2,7 +2,7 @@
 name: komi-store-github-releases-appstore
 description: 이 스킬은 **깃허브, 코드버그, 포지호**에 올라온 릴리스를 모아 보여주고, 눌러서 바로 설치까지 이어주는 **앱스토어**입니다.
 origin: content-lab
-grade: S
+grade: A
 difficulty: 초급
 category: 개발
 ai_tools: ["도구무관"]

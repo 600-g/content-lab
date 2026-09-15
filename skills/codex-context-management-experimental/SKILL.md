@@ -2,7 +2,7 @@
 name: codex-context-management-experimental
 description: Codex의 **실험적 컨텍스트 관리 기능**을 활성화하여, 세션 중 **메모리 압축 및 수동 개입 없이** AI가 이전 대화 내용을 효과적으로 관리하도록 합니다.
 origin: content-lab
-grade: A
+grade: S
 difficulty: 중급
 category: 자동화
 ai_tools: ["Codex"]

@@ -2,7 +2,7 @@
 name: link-in-bio
 description: 유료 서비스에 의존하지 않고, 클로드와 웹 개발 지식을 활용하여 디자인 자유도가 높은 커스텀 링크인바이오 페이지를 직접 구축합니다. 단순 링크 연결을 넘어, 방문자 데이터 수집, 슬랙 알림 연동, 방문자 분석까지 자동화하여 마케팅 효율을 극대화할 수 있습니다.
 origin: content-lab
-grade: S
+grade: C
 difficulty: 고급
 category: 자동화
 ai_tools: ["Claude"]

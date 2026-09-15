@@ -2,7 +2,7 @@
 name: stock-analysis-dashboard-finnhub-guide
 description: 유료 주식 분석 사이트 구독료 없이, **Finnhub 무료 API 키**와 **Claude Code**로 직접 만든 주식 분석 대시보드를 활용하는 스킬입니다.
 origin: content-lab
-grade: S
+grade: A
 difficulty: 초급
 category: 업무
 ai_tools: ["Claude", "Claude Code"]

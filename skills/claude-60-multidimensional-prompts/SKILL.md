@@ -2,6 +2,10 @@
 name: claude-60-multidimensional-prompts
 description: 입문자용 Claude 프롬프트 60종 라이브러리 — 학습·업무·글쓰기·리서치·수익화·관계 6개 카테고리에 걸쳐 복붙해서 바로 쓸 수 있는 검증된 프롬프트 모음. `[ ]` 안만 채우면 즉시 사용 가능
 origin: content-lab
+grade: S
+category: 프롬프트
+difficulty: 초급
+ai_tools: ["Claude"]
 sources:
   - https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149
 ---

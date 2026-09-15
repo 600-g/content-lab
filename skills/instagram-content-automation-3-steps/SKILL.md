@@ -4,7 +4,7 @@ description: 클로드와 연동된 도구들을 활용하여 유튜브 트렌�
 origin: content-lab
 grade: A
 difficulty: 중급
-category: 콘텐츠
+category: 자동화
 ai_tools: ["Claude"]
 sources:
   - https://exultant-principle-9c5.notion.site/3-3c091cb23c4d81ac8615f74ae861c373?pvs=149

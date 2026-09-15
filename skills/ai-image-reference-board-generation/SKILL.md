@@ -2,7 +2,7 @@
 name: ai-image-reference-board-generation
 description: AI 이미지 생성 시 **일관성 유지**를 돕는 '레퍼런스 보드'를 만드는 스킬입니다.
 origin: content-lab
-grade: A
+grade: S
 difficulty: 초급
 category: 디자인
 ai_tools: ["GPT"]

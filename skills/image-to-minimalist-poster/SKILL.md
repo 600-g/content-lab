@@ -2,7 +2,7 @@
 name: image-to-minimalist-poster
 description: 사진을 업로드하면 **고품질 미니멀 디자인 포스터**로 개별 제작해주는 스킬입니다.
 origin: content-lab
-grade: A
+grade: S
 difficulty: 중급
 category: 디자인
 ai_tools: ["GPT"]

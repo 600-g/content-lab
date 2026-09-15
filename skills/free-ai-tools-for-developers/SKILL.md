@@ -2,9 +2,9 @@
 name: free-ai-tools-for-developers
 description: 다양한 **AI 도구**들을 **무료**로 활용하는 방법을 모아놓은 스킬입니다. 유료 결제 없이 코딩, 영상 제작, 웹사이트 제작 등 AI 기반 작업을 경험할 수 있습니다.
 origin: content-lab
-grade: S
+grade: C
 difficulty: 초급
-category: 개발
+category: 기타
 ai_tools: ["Claude", "Claude Code", "Gemini", "Ollama"]
 sources:
   - https://rebornlabs.kr/ai-free?utm_source=instagram&utm_medium=reels&utm_campaign=vibeskills&ref=BS-019&utm_content=BS-019&fbclid=PAVERFWAUQyP1wZG9mAmZkaWQWUOOpC3L-8ODj1vexlLDdsZ2GHKIPIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp6e4dJhk37uH-yDX8HW9Xr8XoFZsMGrFdhC1ZHKAIKiPfHsPDypu-qPBc5bp_aem_nKqBkYw_-PimTBvY4hixXw

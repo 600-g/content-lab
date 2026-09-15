@@ -2,7 +2,7 @@
 name: claude-cowork-guide
 description: 클로드 코워크는 **업무에 쉽게 적용할 수 있는 자동 작업 도구**로, Claude 데스크톱 앱에서 파일 및 폴더 접근 권한을 부여하여 AI의 작업 수행을 돕습니다.
 origin: content-lab
-grade: S
+grade: A
 difficulty: 초급
 category: 업무
 ai_tools: ["Claude"]

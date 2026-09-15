@@ -2,9 +2,9 @@
 name: fable-5-advanced-prompting-mastery
 description: 이 스킬은 **Fable 5**의 자율 에이전트 능력을 활용하여, 복잡한 **다단계 워크플로우**를 최소한의 지시로 완성하는 고급 프롬프팅 기법입니다.
 origin: content-lab
-grade: S
+grade: B
 difficulty: 고급
-category: 자동화
+category: 프롬프트
 ai_tools: ["Claude", "Claude Code"]
 sources:
   - https://adu-fable5-guide.vercel.app/?fbclid=PAVERFWASzfBJwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp3tDUQ7j-FWlcUGsIsYM7o9Z-hSYSY4JZEFSmEYEgkmd6ZEwc5It6NkxeseS_aem_5ZRvt5sOrFXdAe75h5l0VQ

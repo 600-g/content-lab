@@ -2,7 +2,7 @@
 name: claude-code-headroom
 description: 이 스킬은 **Claude Code** 사용 시 입력 토큰을 미리 압축하여 **비용을 절감**하는 **Headroom** 사용법을 안내하는 스킬입니다.
 origin: content-lab
-grade: A
+grade: S
 difficulty: 초급
 category: 개발
 ai_tools: ["Claude", "Claude Code"]

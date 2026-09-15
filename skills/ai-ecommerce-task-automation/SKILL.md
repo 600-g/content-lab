@@ -2,7 +2,7 @@
 name: ai-ecommerce-task-automation
 description: 반복적이고 시간이 많이 소요되는 이커머스 업무(소싱, 광고 분석, CS 등)를 AI에게 자연어 명령으로 위임하여 효율성을 극대화합니다. 복잡한 프롬프트 작성 없이도 AI 비서의 도움을 받아 핵심 매출 증대 활동에 집중할 수 있습니다.
 origin: content-lab
-grade: S
+grade: C
 difficulty: 초급
 category: 업무
 ai_tools: ["Claude", "Gemini", "Ollama"]

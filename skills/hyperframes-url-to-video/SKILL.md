@@ -2,6 +2,10 @@
 name: hyperframes-url-to-video
 description: HyperFrames + Claude Code로 웹사이트 URL 한 줄만 던지면 광고 영상까지 자동 제작하는 HTML→MP4 변환 프레임워크. 인스타 릴스·틱톡·제품 소개·브랜드 광고 다양한 포맷을 슬래시 명령 한 줄로, Suno AI로 BGM 자동 추가까지
 origin: content-lab
+grade: S
+category: 콘텐츠
+difficulty: 중급
+ai_tools: ["Claude Code", "Claude"]
 sources:
   - https://resonant-frog-df5.notion.site/HyperFrames-Claude-3503a1a3234380b685bddfa2931f3665
 ---

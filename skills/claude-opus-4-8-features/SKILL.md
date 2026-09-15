@@ -2,7 +2,7 @@
 name: claude-opus-4-8-features
 description: Claude Opus 4.8은 **코딩, 추론, 컴퓨터 조작, 지식 업무** 등 전반적인 성능을 개선하고, **Dynamic Workflows, Ultracode, /deep-research** 등의 새로운 Claude Code 기능을 도입한 **AI 모델**입니다.
 origin: content-lab
-grade: A
+grade: C
 difficulty: 중급
 category: 업무
 ai_tools: ["Claude", "Claude Code"]

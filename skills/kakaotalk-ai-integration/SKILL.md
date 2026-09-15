@@ -2,10 +2,10 @@
 name: kakaotalk-ai-integration
 description: 카나나 AI는 **별도 앱이 아닌** 카카오톡 대화 흐름 안으로 통합되어 **생활 밀착형 AI 경험**을 제공하는 스킬입니다.
 origin: content-lab
-grade: A
+grade: C
 difficulty: 초급
 category: 업무
-ai_tools: []
+ai_tools: ["도구무관"]
 sources:
   - https://abounding-helmet-0e4.notion.site/AI-6-38b73c7b15ad81dfa53dfd9262efca8e?pvs=149
 ---

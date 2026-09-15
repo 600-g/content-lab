@@ -2,9 +2,9 @@
 name: claude-design-improvement-tips
 description: 클로드 AI의 잠재력을 최대한 활용하기 위해 커뮤니티 노하우, 오픈소스, 가이드북을 탐색하고, 즉시 실행하며 기록하는 습관을 형성하는 방법을 안내합니다.
 origin: content-lab
-grade: S
+grade: C
 difficulty: 중급
-category: 프롬프트
+category: 업무
 ai_tools: ["Claude"]
 sources:
   - https://yeongseon.kr/archive/3bfd86104de280319550e7e13a18a4ee.html?fbclid=PAVERFWAT170NwZG9mAmZkaWQWUM83Az-Z-A2tKzcTjE5AA5QbcCRGd2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp7b5LYeKsiaf8rHC2K1QDBU9RyCG60-vlUiQNXwITFPVSEf4QBImIE1_dBuk_aem_OrjkxGwOZVUfx7WCxCahFQ

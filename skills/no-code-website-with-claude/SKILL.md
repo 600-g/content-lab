@@ -4,7 +4,7 @@ description: Claude AI의 프롬프트 복붙만으로 코딩 없이 8단계 만
 origin: content-lab
 grade: S
 difficulty: 초급
-category: 콘텐츠
+category: 개발
 ai_tools: ["Claude"]
 sources:
   - https://adu-website-guide.vercel.app/

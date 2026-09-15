@@ -2,6 +2,10 @@
 name: claude-code-token-saving
 description: Claude Code 토큰 73% 절약 통합 패턴 — /usage /compact /clear 명령 + CLAUDE.md 룰북 + 서브에이전트 위임 + autocompact 조정 + Skill 분할의 5축 전략으로 주간 한도 안에서 작업량을 3배 늘리는 실전 가이드
 origin: content-lab
+grade: S
+category: 개발
+difficulty: 중급
+ai_tools: ["Claude Code"]
 sources:
   - https://waiting-drug-536.notion.site/73-34bd86104de28031b19ff79353c17b83
 ---

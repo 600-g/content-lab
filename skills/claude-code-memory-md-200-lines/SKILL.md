@@ -2,6 +2,10 @@
 name: claude-code-memory-md-200-lines
 description: Claude Code의 MEMORY.md 자동 메모리 시스템 200줄 법칙 활용법 — 매 세션마다 AI가 스스로 학습한 사용자 패턴·선호도·반복 명령어를 첫 200줄까지만 자동 로드하는 셰프의 개인 노트 관리 원칙과 토픽 파일 분리 전략
 origin: content-lab
+grade: A
+category: 개발
+difficulty: 중급
+ai_tools: ["Claude Code"]
 sources:
   - https://waiting-drug-536.notion.site/4-317d86104de280078bbbe9e3bc98ff18
 ---

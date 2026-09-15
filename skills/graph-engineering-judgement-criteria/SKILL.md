@@ -2,7 +2,7 @@
 name: graph-engineering-judgement-criteria
 description: 그래프 엔지니어링은 여러 AI 에이전트를 병렬로 실행하여 효율성을 높이는 방식입니다. 본 스킬은 그래프 엔지니어링의 적합성을 판단하는 12가지 기준과 실제 적용 시 주의사항을 제공하여, 오류 없이 효과적으로 활용할 수 있도록 돕습니다.
 origin: content-lab
-grade: A
+grade: B
 difficulty: 중급
 category: 자동화
 ai_tools: ["Claude"]

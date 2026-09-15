@@ -2,6 +2,10 @@
 name: 3-day-app-launch-pipeline
 description: 3일 만에 앱을 출시하는 AI 6단계 파이프라인 — Claude in Chrome(시장조사) → Claude Cowork(데이터 정리) → Gemini Pro(아이디어 회의) → Claude Artifacts(구현) → Claude Design(디자인) → Replit×Expo(배포) 각 단계의 결과물이 다음 단계 입력으로 연결되는 실전 출시 가이드
 origin: content-lab
+grade: A
+category: 개발
+difficulty: 고급
+ai_tools: ["Claude", "Gemini"]
 sources:
   - https://ink-jay-f32.notion.site/3-Ai-350f2e12ad5c81e0b0d8f283a89d7504
 ---

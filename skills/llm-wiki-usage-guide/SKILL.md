@@ -2,10 +2,10 @@
 name: llm-wiki-usage-guide
 description: LLM WIKI의 **핵심 정보**를 10배 더 빠르게 흡수하고 활용하는 방법을 안내하는 가이드입니다.
 origin: content-lab
-grade: S
+grade: C
 difficulty: 초급
 category: 업무
-ai_tools: []
+ai_tools: ["도구무관"]
 sources:
   - https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149
 ---

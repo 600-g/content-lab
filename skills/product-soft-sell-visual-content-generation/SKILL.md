@@ -1,77 +1,83 @@
 ---
 name: product-soft-sell-visual-content-generation
-description: 기존 제품 사진에 AI 손글씨, 상세 정보, 브랜드 스토리텔링을 추가하여 신뢰 기반의 솔직 후기 비주얼 콘텐츠를 10초 만에 생성합니다. Use when: - 제품 판매 중 한 장으로 끝나는 후기 콘텐츠를 만들고 싶을 때 - 장문 리뷰 대신 핵심 포인트만 강조한 콘텐츠가 필요할 때 - 화장품, 뷰티, 핸드메이드, 라이프스타일 제품을 홍보할 때
+description: 기존 제품, 매장, 룩북 사진에 AI 손글씨 메모, 상세 정보, 브랜드 스토리 등을 합성하여 신뢰 기반의 솔직 후기 또는 감성적인 브랜드 홍보 비주얼 콘텐츠를 10초 만에 생성합니다. GPT-4o 이미지 생성 기능을 활용하며, 무료로 사용 가능합니다.
 origin: content-lab
 grade: S
-difficulty: 초보OK
+difficulty: 초급
 category: 콘텐츠
-ai_tools: ["Claude", "GPT", "Gemini", "Leonardo AI"]
+ai_tools: ["GPT"]
 sources:
   - https://jasper-tartan-fcc.notion.site/GPT2-35a00b4db8dc808599bbf0d4a16a627e?pvs=149
 ---
-# 제품 솔직 후기 비주얼 콘텐츠 생성
 
-기존 제품 사진에 AI 손글씨, 상세 정보, 브랜드 스토리텔링을 추가하여 신뢰 기반의 솔직 후기 비주얼 콘텐츠를 10초 만에 생성합니다. Use when: - 제품 판매 중 한 장으로 끝나는 후기 콘텐츠를 만들고 싶을 때 - 장문 리뷰 대신 핵심 포인트만 강조한 콘텐츠가 필요할 때 - 화장품, 뷰티, 핸드메이드, 라이프스타일 제품을 홍보할 때
+# AI 손글씨 브랜드 비주얼 콘텐츠 생성 (합병됨)
 
-기존 제품 사진에 AI 손글씨, 상세 정보, 브랜드 스토리텔링을 추가하여 신뢰 기반의 솔직 후기 비주얼 콘텐츠를 10초 만에 생성합니다. Use when: - 제품 판매 중 한 장으로 끝나는 후기 콘텐츠를 만들고 싶을 때 - 장문 리뷰 대신 핵심 포인트만 강조한 콘텐츠가 필요할 때 - 화장품, 뷰티, 핸드메이드, 라이프스타일 제품을 홍보할 때
+## 이게 뭔가요?
 
-기존 제품 사진에 AI 손글씨, 상세 정보, 브랜드 스토리텔링을 추가하여 신뢰 기반의 솔직 후기 비주얼 콘텐츠를 10초 만에 생성합니다.
+이 스킬은 챗GPT(GPT-4o 이미지 생성)에 사진 한 장을 업로드하고, 미리 짜인 프롬프트를 그대로 붙여넣기만 하면, **룩북·메뉴·카페·제품 후기용** 손글씨 메모와 체크리스트가 합성된 브랜드 홍보 사진이 완성되는 혁신적인 방법입니다. 같은 '손글씨 합성' 방식이라도 결이 다릅니다. 1편(일상편)이 감정과 맥락을 얹는 감성 콘텐츠였다면, 이 2편(브랜드편)은 '이유와 설명'을 얹는 것이 핵심입니다. 예를 들어 "오늘 기분 좋은 코디 ♡"(1편 결)와 "여름 데일리 추천 / 사이즈 FREE / 신상 ♡"(2편 결)는 같은 손글씨지만 목적이 다릅니다. 전자는 공감을 사고, 후자는 구매 이유를 보여줍니다.
 
-## 언제 쓰나
+이번 패키지는 **매장 룩북, 메뉴 홍보, 카페 매장 홍보(빈티지 결), 제품 솔직 후기** 4가지 상황별 프롬프트로 구성되어 있으며, 자영업자·셀러가 매일 인스타에 올릴 콘텐츠를 10초 만에 만드는 것이 목표입니다. 또한, 기존 제품 사진에 AI 손글씨, 상세 정보, 브랜드 스토리텔링을 추가하여 신뢰 기반의 솔직 후기 비주얼 콘텐츠를 10초 만에 생성합니다. 이는 제품 판매 중 한 장으로 끝나는 후기 콘텐츠를 만들거나, 장문 리뷰 대신 핵심 포인트만 강조한 콘텐츠가 필요할 때 유용합니다. 화장품, 뷰티, 핸드메이드, 라이프스타일 제품 홍보에 특히 효과적입니다.
 
-- 제품 판매 중 한 장으로 끝나는 후기 콘텐츠를 만들고 싶을 때
-- 장문 리뷰 대신 핵심 포인트만 강조한 콘텐츠가 필요할 때
-- 화장품, 뷰티, 핸드메이드, 라이프스타일 제품을 홍보할 때
+사용 도구는 GPT 이미지 생성(GPT-4o/DALL-E) 기능입니다. 💰 유료 불필요 — ChatGPT 무료 플랜에서도 이미지 업로드+생성이 가능합니다(생성 횟수 제한 있음). ✅ 무료 대안: Gemini 이미지 생성으로도 시도할 수 있지만, 한글 손글씨 렌더링 정확도는 GPT 쪽이 더 안정적입니다.
 
-## 원리
+### 브랜드 사진에 메모 넣을 때 지켜야 할 3가지 원칙
 
-사용자가 제공한 제품 사진을 기반 이미지로 사용하고, AI는 상세 프롬프트 지시에 따라 제품 정보, 사용 후기, 브랜드 스토리 등 다양한 텍스트 및 디자인 요소를 화이트 손글씨 스타일로 이미지 위에 오버레이합니다. 이는 제품의 신뢰도를 높이고, 구매를 유도하는 '솔직 후기' 형태의 콘텐츠를 생성하는 원리입니다.
-```
-Use the uploaded product photo as the main base image.
-[CRITICAL BASE RULES - DO NOT VIOLATE]
+1.  **메인 제품은 가리지 않기**: 손글씨가 아무리 좋아도 상품이 안 보이면 의미 없습니다. 제품·메뉴·룩이 항상 주인공이고 손글씨는 보조 역할입니다.
+2.  **문장은 짧게, 포인트는 선명하게**: 긴 설명은 잘 읽히지 않습니다. 5~14자 안에서 핵심만 전달해야 합니다. "이래서 좋아요"보다 "데일리로 강추 ♡" 같은 짧은 결이 효과적입니다.
+3.  **예쁜 말보다 추천하는 이유를 적기**: "오늘 기분 좋은 코디 ♡"(1편/감성) 대신 "여름 데일리 추천 / 사이즈 FREE / 신상 ♡"(2편/이유)과 같이 구체적인 구매 이유를 제시하는 것이 좋습니다.
+
+## 따라하기
+
+**공통 사용법**
+
+1.  챗GPT에 사진 1장 업로드
+2.  만들고 싶은 카테고리 프롬프트 복사
+3.  챗GPT에 그대로 붙여넣기
+4.  대기 → 완성
+
+### 1. 제품 솔직 후기 비주얼 콘텐츠 생성 (기존 스킬)
+
+**[CRITICAL BASE RULES - DO NOT VIOLATE]**
 - Preserve the original product photo EXACTLY as it is.
 - Do NOT crop, change aspect ratio, or alter composition.
 - Do NOT change brightness, color tone, contrast, or saturation.
 - Maintain original resolution and sharpness.
 - Keep all visible elements identical: product, packaging, background, props.
 - Do NOT add new products or change details.
-[BRAND PURPOSE]
-This is a WARM, SOFT-SELL PRODUCT PROMOTION for small brand owners or sellers.
-The owner shares their product with personal pride — like recommending a favorite to a friend.
-NOT a Smart Store discount banner. NOT a casual user review.
-The feel: a small brand owner's handwritten note next to their product.
-The goal: Make viewers think "이 브랜드 감성 좋다" → "한번 써보고 싶다"
-through TRUST and STORYTELLING, not through aggressive SALE messaging.
-[BRAND NAME REFERENCE]
-Use "리더인" as the placeholder brand name throughout.
-For example: "리더인 코스메틱" / "리더인 라이프" / just "리더인"
-(Use exactly: 리더인 — do NOT invent other names)
-[CONCEPT]
-Soft brand storytelling + product highlights + warm reasons to try + gentle purchase guide.
-Should feel like a small brand owner's lookbook page,
-NOT a Smart Store promotion image.
-[OVERLAY STYLE]
-Add white hand-drawn doodles and handwritten Korean notes.
-The mood: TRUSTWORTHY + WARM + PERSONAL.
-Like a brand owner introducing their product to a friend.
-[VISUAL ELEMENTS]
+
+**[BRAND PURPOSE]**
+This is a WARM, SOFT-SELL PRODUCT PROMOTION for small brand owners or sellers. The owner shares their product with personal pride — like recommending a favorite to a friend. NOT a Smart Store discount banner. NOT a casual user review. The feel: a small brand owner's handwritten note next to their product. The goal: Make viewers think "이 브랜드 감성 좋다" → "한번 써보고 싶다" through TRUST and STORYTELLING, not through aggressive SALE messaging.
+
+**[BRAND NAME REFERENCE]**
+Use "리더인" as the placeholder brand name throughout. For example: "리더인 코스메틱" / "리더인 라이프" / just "리더인" (Use exactly: 리더인 — do NOT invent other names)
+
+**[CONCEPT]**
+Soft brand storytelling + product highlights + warm reasons to try + gentle purchase guide. Should feel like a small brand owner's lookbook page, NOT a Smart Store promotion image.
+
+**[OVERLAY STYLE]**
+Add white hand-drawn doodles and handwritten Korean notes. The mood: TRUSTWORTHY + WARM + PERSONAL. Like a brand owner introducing their product to a friend.
+
+**[VISUAL ELEMENTS]**
 - Lightly trace key product edges (cap, label, body)
 - 5~7 thin arrows pointing to features
 - Highlight ONE main USP with soft DOTTED CIRCLE
 - Soft ★ ratings (use sparingly, max 3 places)
 - Gentle ♡ accents
-[KOREAN HANDWRITTEN TEXT]
+
+**[KOREAN HANDWRITTEN TEXT]**
 - Use ONLY natural Korean
 - Total: 9~12 short annotations
 - Each annotation: 4~14 Korean characters
 - Tone: warm, sincere, brand-storytelling
-[ANNOTATION CATEGORIES]
+
+**[ANNOTATION CATEGORIES]**
 1️⃣ ITEM NAME (top, soft handwriting):
 - "리더인 — 데일리 세럼"
 - "리더인 코스메틱"
 - "리더인 — 오늘의 추천"
 - "리더인 라이프 — 신제품"
 → Place clearly at top, NO bold sticker
+
 2️⃣ KEY FEATURES (with arrows, warm tone):
 - "민감성 피부 OK"
 - "EWG 그린 등급"
@@ -80,12 +86,14 @@ Like a brand owner introducing their product to a friend.
 - "올인원 케어"
 - "끈적임 없어요"
 - "데일리로 부담 없이"
+
 3️⃣ STORY / BRAND TOUCH (warm, personal):
 - "직접 써보고 만든 제품"
 - "사장님이 자신있는 ★"
 - "오랜 연구 끝에"
 - "정성 담은 한 병"
 - "꾸준히 사랑받는 ♡"
+
 4️⃣ NEW / RESTOCK ANNOUNCEMENT (subtle, max 1):
 Choose AT MOST 1:
 - "이번 주 신제품 ♡"
@@ -94,28 +102,33 @@ Choose AT MOST 1:
 - "리뷰로 사랑받은 ★"
 - "새로운 라인 출시"
 → Soft handwriting style, NOT bold red sticker
+
 5️⃣ TARGET / WHO IT'S FOR:
 - "20-30대 데일리 케어"
 - "민감성 피부 추천"
 - "선물용으로도 좋아요"
 - "초보자도 쉽게"
 - "이런 분들께 추천해요"
+
 6️⃣ STAR RATINGS (sparingly, max 3):
 - "사용감 ★★★★★"
 - "디자인 ★★★★☆"
 - "재구매율 ★★★★★"
 → Use as small accents, not as main marketing tool
+
 7️⃣ TRUST INDICATORS (soft, warm):
 - "리뷰 천 개 넘어요 ♡"
 - "재구매율 높아요 ★"
 - "사랑받는 베스트"
 → Use AT MOST 1, in soft handwriting
+
 8️⃣ GENTLE PURCHASE GUIDE (bottom area):
 - "💬 DM으로 문의 환영"
 - "📦 스마트스토어: 리더인"
 - "🔗 프로필 링크"
 → Soft icons, no 🛒💰🔥
-[CHECKBOX BOX - Right side, soft design]
+
+**[CHECKBOX BOX - Right side, soft design]**
 Title: "추천 포인트"
 Example A (Standard):
 ♡ 사용감 부드러움
@@ -132,103 +145,101 @@ Example C (With seasonal):
 ♡ 사장님 추천 ★
 ♡ 데일리 케어
 ♡ DM 문의 환영
-[MAIN VERDICT - Inside soft dotted box]
+
+**[MAIN VERDICT - Inside soft dotted box]**
 Choose ONE warm message:
-- "리더인 — 오늘의 추천"
-- "직접 써보고 추천해요"
-- "꾸준히 사랑받는 베스트"
-- "정성 담은 한 병 ♡"
-[MAIN HEADLINE]
-- "리더인 — 데일리 라이프"
-- "사장님이 자신있게 추천 ♡"
-- "오랜 연구 끝에 만난 한 병"
-- "꾸준히 손이 가는 ★"
-Add small ✨ ♡ accents (NOT 🔥💰).
-[GENTLE CTA BOX - Bottom area]
-┌────────────────────┐
-│ 💬 DM 문의 환영 │
-│ 📦 스마트스토어: │
-│ "리더인" │
-│ 🔗 프로필 링크 │
-└────────────────────┘
-[SOFT-SELL TONE GUIDE]
-DO use (warm, brand-trust):
-- "직접 써보고 만든"
-- "사장님이 추천해요"
-- "꾸준히 사랑받는 ♡"
-- "DM 문의 환영"
-- "정성 담은 한 병"
-DO NOT use (aggressive ad):
-- "🔥 30% SALE"
-- "1+1 이벤트!"
-- "한정 수량!"
-- "오늘만 할인"
-- "지금 주문하세요!"
-[COLOR PALETTE]
-- White handwriting (main)
-- Optional: subtle cream/warm beige tag accents
-- AVOID: red, orange, neon yellow, bold promotional colors
-[VISUAL DENSITY]
-- Product remains hero (65~70% visible)
-- Product info + handwriting: 20~25%
-- Soft CTA box: 8~10%
-[STRICT RESTRICTIONS]
-- DO include brand name (리더인) clearly
-- DO add warm story touches
-- DO include gentle CTA
-- NO aggressive sale stickers
-- NO red/orange promotional labels
-- NO Smart Store hard-sell language
-- NO covering the product label
-- NO English in main copy
-- KEEP warmth and trust throughout
-[GOAL]
-The final image should make viewers think:
-"이 브랜드 정성 가득해 보인다"
-"한번 써보고 싶다"
-"DM으로 물어봐야지"
-"믿을 만해 보여"
-A warm, hand-curated product brand content.
-Brand purpose: build TRUST + STORYTELLING + soft conversion to purchase.
-```
 
-## 단계
+### 2. 매장 룩북 만들기 (OOTD — 쇼핑몰 운영자) (신규 분석)
 
-- **제품 사진 업로드**: 챗GPT (또는 Bing Image Creator/Leonardo AI 등 이미지 생성 AI)에 홍보하고 싶은 제품 사진 1장을 업로드합니다. (사진 선택 팁: 빈 여백이 있고 무드 있는 사진이 좋음)
-- **프롬프트 복사**: 위 `how_it_works` 섹션의 상세 프롬프트 전문을 복사합니다.
-- **프롬프트 수정**: 프롬프트 내 '[BRAND NAME REFERENCE]' 및 '[KOREAN HANDWRITTEN TEXT]' 섹션 등을 참고하여 '리더인' 부분을 본인 브랜드명으로 변경하고, 제품의 특징 및 홍보하고 싶은 내용을 한국어 손글씨 텍스트로 수정합니다. (예: '리더인 — 데일리 세럼'을 '두근코스메틱 — 비건 클렌저'로 변경)
-- **프롬프트 붙여넣기**: 수정된 프롬프트를 AI에 붙여넣고 이미지를 생성합니다.
-- **결과물 확인 및 조정**: 생성된 이미지를 확인하고, 필요 시 '손글씨를 좀 더 작게 해줘', '체크박스 위치를 오른쪽 위로' 등 구체적인 피드백을 주어 미세 조정합니다. (한글 깨짐 발생 시 'All Korean text must be rendered verbatim, exactly as written, with no character distortion.' 추가)
+**[CRITICAL BASE RULES - DO NOT VIOLATE]**
+- Preserve the original photo EXACTLY as it is.
+- Do NOT crop, change aspect ratio, or alter composition.
+- Do NOT change brightness, color tone, contrast, or saturation.
+- Maintain original resolution and sharpness.
+- Keep all visible elements identical: person, outfit, background, lighting.
+- Do NOT add new people, objects, or background elements.
 
-## 예시
+**[BRAND PURPOSE]**
+This is a SOFT-SELL FASHION LOOKBOOK for small clothing brand owners. The owner shares the outfit with personal recommendation tone — like a friend showing you what they made. NOT aggressive ad-style. NOT a personal diary either. The feel: a small fashion brand owner's hand-curated lookbook content. The goal: Make viewers think "이 옷 어디서 사지?" through TRUST and STYLE, not through aggressive sale messaging.
 
-```
-[입력 예시 - 사용자 제공 사진과 프롬프트]
-사용자 사진: (민감성 피부용 세럼 제품의 자연스러운 사용 장면 사진)
-프롬프트: (위 'how_it_works' 섹션 프롬프트 사용, 단, 리더인 부분을 '두근코스메틱'으로, 세럼의 특징을 '병풀 추출물 90%', '진정 효과 ★★★★★' 등으로 수정)
+**[BRAND NAME REFERENCE]**
+Use "리더인 스튜디오" as the placeholder shop name throughout the content. (Use exactly: 리더인 스튜디오 — do NOT invent other names like "어반시크 스튜디오")
 
-[예상 출력]
-(원본 제품 사진 위에 다음과 같은 요소들이 오버레이된 이미지)
-- 상단: "두근코스메틱 — 진정 세럼" (손글씨)
-- 제품 주변 화살표 및 설명 (손글씨): "병풀 추출물 90%", "민감성 피부 OK", "끈적임 없이 흡수", "사장님 자신 있는 ★"
-- 우측 체크박스: "추천 포인트: ♡ 진정 효과 최고 ♡ 순한 성분 ♡ 데일리템 ♡ 재구매 의향 ★"
-- 하단 CTA: "💬 DM 문의 환영", "📦 스마트스토어: 두근코스메틱", "🔗 프로필 링크"
-```
+**[CONCEPT]**
+Soft fashion lookbook + personal styling notes + warm sizing/fit guide + gentle CTA. Should feel like flipping through a small designer's lookbook, NOT a discount flyer or aggressive ad.
 
-## 두근컴퍼니 적용
+**[COMPOSITION - CORE STRUCTURE]**
+1) MAIN SHOT: Person stays as central focus
+2) DETAIL FRAMES: 3 to 4 zoomed-in detail crops as polaroid-style
+- Each frame: garment detail with handwritten note about FIT/MATERIAL/STYLING
+- Slightly tilted (3~10 degrees), white borders
+3) CONNECTION LINES: Thin dashed lines or curved arrows from main shot to frames
+4) GENTLE CTA: Bottom area with soft purchase guide
 
-- ChatGPT Plus 대신 → Gemini 무료 (대용량) + Claude Max (코딩) 조합으로 프롬프트 생성 후, Bing Image Creator (DALL-E 3) 또는 Leonardo AI 무료를 활용하여 이미지 생성 가능.
-- 첼시인스타 프로젝트에서 제품 홍보, 협찬 후기 등 다양한 인스타그램 콘텐츠 제작에 활용하여 팔로워와의 신뢰를 구축하고 구매를 유도할 수 있습니다.
-- company-hq 플랫폼 내 특정 아이템이나 기능 홍보 시, 해당 아이템의 '솔직 후기' 형태 콘텐츠 생성에 활용하여 사용자에게 신뢰도 높은 정보 전달 및 기능 사용을 장려할 수 있습니다.
+**[PEN STYLE]**
+- White gel pen handwriting
+- Slightly rough, hand-drawn feel
+- Variable line thickness, no perfectly straight lines
+- Korean characters MUST be sharp and readable
 
-## ️ 주의
+**[KOREAN HANDWRITTEN TEXT]**
+- Use ONLY natural Korean (no English, no Japanese)
+- Total: 12~15 short annotations
+- Each line: 4~14 Korean characters
+- Tone: warm, personal, like a small brand owner sharing a favorite piece
 
-- AI 모델의 이미지 생성 능력에 따라 손글씨 폰트나 배치, 자연스러움이 다를 수 있습니다.
-- 복잡하거나 빽빽한 사진은 AI가 텍스트를 배치할 공간을 찾기 어려워 결과물이 답답해 보일 수 있으므로, '빈 여백이 있는 사진'을 선택하는 것이 중요합니다.
-- 한글 깨짐 현상이 발생할 수 있으므로, 프롬프트 끝에 'All Korean text must be rendered verbatim, exactly as written, with no character distortion.' 구문을 추가해야 합니다.
+**[ANNOTATION CATEGORIES]**
+1️⃣ ITEM NAME (top of each detail frame, soft tag style):
+- "스트라이프 니트 티"
+- "코튼 숏팬츠"
+- "라탄 토트백"
+- "린넨 셔츠"
+- "오버핏 카디건"
+→ Just the item name. No price tag, no SALE markers.
+
+2️⃣ MATERIAL / FIT NOTES (with arrows, warm and informative):
+- "여름용 얇은 니트"
+- "통기성 좋은 면 100%"
+- "비침 없는 두께감"
+- "부드러운 소재감 ♡"
+- "여유있는 핏"
+- "키 큰 분도 OK"
+
+3️⃣ SIZING GUIDE (near body shot, gentle):
+- "모델 키 165 / S 착용"
+- "정사이즈 추천"
+- "55-77 사이즈 가능"
+- "한 사이즈 업도 좋아요"
+
+4️⃣ STYLING / WHO IT'S FOR (warm recommendation):
+- "데일리룩으로 좋아요"
+- "오피스룩에도 OK"
+- "여름 출근룩 추천"
+- "가벼운 외출에 ♡"
+- "이런 분들께 추천해요"
+
+## 활용 예시
+
+*   **제품 후기**: 고객이 올린 제품 사진에 AI 손글씨로 "정말 만족해요", "민감성 피부에도 순해요 ♡" 와 같은 후기를 추가하여 신뢰도를 높이는 콘텐츠 제작.
+*   **룩북**: 모델 착용 사진에 상품명, 소재, 사이즈, 코디 추천 이유 등을 손글씨로 넣어 쇼핑몰 룩북 콘텐츠 제작.
+*   **카페 메뉴**: 카페 매장 사진이나 메뉴 사진에 "사장님 추천", "오늘의 추천 메뉴 ♡", "신선한 재료 사용" 등의 문구를 넣어 홍보 효과 증대.
+*   **핸드메이드 제품**: 제작자의 손길이 느껴지는 핸드메이드 제품 사진에 "정성 담아 만들었어요", "세상에 하나뿐인 ♡" 등의 문구를 추가하여 감성적인 스토리텔링 강화.
+*   **리테일 샵**: 매장 전경이나 디스플레이 사진에 "오랜 연구 끝에", "리뷰 천 개 넘어요 ♡" 와 같은 문구를 넣어 브랜드 신뢰도 및 고객 경험 강조.
+
+## 💡 아이디어
+
+*   **시즌별 프로모션**: "이번 주 신제품 ♡", "여름맞이 특가", "가을 신상 입고" 등 시즌에 맞는 문구를 활용하여 최신성을 강조.
+*   **사용자 참여 유도**: "DM으로 문의 환영", "프로필 링크 클릭", "궁금한 점은 댓글로!" 와 같은 CTA를 넣어 고객과의 소통 창구 마련.
+*   **재입고 알림**: "재입고 완료!", "기다려주신 분들께" 와 같이 품절되었던 인기 상품의 재입고 소식을 알려 구매 전환율 증대.
+*   **타겟 맞춤형 추천**: "2030 데일리 케어", "민감성 피부 추천", "초보자도 쉽게" 등 특정 타겟을 명시하여 구매 결정 지원.
+
+## 주의사항
+
+*   **원본 사진의 저작권**: AI 생성 시 원본 사진의 저작권 및 초상권 침해 여부를 반드시 확인해야 합니다.
+*   **프롬프트의 정확성**: 원하는 결과물을 얻기 위해 프롬프트의 지시 사항을 정확하게 따르는 것이 중요합니다. 특히 `[CRITICAL BASE RULES - DO NOT VIOLATE]` 부분을 준수해야 합니다.
+*   **과도한 정보 과부하 방지**: 너무 많은 텍스트나 그래픽 요소는 오히려 가독성을 해칠 수 있으므로, 핵심 내용을 중심으로 간결하게 구성하는 것이 좋습니다.
+*   **AI 결과물의 검토**: AI가 생성한 결과물이 항상 완벽하지는 않으므로, 최종 결과물을 확인하고 필요한 수정을 거치는 것이 좋습니다.
 
 ## 출처
 
 - [https://jasper-tartan-fcc.notion.site/GPT2-35a00b4db8dc808599bbf0d4a16a627e?pvs=149](https://jasper-tartan-fcc.notion.site/GPT2-35a00b4db8dc808599bbf0d4a16a627e?pvs=149)
-
----

@@ -2,7 +2,7 @@
 name: card-news-automation-agent
 description: 구조화된 자료(시트, PDF)를 입력으로 받아 카드뉴스 제작 과정을 자동화하는 에이전트를 구축할 때 사용합니다. 콘텐츠 제작 효율을 극대화할 수 있습니다. Use when: - 대량의 콘텐츠(카드뉴스, 보고서 등)를 주기적으로 제작해야 할 때 - 콘텐츠의 기획-제작-배포 과정에 반복적인 수작업이 많을 때 - 구조화된 데이터(표, 목록)를 시각적인 콘텐츠로 변환해야 할 때
 origin: content-lab
-grade: A
+grade: B
 difficulty: 중급
 category: 자동화
 ai_tools: ["Claude", "Claude Code", "Gemini"]

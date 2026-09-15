@@ -2,6 +2,10 @@
 name: ai-native-workflow-5-stages
 description: OpenAI × 무신사 AI Native Workflow 프레임워크로 조직 전체를 AI 네이티브로 전환하는 5단계 확산 전략 (전사 접근권 → 챔피언 선발 → 비효율 수집 → 워크플로우 템플릿화 → 성공 사례 공유)와 4대 리스크 관리 방법
 origin: content-lab
+grade: B
+category: 업무
+difficulty: 중급
+ai_tools: ["도구무관"]
 sources:
   - https://waiting-drug-536.notion.site/OpenAI-AI-Native-Workflow-34bd86104de280e1b0dede7e9717d416
 ---

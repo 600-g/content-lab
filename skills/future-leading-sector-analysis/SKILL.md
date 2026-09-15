@@ -3,7 +3,7 @@ name: future-leading-sector-analysis
 description: 20년 경력 애널리스트처럼 미래 주도 업종과 대장주를 분석하여 다음 투자 기회를 선점하고, 회사 사업 전략 수립에 활용합니다. Use when: - 다음 시장의 주인공을 미리 선점하고 싶을 때 - 업종 내 진짜 '대장주'를 가려내고 싶을 때
 origin: content-lab
 grade: S
-difficulty: 초보OK
+difficulty: 초급
 category: 업무
 ai_tools: ["Gemini", "Claude"]
 sources:

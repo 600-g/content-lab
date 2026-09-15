@@ -2,9 +2,9 @@
 name: claude-canva-mcp-integration
 description: 이 스킬은 Claude AI가 Canva 기능을 활용하여 디자인 작업을 자동화할 수 있도록 MCP 서버를 연동한다. 프롬프트 하나로 다양한 디자인을 생성하고 관리할 수 있게 돕는다. Use when: ['- AI 에이전트가 디자인 콘텐츠를 직접 생성하고 관리해야 할 때', '- 기존 Canva 템플릿에 AI가 생성한 텍스트나 이미지를 자동으로 삽입할 때', '- 특정 브랜드 가이드라인에 맞춰 일관된 디자인 결과물을 얻고자 할 때']
 origin: content-lab
-grade: A
+grade: S
 difficulty: 중급
-category: 자동화
+category: 디자인
 ai_tools: ["Claude", "Canva", "Cursor", "Claude Code"]
 sources:
   - https://abounding-helmet-0e4.notion.site/Claude-Canva-33973c7b15ad81cf8f9cce23a4ae4fe7?pvs=149

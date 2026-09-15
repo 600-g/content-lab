@@ -4,7 +4,7 @@ description: 영상 분석 시 **FFMPEG, Remotion, Whisper** 등의 도구와 �
 origin: content-lab
 grade: A
 difficulty: 중급
-category: 업무
+category: 콘텐츠
 ai_tools: ["Claude", "Claude Code"]
 sources:
   - paste://b47dafb5f757b49a

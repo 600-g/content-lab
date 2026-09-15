@@ -2,7 +2,7 @@
 name: claude-token-reduction
 description: 이 스킬은 **Headroom**과 **Task Observer**라는 무료 오픈소스 도구를 활용하여 Claude AI 사용 시 발생하는 토큰을 최대 95%까지 절감하는 스킬입니다.
 origin: content-lab
-grade: S
+grade: A
 difficulty: 초급
 category: 자동화
 ai_tools: ["Claude"]

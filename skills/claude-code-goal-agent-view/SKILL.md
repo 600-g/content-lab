@@ -2,6 +2,10 @@
 name: claude-code-goal-agent-view
 description: Claude Code v2.1.139의 /goal 자율 실행 + claude agents Agent View 대시보드를 활용해 완료 조건 달성까지 Claude가 자동으로 반복 실행하고 여러 세션을 한 화면에서 모니터링하는 자율 워크플로우 가이드
 origin: content-lab
+grade: S
+category: 자동화
+difficulty: 중급
+ai_tools: ["Claude Code"]
 sources:
   - https://resonant-frog-df5.notion.site/Claude-Code-goal-Agent-View-35f3a1a32343814082d5f0245cb359e5
 ---

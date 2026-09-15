@@ -5,7 +5,7 @@ origin: content-lab
 grade: S
 difficulty: 중급
 category: 업무
-ai_tools: []
+ai_tools: ["Gemini", "Claude", "GPT"]
 sources:
   - https://www.notion.so/35e485d1c310809fbb58f8d7bdbead4e?pvs=39
 ---

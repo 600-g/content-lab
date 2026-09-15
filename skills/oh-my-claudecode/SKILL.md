@@ -2,7 +2,7 @@
 name: oh-my-claudecode
 description: OMC는 **Claude Code**에 여러 역할의 AI 에이전트를 붙여, **계획부터 수정까지** 이어가는 플러그인입니다.
 origin: content-lab
-grade: S
+grade: A
 difficulty: 초급
 category: 개발
 ai_tools: ["Claude", "Claude Code"]

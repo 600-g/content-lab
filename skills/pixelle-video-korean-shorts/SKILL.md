@@ -2,6 +2,10 @@
 name: pixelle-video-korean-shorts
 description: 중국 오픈소스 AI 영상 자동 생성 툴 Pixelle-Video의 한국어 패치 + Gemini 이미지 패치 통합 설치 가이드. GPU 없이 클라우드 API만으로 한국 숏폼 바이럴 스크립트 스타일 세로 영상을 자동 생성 (TTS 자동 한국어)
 origin: content-lab
+grade: S
+category: 자동화
+difficulty: 고급
+ai_tools: ["Claude", "Claude Code", "Gemini"]
 sources:
   - https://resonant-frog-df5.notion.site/Pixelle-Video-Gemini-3573a1a32343817196bec934ee86fb5f
 ---

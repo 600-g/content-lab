@@ -3,7 +3,7 @@ name: complex-topic-staged-explanation
 description: 복잡한 개념을 기초-중급-심화 단계별 비유로 설명하고 이해도 확인 질문을 생성하여 학습 효율을 높일 때 사용합니다. Use when: - 새로운 AI 기술이나 프레임워크를 학습할 때 - 복잡한 시스템이나 아이디어를 팀원에게 설명해야 할 때 - 초보 코더가 AI 관련 지식을 빠르게 습득하도록 도울 때
 origin: content-lab
 grade: S
-difficulty: 초보OK
+difficulty: 초급
 category: 프롬프트
 ai_tools: ["Claude", "도구무관"]
 sources:

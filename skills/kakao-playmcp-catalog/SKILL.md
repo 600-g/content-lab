@@ -2,6 +2,10 @@
 name: kakao-playmcp-catalog
 description: 카카오 PlayMCP 마켓플레이스의 한국 시장 특화 MCP 서버 12종 카탈로그 — 여기어때·아파트 정보·KOPIS 공연·OpenDART·다이소 재고·투두메이트·미국 주식·네이버 검색·팝업스토어·띵동 택배 등 한국형 실시간 데이터를 AI 채팅으로 자연어 활용
 origin: content-lab
+grade: C
+category: 자동화
+difficulty: 초급
+ai_tools: ["Claude", "도구무관"]
 sources:
   - https://playmcp.kakao.com/
 ---

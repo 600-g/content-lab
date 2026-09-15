@@ -2,7 +2,7 @@
 name: ai-office
 description: 이 스킬은 **AI Office**를 활용하여 **시스템 대시보드**부터 **콘텐츠 계획**까지 업무 전반의 자동화 기능을 파악하고 적용하는 방법입니다.
 origin: content-lab
-grade: A
+grade: B
 difficulty: 초급
 category: 자동화
 ai_tools: ["도구무관"]

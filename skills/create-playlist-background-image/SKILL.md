@@ -2,7 +2,7 @@
 name: create-playlist-background-image
 description: AI 이미지 생성 도구를 활용하여 **자신의 사진**을 스포티파이·애플뮤직 스타일의 **투명한 음악 플레이어 카드**가 떠다니는 배경화면으로 만드는 스킬입니다.
 origin: content-lab
-grade: A
+grade: S
 difficulty: 초급
 category: 디자인
 ai_tools: ["Claude", "GPT"]

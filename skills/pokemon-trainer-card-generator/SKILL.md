@@ -2,7 +2,7 @@
 name: pokemon-trainer-card-generator
 description: AI를 활용하여 사용자를 **정통 포켓몬 트레이너 카드 스타일**로 변환하는 스킬입니다.
 origin: content-lab
-grade: A
+grade: S
 difficulty: 중급
 category: 디자인
 ai_tools: ["GPT"]

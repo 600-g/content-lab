@@ -5,7 +5,7 @@ origin: content-lab
 grade: A
 difficulty: 중급
 category: 콘텐츠
-ai_tools: []
+ai_tools: ["도구무관"]
 sources:
   - https://www.instagram.com/reel/Db2GQN8xoo8/?igsi=djE1MjQ4OGszMGM3
   - https://www.instagram.com/reel/Db2GQN8xoo8/

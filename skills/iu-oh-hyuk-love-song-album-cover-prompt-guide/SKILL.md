@@ -2,7 +2,7 @@
 name: iu-oh-hyuk-love-song-album-cover-prompt-guide
 description: 아이유·오혁 '사랑이 잘' 앨범 커버를 **AI 이미지 생성**으로 만드는 방법을 안내합니다.
 origin: content-lab
-grade: A
+grade: S
 difficulty: 중급
 category: 디자인
 ai_tools: ["GPT"]

@@ -2,6 +2,10 @@
 name: claude-code-notion-mcp
 description: Notion 공식 MCP 서버를 Claude Code·Cursor·VS Code·ChatGPT·Codex 등 7+ AI 도구에 연결하는 OAuth 기반 통합 가이드. `/mcp` 명령 한 줄로 노션 워크스페이스에 자연어 읽기·쓰기 권한 부여
 origin: content-lab
+grade: S
+category: 자동화
+difficulty: 중급
+ai_tools: ["Claude Code", "Cursor", "GPT", "Codex"]
 sources:
   - https://developers.notion.com/guides/mcp/get-started-with-mcp
 ---

@@ -2,7 +2,7 @@
 name: any-ai-model-free-trial-promotion
 description: 주요 AI 이미지·영상·음성 모델 23개를 **24시간 동안 완전 무료**로 이용할 수 있는 프로모션입니다.
 origin: content-lab
-grade: S
+grade: C
 difficulty: 초급
 category: 기타
 ai_tools: ["도구무관"]

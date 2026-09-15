@@ -2,7 +2,7 @@
 name: kling-motion-control-video-generation
 description: AI가 생성한 인물 이미지의 **움직임을 복제**하여 새로운 영상을 만드는 스킬입니다.
 origin: content-lab
-grade: A
+grade: S
 difficulty: 초급
 category: 디자인
 ai_tools: ["GPT", "CapCut"]
