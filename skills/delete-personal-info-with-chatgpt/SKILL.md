@@ -90,9 +90,4 @@ sources:
 
 ## 출처
 
-[챗GPT로 인터넷에 흩어진 내 정보 지우기 프롬프트 3개 정리본](https://fieldby.notion.site/GPT-3-3d2d730b395381b2bc99c7b7bb38660c?pvs=149)
-[e프라이버시 클린서비스 (개인정보보호위원회·한국인터넷진흥원)](https://www.eprivacy.go.kr/)
-
-## 출처
-
 - [https://fieldby.notion.site/GPT-3-3d2d730b395381b2bc99c7b7bb38660c?pvs=149](https://fieldby.notion.site/GPT-3-3d2d730b395381b2bc99c7b7bb38660c?pvs=149)

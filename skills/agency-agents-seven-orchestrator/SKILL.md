@@ -135,8 +135,4 @@ agents-orchestrator 를 써서 이 앱을 알릴 준비를 해 줘. reddit-commu
 
 ## 출처
 
-[AI 직원 264명 중 일곱만 뽑기 — 파일 위치 · 설치 순서 · 목표 문장](https://wandering-mile-86e.notion.site/AI-264-3db98dec8eed819ebfa8ed6359d56248?pvs=149)
-
-## 출처
-
 - [https://wandering-mile-86e.notion.site/AI-264-3db98dec8eed819ebfa8ed6359d56248?pvs=149](https://wandering-mile-86e.notion.site/AI-264-3db98dec8eed819ebfa8ed6359d56248?pvs=149)

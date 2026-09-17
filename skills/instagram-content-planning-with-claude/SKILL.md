@@ -457,8 +457,5 @@ AI의 답변을 전문가 관점에서 최종 검수하고, 개선점을 반영�
 AI를 활용하여 콘텐츠 제작 파이프라인을 구축함으로써, 콘텐츠 기획 및 제작에 드는 시간을 획기적으로 단축하고 질적인 수준을 높일 수 있습니다. 특히 반복적인 조사, 초안 작성, 형식 변환 등의 업무를 AI에 맡기고, 자신은 콘텐츠의 핵심 메시지, 개인적인 경험, 고유한 관점을 더하는 데 집중함으로써 콘텐츠의 차별성과 진정성을 강화할 수 있습니다.
 
 ## 출처
-[Claude로 인스타 콘텐츠를 기획하는 실전 프롬프트 모음](https://vaulted-decade-3b2.notion.site/Claude-39cf563cd7068033a169e7c216f57111?pvs=149)
-
-## 출처
 
 - [https://vaulted-decade-3b2.notion.site/Claude-39cf563cd7068033a169e7c216f57111?pvs=149](https://vaulted-decade-3b2.notion.site/Claude-39cf563cd7068033a169e7c216f57111?pvs=149)

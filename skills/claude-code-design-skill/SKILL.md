@@ -61,8 +61,4 @@ sources:
 
 ## 출처
 
-[Notion | Where teams and agents work together](https://app.notion.com/p/design-3c0fd99f0e5f8102ad3ed2294e75c755?source=copy_link)
-
-## 출처
-
 - [https://app.notion.com/p/design-3c0fd99f0e5f8102ad3ed2294e75c755?source=copy_link](https://app.notion.com/p/design-3c0fd99f0e5f8102ad3ed2294e75c755?source=copy_link)

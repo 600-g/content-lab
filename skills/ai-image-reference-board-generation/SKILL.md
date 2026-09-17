@@ -163,8 +163,4 @@ Consistent cinematic color grade, 3:4 vertical.
 
 ## 출처
 
-[레퍼런스 보드 프롬프트 가이드](https://fieldby.notion.site/3a6d730b395381e4b56de23a839dd221?pvs=149)
-
-## 출처
-
 - [https://fieldby.notion.site/3a6d730b395381e4b56de23a839dd221?pvs=149](https://fieldby.notion.site/3a6d730b395381e4b56de23a839dd221?pvs=149)

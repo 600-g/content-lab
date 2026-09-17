@@ -72,8 +72,4 @@ Claude Code v2.1.154 이상에서 사용 가능하며, Max · Team 플랜에서�
 
 ## 출처
 
-[클로드코드 Dynamic Workflows 완벽 가이드](https://abounding-helmet-0e4.notion.site/Dynamic-Workflows-37573c7b15ad816288b6f6a8a2788049?pvs=149)
-
-## 출처
-
 - [https://abounding-helmet-0e4.notion.site/Dynamic-Workflows-37573c7b15ad816288b6f6a8a2788049?pvs=149](https://abounding-helmet-0e4.notion.site/Dynamic-Workflows-37573c7b15ad816288b6f6a8a2788049?pvs=149)

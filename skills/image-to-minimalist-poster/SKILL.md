@@ -60,8 +60,4 @@ For each photo I upload, create a separate high-end minimalist design poster ind
 
 ## 출처
 
-[Notion | Where teams and agents work together](https://app.notion.com/p/3c004aeefb608081ac9bd7814df90e34?source=copy_link)
-
-## 출처
-
 - [https://app.notion.com/p/3c004aeefb608081ac9bd7814df90e34?source=copy_link](https://app.notion.com/p/3c004aeefb608081ac9bd7814df90e34?source=copy_link)

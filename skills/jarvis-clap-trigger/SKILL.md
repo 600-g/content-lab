@@ -232,8 +232,4 @@ sources:
 
 ## 출처
 
-[자비스 박수 트리거 — 풀코드 가이드](https://adu-jarvis-guide.vercel.app/?fbclid=PAVERFWATXAllwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpzvg3ztkoA4eASv4RN4H1XQis14j-6JGAjvFNE4SzGmf8uIf6jjq0qW1dRnp_aem_y2bJqHM9NysmUs8qrd_Whw)
-
-## 출처
-
 - [https://adu-jarvis-guide.vercel.app/?fbclid=PAVERFWATXAllwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpzvg3ztkoA4eASv4RN4H1XQis14j-6JGAjvFNE4SzGmf8uIf6jjq0qW1dRnp_aem_y2bJqHM9NysmUs8qrd_Whw](https://adu-jarvis-guide.vercel.app/?fbclid=PAVERFWATXAllwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpzvg3ztkoA4eASv4RN4H1XQis14j-6JGAjvFNE4SzGmf8uIf6jjq0qW1dRnp_aem_y2bJqHM9NysmUs8qrd_Whw)

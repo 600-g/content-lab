@@ -54,8 +54,5 @@ Claude Code는 단순한 채팅창을 넘어, 사용자가 필요한 능력을 �
 Claude Code를 잘 쓰는 사람은 모든 기능을 외우는 사람이 아니라, 필요한 작업에 맞춰 능력을 찾고 장착하는 사람이 될 가능성이 큽니다. 스킬은 무조건 많이 까는 것이 중요한 게 아니라, 지금 내 업무에 딱 맞는 것을 고르고, 그것이 믿을 만한지 검증해 내는 안목이 핵심입니다. 이를 통해 개인의 생산성을 극대화하고, 복잡한 작업을 자동화하는 데 집중할 수 있습니다.
 
 ## 출처
-[나한테 딱 맞는 클로드 스킬 찾는 법](https://abounding-helmet-0e4.notion.site/38e73c7b15ad81a09d97d673db5b9979?pvs=149)
-
-## 출처
 
 - [https://abounding-helmet-0e4.notion.site/38e73c7b15ad81a09d97d673db5b9979?pvs=149](https://abounding-helmet-0e4.notion.site/38e73c7b15ad81a09d97d673db5b9979?pvs=149)

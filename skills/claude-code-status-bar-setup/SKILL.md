@@ -123,8 +123,4 @@ Mac에서도 `Python으로 만들어줘` 를 붙이는 것이 안전합니다. M
 
 ## 출처
 
-[클로드코드 상태바 세팅 가이드](https://possible-timpani-b05.notion.site/3abf67ccdbf881c2b5e9f4bf449c950c?pvs=149)
-
-## 출처
-
 - [https://possible-timpani-b05.notion.site/3abf67ccdbf881c2b5e9f4bf449c950c?pvs=149](https://possible-timpani-b05.notion.site/3abf67ccdbf881c2b5e9f4bf449c950c?pvs=149)

@@ -186,8 +186,4 @@ LG에너지솔루션 주가에 대한 시장의 다양한 관점을 분석해줘
 
 ## 출처
 
-[ [호시절] 투자 고수들의 황금 프롬프트 5가지 ](https://petalite-mayonnaise-ed7.notion.site/5-36efe1c9c8bb80be871bcdb4e4f60bc6?pvs=149)
-
-## 출처
-
 - [https://petalite-mayonnaise-ed7.notion.site/5-36efe1c9c8bb80be871bcdb4e4f60bc6?pvs=149](https://petalite-mayonnaise-ed7.notion.site/5-36efe1c9c8bb80be871bcdb4e4f60bc6?pvs=149)

@@ -119,8 +119,4 @@ AI에게 "네가 만족하면 끝내"라고 하면 안 됩니다. 실제 연구�
 
 ## 출처
 
-[루프 엔지니어링 완전정복 — 비개발자도 5분이면 이해하는 'AI를 굴리는 법'](https://lovely-century-8af.notion.site/5-AI-386ecbe3934981719047deed083ebc98?pvs=149)
-
-## 출처
-
 - [https://lovely-century-8af.notion.site/5-AI-386ecbe3934981719047deed083ebc98?pvs=149](https://lovely-century-8af.notion.site/5-AI-386ecbe3934981719047deed083ebc98?pvs=149)

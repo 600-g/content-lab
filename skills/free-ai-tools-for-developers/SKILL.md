@@ -102,8 +102,4 @@ sources:
 
 ## 출처
 
-[AI 도구, 공짜로 쓰는 법만 모았습니다](https://rebornlabs.kr/ai-free?utm_source=instagram&utm_medium=reels&utm_campaign=vibeskills&ref=BS-019&utm_content=BS-019&fbclid=PAVERFWAUQyP1wZG9mAmZkaWQWUOOpC3L-8ODj1vexlLDdsZ2GHKIPIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp6e4dJhk37uH-yDX8HW9Xr8XoFZsMGrFdhC1ZHKAIKiPfHsPDypu-qPBc5bp_aem_nKqBkYw_-PimTBvY4hixXw)
-
-## 출처
-
 - [https://rebornlabs.kr/ai-free?utm_source=instagram&utm_medium=reels&utm_campaign=vibeskills&ref=BS-019&utm_content=BS-019&fbclid=PAVERFWAUQyP1wZG9mAmZkaWQWUOOpC3L-8ODj1vexlLDdsZ2GHKIPIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp6e4dJhk37uH-yDX8HW9Xr8XoFZsMGrFdhC1ZHKAIKiPfHsPDypu-qPBc5bp_aem_nKqBkYw_-PimTBvY4hixXw](https://rebornlabs.kr/ai-free?utm_source=instagram&utm_medium=reels&utm_campaign=vibeskills&ref=BS-019&utm_content=BS-019&fbclid=PAVERFWAUQyP1wZG9mAmZkaWQWUOOpC3L-8ODj1vexlLDdsZ2GHKIPIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp6e4dJhk37uH-yDX8HW9Xr8XoFZsMGrFdhC1ZHKAIKiPfHsPDypu-qPBc5bp_aem_nKqBkYw_-PimTBvY4hixXw)

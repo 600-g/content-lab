@@ -89,8 +89,5 @@ Single card composition, no splits, readable UI, trainer, and Pokémon together.
 3. **프롬프트 길이**: 프롬프트 자체가 매우 길고 복잡하기 때문에, 일부 AI 모델은 처리 과정에서 일부 규칙을 무시할 수 있습니다. 따라서 **가장 중요한 규칙(1. 정체성 보존, 2. TCG 레이아웃)**을 별도로 강조하는 것이 좋습니다.
 
 ## 출처
-[Notion | Where teams and agents work together](https://app.notion.com/p/Chat-gpt-37686293e5b180e38f81fd76f9fb4da9?source=copy_link)
-
-## 출처
 
 - [https://app.notion.com/p/Chat-gpt-37686293e5b180e38f81fd76f9fb4da9?source=copy_link](https://app.notion.com/p/Chat-gpt-37686293e5b180e38f81fd76f9fb4da9?source=copy_link)

@@ -38,8 +38,5 @@ sources:
 - 자동 갱신 조건은 가입·결제 화면에서 확인해야 합니다.
 
 ## 출처
-[Notion | Where teams and agents work together](https://app.notion.com/p/3acc601852d1809ca558f9c0c21fd010?source=copy_link)
-
-## 출처
 
 - [https://app.notion.com/p/3acc601852d1809ca558f9c0c21fd010?source=copy_link](https://app.notion.com/p/3acc601852d1809ca558f9c0c21fd010?source=copy_link)

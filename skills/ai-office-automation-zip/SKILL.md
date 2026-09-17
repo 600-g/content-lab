@@ -60,8 +60,4 @@ sources:
 
 ## 출처
 
-[갓생맘 AI OFFICE.zip](https://drive.google.com/file/d/1rhHCd_JHlvY52p50OqE8y9jqcBTJrXxN/view?fbclid=PAVERFWATWSopwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp2Br5PtFQz3sN-L2_u9TToMUfDMgpHTot9GzqEymN9GNnVJv7y8nIVF9lsPX_aem_aHzTb8CJ3hQgbjL-yv9_bg)
-
-## 출처
-
 - [https://drive.google.com/file/d/1rhHCd_JHlvY52p50OqE8y9jqcBTJrXxN/view?fbclid=PAVERFWATWSopwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp2Br5PtFQz3sN-L2_u9TToMUfDMgpHTot9GzqEymN9GNnVJv7y8nIVF9lsPX_aem_aHzTb8CJ3hQgbjL-yv9_bg](https://drive.google.com/file/d/1rhHCd_JHlvY52p50OqE8y9jqcBTJrXxN/view?fbclid=PAVERFWATWSopwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp2Br5PtFQz3sN-L2_u9TToMUfDMgpHTot9GzqEymN9GNnVJv7y8nIVF9lsPX_aem_aHzTb8CJ3hQgbjL-yv9_bg)

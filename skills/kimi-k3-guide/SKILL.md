@@ -204,8 +204,5 @@ sources:
 *   **API 키 보안**: 터미널 등에서 API 키를 사용할 경우, 키 노출에 주의해야 합니다.
 
 ## 출처
-[키미 K3 제대로 쓰는 법](https://adu-kimi-guide.vercel.app/?fbclid=PAVERFWAUE7SxwZG9mAmZkaWQWUNrD_iDXOxrGduDNltRqDeQk4gcBIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwQwE5EiQPU7Vni-5zhVGjb7q1QQJ2BHH5NzSA0mVaLnzRedx1188rEIkix-_aem_ZdMOu2JpiIZaVRD7gx4UWw)
-
-## 출처
 
 - [https://adu-kimi-guide.vercel.app/?fbclid=PAVERFWAUE7SxwZG9mAmZkaWQWUNrD_iDXOxrGduDNltRqDeQk4gcBIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwQwE5EiQPU7Vni-5zhVGjb7q1QQJ2BHH5NzSA0mVaLnzRedx1188rEIkix-_aem_ZdMOu2JpiIZaVRD7gx4UWw](https://adu-kimi-guide.vercel.app/?fbclid=PAVERFWAUE7SxwZG9mAmZkaWQWUNrD_iDXOxrGduDNltRqDeQk4gcBIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwQwE5EiQPU7Vni-5zhVGjb7q1QQJ2BHH5NzSA0mVaLnzRedx1188rEIkix-_aem_ZdMOu2JpiIZaVRD7gx4UWw)

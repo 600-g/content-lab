@@ -73,11 +73,5 @@ sources:
 
 ## 출처
 
-- [Instagram의 COVAL | 개발자 생존기님 : "서버비 0원으로 배포하는 방법 🤫"](https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==)
-- [https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==](https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==)
-- [Instagram @coval.dev: 서버비 0원으로 배포하는 방법 🤫](https://www.instagram.com/reel/Dcp66PwTPwR/)
-
-## 출처
-
 - [https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==](https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==)
 - [https://www.instagram.com/reel/Dcp66PwTPwR/](https://www.instagram.com/reel/Dcp66PwTPwR/)

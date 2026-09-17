@@ -113,8 +113,4 @@ sources:
 
 ## 출처
 
-[마케팅 소재 열 가지 고르는 법](https://adu-ten-in-one-chat.vercel.app/?fbclid=PAVERFWAT0udNwZG9mAmZkaWQWUM0fQwib_VeMAepCW7p9Uu6l-kr1P2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp9nDxNYIvpiDRzDTpytlyL4XNdaJaWifGK_Z6ydjoVseAEWPFc5p4wll96qk_aem_nhOUzVZGT1HuZHMfX6e4RA)
-
-## 출처
-
 - [https://adu-ten-in-one-chat.vercel.app/?fbclid=PAVERFWAT0udNwZG9mAmZkaWQWUM0fQwib_VeMAepCW7p9Uu6l-kr1P2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp9nDxNYIvpiDRzDTpytlyL4XNdaJaWifGK_Z6ydjoVseAEWPFc5p4wll96qk_aem_nhOUzVZGT1HuZHMfX6e4RA](https://adu-ten-in-one-chat.vercel.app/?fbclid=PAVERFWAT0udNwZG9mAmZkaWQWUM0fQwib_VeMAepCW7p9Uu6l-kr1P2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp9nDxNYIvpiDRzDTpytlyL4XNdaJaWifGK_Z6ydjoVseAEWPFc5p4wll96qk_aem_nhOUzVZGT1HuZHMfX6e4RA)

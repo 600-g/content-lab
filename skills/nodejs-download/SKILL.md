@@ -76,8 +76,4 @@ Node.js의 최신 버전을 활용하여 다음과 같은 프로젝트를 강화
 
 ## 출처
 
-[Node.js® 다운로드](https://nodejs.org/ko/download)
-
-## 출처
-
 - [https://nodejs.org/ko/download?fbclid=PAVERFWATWSrlwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp8k7d2RNQfvD4BwcXxnb3e8PABNkUyk4wyIhS6XC5m-Ljng1L7M_blX2KDhg_aem_DOBRp4m4ANJemkxWaBQQUQ](https://nodejs.org/ko/download?fbclid=PAVERFWATWSrlwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp8k7d2RNQfvD4BwcXxnb3e8PABNkUyk4wyIhS6XC5m-Ljng1L7M_blX2KDhg_aem_DOBRp4m4ANJemkxWaBQQUQ)

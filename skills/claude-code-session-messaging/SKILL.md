@@ -65,8 +65,4 @@ sources:
 
 ## 출처
 
-[클로드 코드 세션 메시지 기능 총정리](https://fieldby.notion.site/3b8d730b395381a083faf9e4d90a9527?pvs=149)
-
-## 출처
-
 - [https://fieldby.notion.site/3b8d730b395381a083faf9e4d90a9527?pvs=149](https://fieldby.notion.site/3b8d730b395381a083faf9e4d90a9527?pvs=149)

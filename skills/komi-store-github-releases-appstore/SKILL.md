@@ -51,8 +51,4 @@ Komi Store는 개발자 커뮤니티에서 활발히 사용되는 깃허브(GitH
 
 ## 출처
 
-[Instagram @ai.asap.kr: Komi Store는 깃허브·코드버그·포지호에 올라온 릴리스를 목록으로 보여주고 눌러서 설치까지 이어 주는 앱스토어입니다.](https://www.instagram.com/p/DdEAS85D0TV/)
-
-## 출처
-
 - [https://www.instagram.com/p/DdEAS85D0TV/](https://www.instagram.com/p/DdEAS85D0TV/)

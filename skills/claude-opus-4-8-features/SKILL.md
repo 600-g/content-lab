@@ -137,8 +137,5 @@ Opus 4.8이 모든 벤치마크에서 GPT-5.5를 앞섰다고 주장하는 것�
 Opus 4.7부터 사용된 새로운 토크나이저는 이전 모델 대비 같은 텍스트에 대해 최대 35% 더 많은 토큰을 사용할 수 있습니다. Opus 4.8도 이 토크나이저를 사용하므로, Opus 4.7 이전 모델과 비교 시 토큰 사용량 증가가 있을 수 있습니다. Opus 4.8과 Opus 4.7 간의 토큰 사용량 차이는 이 토크나이저 자체의 영향보다는 Effort 설정 등 다른 요인에 더 영향을 받습니다.
 
 ## 출처
-[Claude Opus 4.8, 무엇이 달라졌을까?](https://resonant-frog-df5.notion.site/Claude-Opus-4-8-3783a1a3234380f0b5b4e646e6f65ec9?pvs=149)
-
-## 출처
 
 - [https://resonant-frog-df5.notion.site/Claude-Opus-4-8-3783a1a3234380f0b5b4e646e6f65ec9?pvs=149](https://resonant-frog-df5.notion.site/Claude-Opus-4-8-3783a1a3234380f0b5b4e646e6f65ec9?pvs=149)

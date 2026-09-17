@@ -89,8 +89,5 @@ sources:
 *   **반복 테스트**: 자동화 설정을 한 번에 완벽하게 기대하기보다, **'한 번 잘 되면'**이라는 마인드로 작은 성공부터 반복하며 시스템을 굳히는 것이 중요합니다.
 
 ## 출처
-[비서30명_세팅법.pdf](https://drive.google.com/file/d/1ZcmioCwiHXGU4TfNEHeokosB5Ajs3wKM/view?fbclid=PAVERFWASk3ddleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAaeaSib1FytF8FziA3TEz-Tw96epSb7kWx5pZBBQ3cSQJozZbxldaa-b493M4A_aem_7sGFNXAtXVrmQJLNdq53Sw
-
-## 출처
 
 - [https://drive.google.com/file/d/1ZcmioCwiHXGU4TfNEHeokosB5Ajs3wKM/view?fbclid=PAVERFWASk3ddleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAaeaSib1FytF8FziA3TEz-Tw96epSb7kWx5pZBBQ3cSQJozZbxldaa-b493M4A_aem_7sGFNXAtXVrmQJLNdq53Sw](https://drive.google.com/file/d/1ZcmioCwiHXGU4TfNEHeokosB5Ajs3wKM/view?fbclid=PAVERFWASk3ddleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAaeaSib1FytF8FziA3TEz-Tw96epSb7kWx5pZBBQ3cSQJozZbxldaa-b493M4A_aem_7sGFNXAtXVrmQJLNdq53Sw)

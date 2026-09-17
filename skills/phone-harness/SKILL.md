@@ -69,8 +69,4 @@ PY
 
 ## 출처
 
-[ShawnPana/phone-harness](https://github.com/ShawnPana/phone-harness)
-
-## 출처
-
 - [https://github.com/ShawnPana/phone-harness](https://github.com/ShawnPana/phone-harness)

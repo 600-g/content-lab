@@ -66,8 +66,4 @@ A handsome Korean male influencer in his 20s practicing dance in a studio, weari
 
 ## 출처
 
-[Kling Motion Control 제작 가이드북](https://waiting-drug-536.notion.site/Kling-Motion-Control-3aed86104de280fdb4bcff4d311638fa?pvs=149)
-
-## 출처
-
 - [https://waiting-drug-536.notion.site/Kling-Motion-Control-3aed86104de280fdb4bcff4d311638fa?pvs=149](https://waiting-drug-536.notion.site/Kling-Motion-Control-3aed86104de280fdb4bcff4d311638fa?pvs=149)

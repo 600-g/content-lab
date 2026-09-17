@@ -69,8 +69,4 @@ PPT나 디자인 작업의 완성도를 높이기 위해 제품 목업 파일을
 
 ## 출처
 
-[Instagram @bysu.ppt: | 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟](https://www.instagram.com/p/DcidOHFI5z6/)
-
-## 출처
-
 - [https://www.instagram.com/p/DcidOHFI5z6/](https://www.instagram.com/p/DcidOHFI5z6/)

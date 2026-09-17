@@ -101,8 +101,4 @@ AI 에이전트가 맥 화면을 인식하고 상호작용하기 위해서는 �
 
 ## 출처
 
-[‘phone-harness’ 설치 가이드](https://app.notion.com/p/phone-harness-3b9c601852d180209b71f3acd9e901dc?source=copy_link)
-
-## 출처
-
 - [https://app.notion.com/p/phone-harness-3b9c601852d180209b71f3acd9e901dc?source=copy_link](https://app.notion.com/p/phone-harness-3b9c601852d180209b71f3acd9e901dc?source=copy_link)

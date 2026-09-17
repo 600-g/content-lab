@@ -69,8 +69,5 @@ sources:
 이 스킬을 활용하여 개인의 소셜 미디어 콘텐츠 제작 시간을 대폭 단축하거나, 소규모 비즈니스의 마케팅 자료 제작 비용을 절감할 수 있습니다. 또한, AI 기술 동향을 주제로 카드 뉴스를 꾸준히 제작하여 관련 커뮤니티에 공유하며 영향력을 키울 수 있습니다.
 
 ## 출처
-[캐러셀 자동화, 이미지 제작 이렇게 해보세요.](https://waiting-drug-536.notion.site/373d86104de2800daa85c99b44d90bfd?pvs=149)
-
-## 출처
 
 - [https://waiting-drug-536.notion.site/373d86104de2800daa85c99b44d90bfd?pvs=149](https://waiting-drug-536.notion.site/373d86104de2800daa85c99b44d90bfd?pvs=149)

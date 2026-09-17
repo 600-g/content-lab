@@ -145,8 +145,4 @@ Claude는 단순히 정답을 알려주는 검색창이 아니라, 질문을 던
 
 ## 출처
 
-[Claude로 무엇이든 배우는 프롬프트](https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149)
-
-## 출처
-
 - [https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149](https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149)

@@ -54,8 +54,5 @@ Use the uploaded photos as fixed identity references: Image 2 = the WOMAN\'s fac
     → 원본 얼굴 사진을 선명한 정면으로 바꿔 다시 시도하세요.
 
 ## 출처
-[사랑이 잘 앨범커버 프롬프트 가이드](https://fieldby.notion.site/3a6d730b39538184855cde596254cee5?pvs=149)
-
-## 출처
 
 - [https://fieldby.notion.site/3a6d730b39538184855cde596254cee5?pvs=149](https://fieldby.notion.site/3a6d730b39538184855cde596254cee5?pvs=149)

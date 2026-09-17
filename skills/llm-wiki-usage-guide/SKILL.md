@@ -39,8 +39,4 @@ LLM WIKI의 정보를 바탕으로 개인 맞춤형 AI 학습 로드맵을 구�
 
 ## 출처
 
-[LLM WIKI 이렇게 쓰세요.](https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149)
-
-## 출처
-
 - [https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149](https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149)

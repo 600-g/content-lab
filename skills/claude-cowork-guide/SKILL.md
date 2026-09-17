@@ -49,8 +49,4 @@ sources:
 
 ## 출처
 
-[클로드(Claude) 쌩초보 가이드 ③](https://app.notion.com/p/Claude-37cc601852d180d0a67ef81aa69742f0?source=copy_link)
-
-## 출처
-
 - [https://app.notion.com/p/Claude-37cc601852d180d0a67ef81aa69742f0?source=copy_link](https://app.notion.com/p/Claude-37cc601852d180d0a67ef81aa69742f0?source=copy_link)

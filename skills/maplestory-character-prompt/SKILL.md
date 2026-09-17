@@ -74,8 +74,4 @@ The final image must look like a genuine official Nexon MapleStory playable char
 
 ## 출처
 
-[메이플st 캐릭터 프롬프트 @solrr.aa](https://rural-slash-4e3.notion.site/st-solrr-aa-381c2a2c7a0a80d2be19e5cc6ea02fff?pvs=149)
-
-## 출처
-
 - [https://rural-slash-4e3.notion.site/st-solrr-aa-381c2a2c7a0a80d2be19e5cc6ea02fff?pvs=149](https://rural-slash-4e3.notion.site/st-solrr-aa-381c2a2c7a0a80d2be19e5cc6ea02fff?pvs=149)

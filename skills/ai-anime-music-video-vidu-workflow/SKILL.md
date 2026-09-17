@@ -107,8 +107,5 @@ J-pop rock, anime opening, pop-punk influence, energetic, upbeat, funk rhythm gu
 - 캐릭터 레퍼런스를 정면 각도만 등록하면 다른 각도 씬에서 캐릭터 일관성이 깨질 수 있으니 3방향 이미지를 미리 준비할 것.
 
 ## 출처
-[AI 애니메이션 만들기 튜토리얼](https://vaulted-decade-3b2.notion.site/AI-361f563cd706808ba6d7e626f0f159a4?pvs=149)
-
-## 출처
 
 - [https://vaulted-decade-3b2.notion.site/AI-361f563cd706808ba6d7e626f0f159a4?pvs=149](https://vaulted-decade-3b2.notion.site/AI-361f563cd706808ba6d7e626f0f159a4?pvs=149)

@@ -92,8 +92,4 @@ sources:
 
 ## 출처
 
-[그래프 엔지니어링, 언제 쓰고 언제 피할까 — 판단 기준 12개](https://abounding-helmet-0e4.notion.site/12-3b373c7b15ad81d8b5f8c41653a2b5d1?pvs=149)
-
-## 출처
-
 - [https://abounding-helmet-0e4.notion.site/12-3b373c7b15ad81d8b5f8c41653a2b5d1?pvs=149](https://abounding-helmet-0e4.notion.site/12-3b373c7b15ad81d8b5f8c41653a2b5d1?pvs=149)

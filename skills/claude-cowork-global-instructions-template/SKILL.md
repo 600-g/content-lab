@@ -129,8 +129,4 @@ AI 모델과의 협업에서 가장 중요한 부분은 AI에게 명확한 역�
 
 ## 출처
 
-[딱 이 3가지만 보고 그대로 설정하세요.](https://waiting-drug-536.notion.site/3-39ed86104de2802ea2c6ed01fd608b76?pvs=149)
-
-## 출처
-
 - [https://waiting-drug-536.notion.site/3-39ed86104de2802ea2c6ed01fd608b76?pvs=149](https://waiting-drug-536.notion.site/3-39ed86104de2802ea2c6ed01fd608b76?pvs=149)

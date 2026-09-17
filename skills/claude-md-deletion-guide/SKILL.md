@@ -62,8 +62,4 @@ AI 모델의 발전 속도에 맞춰 주기적으로(약 6개월마다 또는 �
 
 ## 출처
 
-[CLAUDE.md 삭제 가이드 — 클로드 코드 제작자가 말한 것](https://abounding-helmet-0e4.notion.site/CLAUDE-md-3b073c7b15ad81a5925bdc435abf9d25?pvs=149)
-
-## 출처
-
 - [https://abounding-helmet-0e4.notion.site/CLAUDE-md-3b073c7b15ad81a5925bdc435abf9d25?pvs=149](https://abounding-helmet-0e4.notion.site/CLAUDE-md-3b073c7b15ad81a5925bdc435abf9d25?pvs=149)

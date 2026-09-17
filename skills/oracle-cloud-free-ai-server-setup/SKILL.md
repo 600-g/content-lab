@@ -160,8 +160,5 @@ exit # 서버에서 나가기
 * **재고 문제:** `Out of host capacity` 에러는 오라클 측의 리소스 부족일 수 있습니다. 이 경우 다른 리전이나 Shape을 확인해야 합니다.
 
 ## 출처
-[🖥️Oracle Cloud 무료로 24시간 AI 서버 만들기 (초보자가 막히는 7가지 포함)](https://oracleserverbyaduai.netlify.app/?fbclid=PAVERFWASJXnBleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAaeBx0OBKXkHoiVSotXm3MbmCk1vgJinL9v1XftySx8dZwgGK4w0vCcT150CWg_aem_k9xiu7z2YBb6S9KSm9VQLg
-
-## 출처
 
 - [https://oracleserverbyaduai.netlify.app/?fbclid=PAVERFWASJXnBleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAaeBx0OBKXkHoiVSotXm3MbmCk1vgJinL9v1XftySx8dZwgGK4w0vCcT150CWg_aem_k9xiu7z2YBb6S9KSm9VQLg](https://oracleserverbyaduai.netlify.app/?fbclid=PAVERFWASJXnBleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAaeBx0OBKXkHoiVSotXm3MbmCk1vgJinL9v1XftySx8dZwgGK4w0vCcT150CWg_aem_k9xiu7z2YBb6S9KSm9VQLg)

@@ -60,8 +60,4 @@ Headroom을 설치하고 Claude Code에 적용하는 방법은 다음과 같습�
 
 ## 출처
 
-[Claude Code 토큰 줄이는 Headroom 가이드](https://abounding-helmet-0e4.notion.site/Claude-Code-Headroom-38d73c7b15ad813190abf555ad0bf667?pvs=149)
-
-## 출처
-
 - [https://abounding-helmet-0e4.notion.site/Claude-Code-Headroom-38d73c7b15ad813190abf555ad0bf667?pvs=149](https://abounding-helmet-0e4.notion.site/Claude-Code-Headroom-38d73c7b15ad813190abf555ad0bf667?pvs=149)

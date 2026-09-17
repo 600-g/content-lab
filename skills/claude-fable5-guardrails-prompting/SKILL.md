@@ -82,8 +82,4 @@ Fable 5 자체는 2026년 7월 12일까지 Pro / Max / Team 유료 플랜에서 
 
 ## 출처
 
-[[캐러셀 자료] Claude Fable 5 지시서 12가지 · 오늘 Claude 응용 가이드](https://abounding-helmet-0e4.notion.site/Claude-Fable-5-12-Claude-39873c7b15ad81b6856ed95b0e179a51?pvs=149)
-
-## 출처
-
 - [https://abounding-helmet-0e4.notion.site/Claude-Fable-5-12-Claude-39873c7b15ad81b6856ed95b0e179a51?pvs=149](https://abounding-helmet-0e4.notion.site/Claude-Fable-5-12-Claude-39873c7b15ad81b6856ed95b0e179a51?pvs=149)

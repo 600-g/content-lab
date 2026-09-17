@@ -86,8 +86,4 @@ sources:
 
 ## 출처
 
-[구글 옴니 X 힉스필드](https://dour-tailor-5c6.notion.site/X-39161c2773b180b396fde440f7349cbf?pvs=149)
-
-## 출처
-
 - [https://dour-tailor-5c6.notion.site/X-39161c2773b180b396fde440f7349cbf?pvs=149](https://dour-tailor-5c6.notion.site/X-39161c2773b180b396fde440f7349cbf?pvs=149)

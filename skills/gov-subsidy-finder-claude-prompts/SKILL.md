@@ -120,8 +120,4 @@ A4 2페이지 분량으로 작성해줘.
 
 ## 출처
 
-[왜 지원금은 항상 "숨겨져" 있을까?](https://tangerine-twilight-e7fe25.netlify.app/?fbclid=PAVERFWAR-5sxleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAadanhUAahDU-V-zugqAdY62M8OF0DLHKwg62995AoAO_whdMHe7A6WShOltcQ_aem_crN_5QS9u3EXvupvQjpkmw)
-
-## 출처
-
 - [https://tangerine-twilight-e7fe25.netlify.app/?fbclid=PAVERFWAR-5sxleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAadanhUAahDU-V-zugqAdY62M8OF0DLHKwg62995AoAO_whdMHe7A6WShOltcQ_aem_crN_5QS9u3EXvupvQjpkmw](https://tangerine-twilight-e7fe25.netlify.app/?fbclid=PAVERFWAR-5sxleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAadanhUAahDU-V-zugqAdY62M8OF0DLHKwg62995AoAO_whdMHe7A6WShOltcQ_aem_crN_5QS9u3EXvupvQjpkmw)

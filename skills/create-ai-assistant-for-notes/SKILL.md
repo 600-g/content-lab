@@ -106,8 +106,4 @@ sources:
 
 ## 출처
 
-[내 모든 메모를 이해하고 답해주는 AI 비서 만들기](https://adu-llm-wiki.vercel.app/?fbclid=PAVERFWASrLkRleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTAAafopEyq9qrMijCCDp96qb158X29Agwno0-jPsFSwe4cSeEzyVOwtKtfzy-DHw_aem_s3d4e4EQ4Xs6x0b10NDE6A)
-
-## 출처
-
 - [https://adu-llm-wiki.vercel.app/?fbclid=PAVERFWASrLkRleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafopEyq9qrMijCCDp96qb158X29Agwno0-jPsFSwe4cSeEzyVOwtKtfzy-DHw_aem_s3d4e4EQ4Xs6x0b10NDE6A](https://adu-llm-wiki.vercel.app/?fbclid=PAVERFWASrLkRleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafopEyq9qrMijCCDp96qb158X29Agwno0-jPsFSwe4cSeEzyVOwtKtfzy-DHw_aem_s3d4e4EQ4Xs6x0b10NDE6A)

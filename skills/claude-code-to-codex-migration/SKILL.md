@@ -96,8 +96,4 @@ Codex 앱을 실행하고 좌측 하단의 **Settings(설정)** 메뉴로 들어
 
 ## 출처
 
-[Claude Code → Codex 이주 가이드](https://abounding-helmet-0e4.notion.site/Claude-Code-Codex-35873c7b15ad81fa95a4d608d35164a3?pvs=149)
-
-## 출처
-
 - [https://abounding-helmet-0e4.notion.site/Claude-Code-Codex-35873c7b15ad81fa95a4d608d35164a3?pvs=149](https://abounding-helmet-0e4.notion.site/Claude-Code-Codex-35873c7b15ad81fa95a4d608d35164a3?pvs=149)

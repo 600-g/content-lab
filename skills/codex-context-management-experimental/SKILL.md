@@ -109,8 +109,4 @@ Astra 발표에서 화제가 된 컴퓨터 유즈 기능은 이 컨텍스트 설
 
 ## 출처
 
-[Notion | Where teams and agents work together](https://app.notion.com/p/3d173c7b15ad81239d3fe9e54f0c8e05?pvs=39)
-
-## 출처
-
 - [https://app.notion.com/p/3d173c7b15ad81239d3fe9e54f0c8e05?pvs=39](https://app.notion.com/p/3d173c7b15ad81239d3fe9e54f0c8e05?pvs=39)

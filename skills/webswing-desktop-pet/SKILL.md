@@ -92,9 +92,4 @@ WebSwing은 배경화면 위에 투명한 레이어를 띄워 그 위에서 히�
 
 ## 출처
 
-*   [WebSwing — 창 사이를 날아다니는 데스크톱 펫 (맥 · 윈도우)](https://joowonkoh.com/playground/webswing?fbclid=PAVERFWATld71wZG9mAmZkaWQWUMKVlajuz_FkwWfv_CISbvn90Q6JbGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQ1NTABpwFYoSVao__eu75-GVkCux6sksglj8gGLC7o0yO9YPThstkhxKZJqptaidC7_aem_UXMcK1WEfr1r-QfyfwYCIg)
-
-
-## 출처
-
 - [https://joowonkoh.com/playground/webswing?fbclid=PAVERFWATld71wZG9mAmZkaWQWUMKVlajuz_FkwWfv_CISbvn90Q6JbGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwFYoSVao__eu75-GVkCux6sksglj8gGLC7o0yO9YPThstkhxKZJqptaidC7_aem_UXMcK1WEfr1r-QfyfwYCIg](https://joowonkoh.com/playground/webswing?fbclid=PAVERFWATld71wZG9mAmZkaWQWUMKVlajuz_FkwWfv_CISbvn90Q6JbGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwFYoSVao__eu75-GVkCux6sksglj8gGLC7o0yO9YPThstkhxKZJqptaidC7_aem_UXMcK1WEfr1r-QfyfwYCIg)

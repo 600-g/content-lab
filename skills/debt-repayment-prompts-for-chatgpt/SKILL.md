@@ -91,8 +91,5 @@ sources:
 - **프로젝트 강화**: 작성된 재무 설계 로드맵을 바탕으로, 투자, 절세 등 후속 재무 관리 스킬과 연계하여 사용자 경험을 확장할 수 있습니다.
 
 ## 출처
-[이 7가지 프롬프트를 그대로 복사해라](https://storied-macaron-8dd56d.netlify.app/?fbclid=PAVERFWASMnidleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAad9kCTqEU0XvQCT4xZDjAoN8HGXWotb_AUYQ_16Kj9oE8sIGZdkEG7oBRLlAA_aem_itTQU59o0oQjf3E3syT5hA)
-
-## 출처
 
 - [https://storied-macaron-8dd56d.netlify.app/?fbclid=PAVERFWASMnidleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAad9kCTqEU0XvQCT4xZDjAoN8HGXWotb_AUYQ_16Kj9oE8sIGZdkEG7oBRLlAA_aem_itTQU59o0oQjf3E3syT5hA](https://storied-macaron-8dd56d.netlify.app/?fbclid=PAVERFWASMnidleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAad9kCTqEU0XvQCT4xZDjAoN8HGXWotb_AUYQ_16Kj9oE8sIGZdkEG7oBRLlAA_aem_itTQU59o0oQjf3E3syT5hA)

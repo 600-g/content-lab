@@ -201,8 +201,4 @@ We recommend resuming from a summary.
 
 ## 출처
 
-[Notion | Where teams and agents work together](https://app.notion.com/p/3c573c7b15ad814dbf0dd3d6052f3edc?pvs=39)
-
-## 출처
-
 - [https://app.notion.com/p/3c573c7b15ad814dbf0dd3d6052f3edc?pvs=39](https://app.notion.com/p/3c573c7b15ad814dbf0dd3d6052f3edc?pvs=39)

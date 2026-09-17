@@ -64,8 +64,4 @@ A cinematic, dreamlike AR visual featuring a central photorealistic person surro
 
 ## 출처
 
-[내 사진을 플레이리스트 배경화면으로 만드는 프롬프트 가이드](https://fieldby.notion.site/3b8d730b3953812c868aca0d22bb954b?pvs=149)
-
-## 출처
-
 - [https://fieldby.notion.site/3b8d730b3953812c868aca0d22bb954b?pvs=149](https://fieldby.notion.site/3b8d730b3953812c868aca0d22bb954b?pvs=149)

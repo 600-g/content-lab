@@ -52,8 +52,5 @@ sources:
 *   **투자 책임:** 본 대시보드는 투자 참고용 자료이며, 실제 투자 결정은 반드시 해당 기업의 공식 IR 페이지와 공시 원문을 직접 확인한 후에 신중하게 내려야 합니다.
 
 ## 출처
-[주식 분석 대시보드] 풀버전 vercel app + Finnhub 무료 키 발급 가이드(https://abounding-helmet-0e4.notion.site/vercel-app-Finnhub-37873c7b15ad81b9b410fe1885329b70?pvs=149)
-
-## 출처
 
 - [https://abounding-helmet-0e4.notion.site/vercel-app-Finnhub-37873c7b15ad81b9b410fe1885329b70?pvs=149](https://abounding-helmet-0e4.notion.site/vercel-app-Finnhub-37873c7b15ad81b9b410fe1885329b70?pvs=149)

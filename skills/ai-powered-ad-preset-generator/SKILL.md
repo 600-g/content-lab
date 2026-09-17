@@ -147,8 +147,5 @@ sources:
 *   **프리셋 업데이트**: 현재 목록은 2024년 8월 기준이며, 프리셋은 계속 추가되고 업데이트될 수 있습니다.
 
 ## 출처
-[광고 만들 때 쓴 프리셋, 전부 적어뒀어요](https://abounding-helmet-0e4.notion.site/3c373c7b15ad81c2980ff1fd5eddb9e1?pvs=149)
-
-## 출처
 
 - [https://abounding-helmet-0e4.notion.site/3c373c7b15ad81c2980ff1fd5eddb9e1?pvs=149](https://abounding-helmet-0e4.notion.site/3c373c7b15ad81c2980ff1fd5eddb9e1?pvs=149)

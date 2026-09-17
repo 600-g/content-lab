@@ -84,8 +84,4 @@ omniroute run aider --model glm/glm-5.2 -- --message "reply OK"
 
 ## 출처
 
-[diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute)
-
-## 출처
-
 - [https://github.com/diegosouzapw/OmniRoute?fbclid=PAVERFWAT5qhtwZG9mAmZkaWQWUNHYLf1kPOw6dg1dr2eXutgZpVf0EGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpygtIkWa1Avaq69_5wlE1kjoNdCyM4eJF9X0fDeS85ErLCZYU7Ab_BQEtVAR_aem_pghrJzxBaJS4VedSgGP73g](https://github.com/diegosouzapw/OmniRoute?fbclid=PAVERFWAT5qhtwZG9mAmZkaWQWUNHYLf1kPOw6dg1dr2eXutgZpVf0EGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpygtIkWa1Avaq69_5wlE1kjoNdCyM4eJF9X0fDeS85ErLCZYU7Ab_BQEtVAR_aem_pghrJzxBaJS4VedSgGP73g)

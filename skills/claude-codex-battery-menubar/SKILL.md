@@ -136,8 +136,4 @@ Chromebook에서 앱처럼 쓰고 싶다면:
 
 ## 출처
 
-[dennykim123/claude-codex-battery](https://github.com/dennykim123/claude-codex-battery)
-
-## 출처
-
 - [https://github.com/dennykim123/claude-codex-battery](https://github.com/dennykim123/claude-codex-battery)

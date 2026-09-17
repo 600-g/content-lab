@@ -63,6 +63,20 @@ def _scrub_paste_links(body: str) -> str:
     return _PASTE_LINK_RE.sub(lambda m: m.group(1) or "직접 입력한 텍스트", body or "")
 
 
+_SOURCE_SECTION_RE = re.compile(r"(?ms)^##\s*출처\s*$.*?(?=^##\s|\Z)")
+
+
+def _strip_source_section(body: str) -> str:
+    """본문 속 `## 출처` 섹션을 뗀다 — 출처는 렌더러가 frontmatter sources 로 하나만 붙인다.
+
+    프롬프트가 '출처는 body_md 에 넣지 마라' 고 해도 모델은 자주 넣는다 (실측 2026-09-18: 119건 중 73건 이중).
+    프롬프트로 막지 않고 여기서 구조적으로 없앤다.
+    """
+    if not body or "출처" not in body:
+        return body or ""
+    return _SOURCE_SECTION_RE.sub("", body).rstrip() + ("\n" if body.endswith("\n") else "")
+
+
 def _source_line(u: str) -> str:
     """출처 한 줄. paste:// 는 진짜 URL 이 아니므로 죽은 링크로 렌더하면 안 된다."""
     try:
@@ -84,7 +98,7 @@ def render_skill_md(result: "AnalysisResult", source_url: str, source_type: str)
     body_md = (getattr(result, "body_md", "") or "").strip()
     if not body_md:
         body_md = _compose_legacy_body(result)
-    body_md = _scrub_paste_links(body_md)
+    body_md = _strip_source_section(_scrub_paste_links(body_md))
 
     # description (frontmatter, AI 활성화 트리거) — callout/tldr 한 줄
     _callout = (getattr(result, "callout", "") or "").strip()

@@ -47,8 +47,4 @@ sources:
 
 ## 출처
 
-[[AI Brief] Claude는 어떻게 S&P 500을 이겼을까?](https://rounded-fossa-8ea.notion.site/AI-Brief-Claude-S-P-500-3b45142006a680969403c8a7b3783b59?pvs=149)
-
-## 출처
-
 - [https://rounded-fossa-8ea.notion.site/AI-Brief-Claude-S-P-500-3b45142006a680969403c8a7b3783b59?pvs=149](https://rounded-fossa-8ea.notion.site/AI-Brief-Claude-S-P-500-3b45142006a680969403c8a7b3783b59?pvs=149)

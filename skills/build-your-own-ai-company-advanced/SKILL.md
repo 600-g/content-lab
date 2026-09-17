@@ -146,8 +146,4 @@ Claude Code를 활용하여 위에서 설계한 회사 운영 시나리오를 �
 
 ## 출처
 
-[나만의 AI 회사 만들기 가이드\_심화편](https://assorted-tennis-365.notion.site/_AI-_-_-_-3a9c680c75f08078a2a0ce1c4d43fcde?pvs=149)
-
-## 출처
-
 - [https://assorted-tennis-365.notion.site/_AI-_-_-_-3a9c680c75f08078a2a0ce1c4d43fcde?pvs=149](https://assorted-tennis-365.notion.site/_AI-_-_-_-3a9c680c75f08078a2a0ce1c4d43fcde?pvs=149)

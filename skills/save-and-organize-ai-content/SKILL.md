@@ -37,8 +37,5 @@ AI 관련 유용한 정보를 놓치지 않고 습득하기 위한 4단계 방�
 *   **AI 활용 스터디 그룹 운영:** 커뮤니티 내에서 각자 수집하고 실행해본 AI 정보들을 공유하고 함께 토론하며 집단지성을 활용하는 스터디 그룹을 운영할 수 있습니다.
 
 ## 출처
-[만드는 건 공짜가 됐습니다](https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149)
-
-## 출처
 
 - [https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149](https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149)

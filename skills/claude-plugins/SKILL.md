@@ -126,8 +126,4 @@ https://github.com/affaan-m/ECC 이 저장소를 플러그인으로 설치해줘
 
 ## 출처
 
-[클로드 성능을 바꾸는 깃허브 무료 도구 6개](https://adu-github-picks.vercel.app/)
-
-## 출처
-
 - [https://adu-github-picks.vercel.app/?fbclid=PAVERFWATdWHtwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp7ycc2kxliZp1IHlUgwDv3xsJB1IHkMf4JViHgx9_v9zjtikGiGa2gNENg2O_aem_FNen8P-jpFaciFvHrtjF0A](https://adu-github-picks.vercel.app/?fbclid=PAVERFWATdWHtwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp7ycc2kxliZp1IHlUgwDv3xsJB1IHkMf4JViHgx9_v9zjtikGiGa2gNENg2O_aem_FNen8P-jpFaciFvHrtjF0A)

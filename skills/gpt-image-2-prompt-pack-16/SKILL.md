@@ -198,8 +198,4 @@ A detailed 3D medical illustration of the human heart. Cross-section view with t
 
 ## 출처
 
-[GPT2 이미지 프롬프트 16선](https://jasper-tartan-fcc.notion.site/GPT2-16-35200b4db8dc8051b4bee15a9e1bddb1?pvs=149)
-
-## 출처
-
 - [https://jasper-tartan-fcc.notion.site/GPT2-16-35200b4db8dc8051b4bee15a9e1bddb1?pvs=149](https://jasper-tartan-fcc.notion.site/GPT2-16-35200b4db8dc8051b4bee15a9e1bddb1?pvs=149)

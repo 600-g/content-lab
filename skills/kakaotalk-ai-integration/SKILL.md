@@ -69,8 +69,4 @@ sources:
 
 ## 출처
 
-[카카오톡 안으로 들어오는 카나나 AI — 6월 업데이트 핵심 정리](https://abounding-helmet-0e4.notion.site/AI-6-38b73c7b15ad81dfa53dfd9262efca8e?pvs=149)
-
-## 출처
-
 - [https://abounding-helmet-0e4.notion.site/AI-6-38b73c7b15ad81dfa53dfd9262efca8e?pvs=149](https://abounding-helmet-0e4.notion.site/AI-6-38b73c7b15ad81dfa53dfd9262efca8e?pvs=149)

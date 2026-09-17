@@ -119,8 +119,5 @@ AI에게 자율권을 부여하더라도 사고를 방지하기 위해 문서 �
 - **무료 vs 유료:** Claude 무료 버전으로도 충분히 활용 가능하나, Claude Code를 사용하거나 더 높은 성능을 원할 경우 유료 결제를 고려할 수 있습니다. 무료 대안으로는 Gemini, ChatGPT 등을 활용하여 유사한 방식으로 적용해볼 수 있습니다.
 
 ## 출처
-[나만의 AI 회사 만들기_가이드_초보자편](https://assorted-tennis-365.notion.site/AI-_-_-3a9c680c75f08065b285dca9b41ac6ed?pvs=149)
-
-## 출처
 
 - [https://assorted-tennis-365.notion.site/AI-_-_-3a9c680c75f08065b285dca9b41ac6ed?pvs=149](https://assorted-tennis-365.notion.site/AI-_-_-3a9c680c75f08065b285dca9b41ac6ed?pvs=149)

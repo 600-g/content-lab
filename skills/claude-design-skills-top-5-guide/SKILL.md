@@ -162,8 +162,4 @@ claude mcp add figma -s user -- npx figma-developer-mcp --figma-api-key=[피그�
 
 ## 출처
 
-[클로드 디자인 스킬 TOP 5 설치 가이드](https://fieldby.notion.site/TOP-5-392d730b3953818184e8c0700d2d7548?pvs=149)
-
-## 출처
-
 - [https://fieldby.notion.site/TOP-5-392d730b3953818184e8c0700d2d7548?pvs=149](https://fieldby.notion.site/TOP-5-392d730b3953818184e8c0700d2d7548?pvs=149)

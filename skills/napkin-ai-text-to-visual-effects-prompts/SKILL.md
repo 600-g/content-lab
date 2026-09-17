@@ -135,8 +135,4 @@ Transform all filled areas into folded pastel origami paper with soft rounded cr
 
 ## 출처
 
-[📌Napkin AI 입문 가이드 (복잡한 생각을 5초 만에 비주얼로)](https://napkinaibyaduai.netlify.app/)
-
-## 출처
-
 - [https://napkinaibyaduai.netlify.app/?fbclid=PAVERFWASJXqlleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAacjyhi_ZtYV2dLaF24Yg8y5J_HaEu2F4ALqSWH56DYRq6iyQ-1z90Ol1VgKag_aem_7c3jEJSADGkppFvhDIC49A](https://napkinaibyaduai.netlify.app/?fbclid=PAVERFWASJXqlleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAacjyhi_ZtYV2dLaF24Yg8y5J_HaEu2F4ALqSWH56DYRq6iyQ-1z90Ol1VgKag_aem_7c3jEJSADGkppFvhDIC49A)

@@ -145,8 +145,5 @@ Vault/
 - Personal의 날것 메모를 검증 없이 바로 Shared-Knowledge로 옮기면 신뢰도가 떨어진다. 반드시 "두 번 이상 썼다" 기준을 거친 뒤 승격한다.
 
 ## 출처
-[클로드코드x옵시디언으로 제 2의 뇌 만들기](https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149)
-
-## 출처
 
 - [https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149](https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149)
