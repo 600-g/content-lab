@@ -7,11 +7,30 @@ MIN_TEXT_LEN(500) 미달이라 _retry 가 None 을 반환 → 3단계 requests �
 """
 from __future__ import annotations
 
+import contextlib
 import unittest
 from unittest import mock
 
+import scripts.scraper as scraper_pkg
 from scripts.scraper import router
 from scripts.scraper.router import ScrapeResult
+
+
+@contextlib.contextmanager
+def _stub_modules(web, fallback):
+    """router 의 `from . import web / mcp_fallback / jina` 를 대역으로 바꾼다.
+
+    ★ sys.modules 만 갈아끼우면 안 된다 — `from . import X` 는 **패키지 속성**을 먼저 보므로,
+    앞선 테스트가 진짜 모듈을 한 번이라도 import 했다면 패치가 통째로 무력화되고 실제 Playwright 가
+    돈다 (2026-09-20 실측: 체인 테스트 5건이 example.com 을 진짜로 긁어 129자를 받고 30초 소요).
+    패키지 속성을 직접 갈아끼워 import 순서와 무관하게 만든다.
+    """
+    no_jina = mock.Mock()
+    no_jina.scrape.return_value = None   # v5.4 4단계는 이 파일의 관심사가 아니다
+    with mock.patch.object(scraper_pkg, "web", web, create=True), \
+         mock.patch.object(scraper_pkg, "mcp_fallback", fallback, create=True), \
+         mock.patch.object(scraper_pkg, "jina", no_jina, create=True):
+        yield
 
 
 def _res(text: str, *, ok: bool = True, source: str = "web") -> ScrapeResult:
@@ -76,6 +95,8 @@ class RetryKeepsBestTest(unittest.TestCase):
 
 
 class ScrapeChainTest(unittest.TestCase):
+    """v5.4 부터 체인 끝에 Jina Reader 가 붙는다 — 여기서는 항상 꺼두고 3단계까지만 본다."""
+
     """scrape() 전체 체인 — Playwright 짧은 결과 vs requests 폴백."""
 
     def _run(self, playwright_texts, fallback_text):
@@ -83,10 +104,7 @@ class ScrapeChainTest(unittest.TestCase):
         pw.scrape.side_effect = [_res(t) for t in playwright_texts]
         fb = mock.Mock()
         fb.scrape.return_value = _res(fallback_text)
-        with mock.patch.dict("sys.modules", {
-            "scripts.scraper.web": pw,
-            "scripts.scraper.mcp_fallback": fb,
-        }), mock.patch.object(router.time, "sleep"):
+        with _stub_modules(pw, fb), mock.patch.object(router.time, "sleep"):
             return router.scrape("https://example.com/page")
 
     def test_playwright_477_beats_fallback_103(self):
@@ -102,10 +120,7 @@ class ScrapeChainTest(unittest.TestCase):
         fb = mock.Mock()
         pw = mock.Mock()
         pw.scrape.return_value = _res("a" * 1200)
-        with mock.patch.dict("sys.modules", {
-            "scripts.scraper.web": pw,
-            "scripts.scraper.mcp_fallback": fb,
-        }):
+        with _stub_modules(pw, fb):
             got = router.scrape("https://example.com/page")
         fb.scrape.assert_not_called()
         self.assertEqual(len(got.text), 1200)
@@ -115,10 +130,7 @@ class ScrapeChainTest(unittest.TestCase):
         pw.scrape.side_effect = [_res("a" * 300), _res("a" * 300)]
         fb = mock.Mock()
         fb.scrape.side_effect = RuntimeError("connection reset")
-        with mock.patch.dict("sys.modules", {
-            "scripts.scraper.web": pw,
-            "scripts.scraper.mcp_fallback": fb,
-        }), mock.patch.object(router.time, "sleep"):
+        with _stub_modules(pw, fb), mock.patch.object(router.time, "sleep"):
             got = router.scrape("https://example.com/page")
         self.assertEqual(len(got.text), 300, "폴백이 터져도 확보한 본문은 남아야 한다")
 
@@ -127,10 +139,7 @@ class ScrapeChainTest(unittest.TestCase):
         pw.scrape.side_effect = RuntimeError("goto timeout")
         fb = mock.Mock()
         fb.scrape.side_effect = RuntimeError("dns")
-        with mock.patch.dict("sys.modules", {
-            "scripts.scraper.web": pw,
-            "scripts.scraper.mcp_fallback": fb,
-        }), mock.patch.object(router.time, "sleep"):
+        with _stub_modules(pw, fb), mock.patch.object(router.time, "sleep"):
             got = router.scrape("https://example.com/page")
         self.assertFalse(got.ok)
         self.assertTrue(got.error)

@@ -307,6 +307,20 @@ def scrape(url: str) -> ScrapeResult:
     if best is not None and best is not fallback:
         logger.info("폴백보다 Playwright 결과가 김 (%d자 > %d자) → Playwright 채택",
                     _text_len(result), _text_len(fallback))
+
+    # 4단계 — Jina Reader (v5.4). 여기까지 와서도 본문이 짧다면 렌더 실패일 가능성이 크다.
+    # 무료·키 불필요라 쿼터 부담이 없다. 단 로그인 벽은 못 뚫으므로 사전 차단된 URL 에는 부르지 않는다
+    # (그건 '못 읽은' 게 아니라 '읽지 않기로 한' 것이다). 더 짧으면 기존 결과가 그대로 남는다.
+    if not getattr(best, "skip_reason", None) and _text_len(best) < MIN_TEXT_LEN:
+        try:
+            from . import jina
+            jr = jina.scrape(url, source_type=source)
+            if jr is not None and jr.ok:
+                logger.info("Jina Reader 폴백: %d자 (직전 최선 %d자)", _text_len(jr), _text_len(best))
+            best = pick_best(best, jr)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Jina Reader 폴백 예외 (무시하고 기존 결과 유지): %s", e)
+
     return best if best is not None else ScrapeResult(
         url=url, source_type=source, title="", text="", meta={},
         ok=False, error="모든 스크래퍼가 본문을 가져오지 못했습니다",
