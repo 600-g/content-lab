@@ -2,513 +2,298 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 먼저 알 것
+
+1. **스킬의 원본은 `skills/{slug}/SKILL.md` 파일 그 자체다.** 편집 엔드포인트는 없다 — 고치려면 파일을 고친다. mtime 감지로 검색·카탈로그·MCP 에 재시작 없이 반영된다.
+2. **테스트는 unittest** — `venv/bin/python -m unittest discover -s tests -t .`. ★ pytest 는 venv 에 없다. 규칙은 **네트워크 0 · 디스크 부작용 0**.
+3. **코드를 고쳤으면 `launchctl kickstart -k "gui/$(id -u)/com.doogeun.aiskillbox"`.** `app.run(debug=False)` 라 자동 리로드가 없다. dev 는 `AISKILLBOX_PORT=5051 venv/bin/python app.py` (5050 은 launchd 가 쥐고 있다).
+4. **사이트는 초대코드로 전체 잠금이다.** `/healthz`·`/mcp`·`/oauth/*` 외 모든 `/api/*` 는 무토큰이면 401 이 정상 — curl 은 `-H "X-Auth-Token: $TOKEN"`. 예외 목록의 단일 진실은 `scripts/auth_routes.py:_ALLOW_EXACT` (여기에 베끼지 않는다).
+5. **로그는 `logs/launchd_stderr.log`** (수십 MB 무로테이션, ANSI 이스케이프 혼입). stdout 은 기동 배너뿐. 커넥터 생사 진단 1순위는 `grep -a "POST /oauth/token" logs/launchd_stderr.log | tail`.
+6. **grep 할 때 `.claude/worktrees/`(v4.5 시절 전체 사본)·`venv/`·`__pycache__` 를 제외할 것** — 안 하면 옛 코드가 현행으로 잡힌다.
+7. **문서보다 코드가 단일 진실인 것**: 본문 섹션(`scripts/analyzer/prompt.py:ALLOWED_HEADINGS`) · 게이트 예외(`auth_routes.py:_ALLOW_EXACT`) · MCP 도구(`scripts/library/mcp_server.py:TOOLS`) · enum(`analyzer/prompt.py` + `notion_client/register.py`). 이 문서가 목록을 들고 있던 동안 코드가 바뀐 적이 세 번이다.
+8. **명령어는 전부 `venv/bin/python`** — 이 맥에 bare `python` 이 없다.
+
 ## What this is
 
-**aiskillbox** (콘텐츠랩 v5.4) — URL 한 줄 **또는 붙여넣은 텍스트** 입력 → 스크래핑 → AI 분석 → ECC 표준 `SKILL.md` 자동 생성 → 글로벌 설치 → **스킬 라이브러리(도서관)** 에 즉시 등재 (하이브리드 검색 API · MCP · 카탈로그 HTML). Notion 마스터 DB 등록은 v4.5 부터 **옵션** (`config.json notion.register_on_collect`, 기본 off). 제출은 순차 큐로 비차단 처리, 완료 시 Web Push 알림.
+**aiskillbox** — URL 한 줄 또는 붙여넣은 텍스트 → 스크래핑 → AI 분석 → `SKILL.md` 자동 생성 → 글로벌(`~/.claude/skills/`) + mirror(`skills/`) 설치 → **스킬 라이브러리**에 즉시 등재(검색 API · 카탈로그 · MCP). 제출은 순차 큐, 완료 시 Web Push.
 
-- **v4.6 전체 잠금**: 사이트 전체(수집 UI·카탈로그·라이브러리 API)가 초대코드 로그인 필요. 예외는 `/login`·`/api/auth/redeem|bootstrap`·`/healthz`(112 모니터)·`/static/*`·`/sw.js`·`/favicon.ico` 와 v5.0 원격 MCP 경로(`/mcp`·`/oauth/*` 4종·`/.well-known/*` 3종) 뿐 — 목록의 단일 진실은 `scripts/auth_routes.py:_ALLOW_EXACT`(정확 일치, gotcha 43). 첫 진입/복구는 `/login` 의 "관리자 첫 등록(PIN)". 설계: `docs/superpowers/specs/2026-08-22-invite-auth-design.md`
-- 게시판(도서관): https://aiskillbox.600g.net/catalog — 카테고리 섹션 + 칩 필터 + 카드/목록 전환. **제목 클릭 = 사이트 안 게시글** `/skill/<slug>` (본문 전문·SKILL.md 복사·같은 카테고리 글), 외부로 나가는 링크는 [원본 ↗] 하나뿐 · 검색 API: `GET /api/library/search?q=` · MCP: `scripts/library/mcp_server.py`
-- 채팅(v4.8): **Opus 5 · SSE 실시간 스트리밍 · 대화 기억**. `POST /api/chat/stream` 이 `status/delta/tool/done` 이벤트를 흘리고, `conv_id` 로 `claude --resume` 세션을 이어 앞 턴을 기억한다. `POST /api/chat/reset` = 새 대화.
-- 입력(v4.9): 메인 폼이 **[🔗 링크] / [✍️ 텍스트] 2탭**. 텍스트 탭은 스크랩을 건너뛰고 붙여넣은 본문을 바로 분석한다 (최소 200자). 로그인 벽 때문에 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 뉴스레터, 워크스페이스 전용 노션)의 정식 경로. 링크칸에 본문을 붙여넣어도 자동으로 텍스트 탭으로 넘어간다.
-- **미디어 이해 (v5.1)**: 인스타 릴스·피드 캐러셀·자막 없는 유튜브의 **내용**을 읽는다. 인스타는 공개 embed 엔드포인트(로그인·yt-dlp 불필요)에서 캡션 + 영상/슬라이드 URL 을 얻고, `analyzer/media_understand.py` 가 Gemini 멀티모달(flash-lite 우선)로 음성·화면 텍스트를 본문에 덧붙인다. 설계: `docs/superpowers/specs/2026-09-12-media-understanding-design.md`
-- **분석 1순위 = Claude 구독 (v5.2)**: SKILL.md 본문을 만드는 `analyze()` 가 **Claude Sonnet 5(`claude -p`) → Gemini → Gemma** 순으로 돈다 (`analyzer/claude_cli.py`). 슬라이드(카드뉴스) 판독도 Claude(Read 도구) 가 먼저, 영상·유튜브는 Claude 가 입력을 못 받아 계속 Gemini. 한도 메시지가 뜨면 30분 쿨다운 후 Gemini/Gemma. 스위치 `config.json analyzer.claude_enabled` (재시작 불필요) · 긴급 env `ANALYZER_CLAUDE=0`. 어느 LLM 이 만들었는지 잡 summary `stages.analyze.provider` 와 로그 `AI 분석 완료 — provider=…` 에 남는다.
-- **Jina Reader 폴백 (v5.4)**: Playwright·requests 가 껍데기만 가져오면(`MIN_TEXT_LEN` 미만) `r.jina.ai` 로 한 번 더 읽는다. 키·로그인 불필요, 무료. 실측 2026-09-20: 렌더 실패로 95자였던 공개 노션 페이지를 5,167자로 복구. 사전 차단(`skip_reason`)된 URL 에는 부르지 않는다 — 그건 '못 읽은' 게 아니라 '읽지 않기로 한' 것이다 (로그인 벽은 Jina 도 못 뚫는다).
-- **등급 = 활용도, 소장은 전부 (v5.3)**: S 즉시 실행(복붙 가능한 프롬프트·명령·코드로 그대로 결과) / A 절차형(단계는 있으나 사용자가 채울 부분) / B 개념·방법론(원리·체크리스트, 실행은 스스로 설계) / C 정보·소개(도구 소개·기능 목록·뉴스, 따라 할 절차 없음). **C 도 등록한다** — 활용도가 낮다는 표시일 뿐 제외 사유가 아니다 (v5.2 까지는 C 면 미등록). rubric 은 `analyzer/prompt.py` 와 `library/regrade.py` 두 곳에 같은 문장으로 — 어긋나면 안 된다.
-- **중복은 합쳐 간소화 (v5.3)**: 같은 주제를 다른 출처로 또 받는 게 정상 흐름이라 매번 쌓지 않는다. 수집 시 의미 dedup(0.90+) 의 최종 확인이 Claude(→Gemma) 로 바뀌었고 두 카테고리를 근거로 넘긴다. 이미 쌓인 중복은 `python -m scripts.library.consolidate <keeper> <absorbed>` 로 흡수 (백업 후 삭제, 출처 합집합). 원칙: 정확히 유사 + 카테고리 겹침이면 합침, 관점이 다르면 분리.
-- **원격 MCP (v5.0)**: `POST /mcp` (Streamable HTTP) + OAuth 2.1 인가서버. claude.ai 웹·모바일·Cowork 에 커스텀 커넥터로 붙는다. 읽기 전용 3종 도구. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md`
-- 설계: `docs/superpowers/specs/2026-08-20-skill-library-design.md`
+- 사람이 보는 곳: https://aiskillbox.600g.net (`/catalog` 게시판, `/skill/<slug>` 게시글). Local: http://localhost:5050 (launchd `com.doogeun.aiskillbox`, Cloudflare Tunnel token-mode)
+- AI 가 보는 곳: `GET /api/library/search?q=` · stdio MCP(`scripts/library/mcp_server.py`, Claude Code 용) · 원격 MCP(`POST /mcp` + OAuth 2.1, claude.ai 웹·모바일·Cowork 용). **읽기 전용 3종 도구**(`search_skills`/`get_skill`/`list_skills`).
+- Notion 등록은 옵션(`config.json notion.register_on_collect`, 기본 **off**). 켤 때만 `docs/notion-migration.md`.
 
-좋은 콘텐츠를 한 번 보고 끝내지 않고 **스킬 자산**으로 영구 활용 가능한 형태로 보관. 두근컴퍼니의 모든 다른 AI 에이전트가 이 DB와 글로벌 `~/.claude/skills/` 에서 자동으로 활용.
-
-- Live: https://aiskillbox.600g.net (Cloudflare Tunnel, token-mode)
-- Local: http://localhost:5050 (Flask, launchd `com.doogeun.aiskillbox`)
+설계 스펙은 `docs/superpowers/specs/` (`ls` 로 확인). 릴리스 이력은 `docs/CHANGELOG.md` 와 `git log --oneline`.
 
 ## Common commands
 
 ```bash
-# venv (첫 실행 시 aiskillbox_start.sh 가 자동 처리하기도 함)
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-playwright install chromium
+# venv 는 aiskillbox_start.sh 가 첫 실행 때 만든다. 손으로 할 때만:
+python3 -m venv venv && venv/bin/pip install -r requirements.txt && venv/bin/playwright install chromium
 
-# 수집 — CLI 한 줄
-python -m scripts.collect "https://youtu.be/<영상ID>"
-python -m scripts.collect "<URL>" --no-notion        # Notion 등록 생략
-python -m scripts.collect "<URL>" --skip-duplicate   # 중복 시 합병 안 하고 스킵
+# 수집
+venv/bin/python -m scripts.collect "https://youtu.be/<id>"
+venv/bin/python -m scripts.collect "<URL>" --skip-duplicate          # 중복 시 합병 안 하고 스킵
+venv/bin/python -m scripts.collect --text-file ./본문.md --title "제목"   # 스크랩 불가 출처 (최소 200자)
+pbpaste | venv/bin/python -m scripts.collect --text -
 
-# 수집 — 텍스트 직접 입력 (v4.9, 스크랩 불가 출처용). 최소 200자
-python -m scripts.collect --text-file ./본문.md --title "제목"
-pbpaste | python -m scripts.collect --text -                       # 클립보드 그대로
-python -m scripts.collect "https://chatgpt.com/share/x" --text-file ./본문.md   # 원본 URL 을 출처로 기록
+# 컴파일 사전 검증 (변경 후 항상). bash 는 ** 를 재귀 확장하지 않는다 — find 로.
+find scripts -name '*.py' -not -path '*/__pycache__/*' -print0 | xargs -0 venv/bin/python -m py_compile app.py
 
-# 미디어 이해 (v5.1) — 릴스/피드/자막 없는 유튜브. 결과 캐시는 key(shortcode:순번, yt:id) 기준
-python3 -c "import json;d=json.load(open('logs/media_cache.json'));print(len(d),'건');[print(k,len(v['text']),'자') for k,v in list(d.items())[-5:]]"
-venv/bin/python -m unittest tests.test_instagram_embed tests.test_media_understand -v   # 네트워크 0
-
-# 컴파일 사전 검증 (변경 후 항상)
-python -m py_compile app.py scripts/**/*.py
-
-# 서비스 (launchd, 코드 수정 후 반영)
+# 서비스
 launchctl kickstart -k "gui/$(id -u)/com.doogeun.aiskillbox"
 launchctl load -w ~/Library/LaunchAgents/com.doogeun.aiskillbox.plist
-tail -f logs/launchd_stdout.log
+grep -a "AI 분석 완료\|Claude 한도\|Jina" logs/launchd_stderr.log | tail -20   # tail -f 보다 이게 기본 (수십 MB)
 
-# 분석 프로바이더 (v5.2) — 1순위 Claude 구독(claude -p, Sonnet 5). 슬라이드 판독도 같은 스위치.
-#   끄기/모델/쿨다운은 config.json analyzer.* (mtime 재적재 — 재시작 불필요). 실측: 스킬 1건 50초·~20k 토큰, 슬라이드 2장 6초
-grep -a "AI 분석 완료\|Claude 한도" logs/launchd_stderr.log | tail -5   # provider=claude|gemini-2.5-…|gemma · 한도 쿨다운 이력
-
-# 라이브러리 큐레이션 (v5.3)
-venv/bin/python -m scripts.library.regrade                        # 활용도 등급 재판정 dry-run (Claude, 6건/호출, 20초 간격)
-venv/bin/python -m scripts.library.regrade --apply --recategorize # 적용 (grade 항상, category 도 교체, 비어있는 난이도·도구 채움)
-venv/bin/python -m scripts.library.consolidate <keeper> <absorbed> [<absorbed2>…]   # 중복 스킬 흡수 (백업 logs/backup_consolidate_*)
-
-# 초대코드 (v4.6 전체 잠금) — 발급/목록/삭제(삭제 = 그 코드 기기 전부 로그아웃)
-python -m scripts.auth_store create "폰" && python -m scripts.auth_store list
-# 첫 진입/전기기 로그아웃 복구: /login → "관리자 첫 등록" 에 ADMIN_PIN
-# 에이전트/외부 MCP 는 redeem 응답의 token 을 AISKILLBOX_TOKEN env 로
-
-# 스킬 라이브러리 (v4.5) — 검색 / 카탈로그 / MCP
-python -m scripts.library search "토큰 절약" -k 5          # 터미널 하이브리드 검색 (키 없으면 키워드만)
-python -m scripts.library stats                             # 인덱스 통계 (총/카테고리/등급/임베딩)
-python -m scripts.library build-catalog --out logs/catalog.html   # 정적 단일 HTML (서버는 /catalog 로 자동 서빙)
-curl -s "http://localhost:5050/api/library/search?q=인스타+릴스&k=5" | python3 -m json.tool
-curl -s "http://localhost:5050/api/library/skills/<slug>?format=raw"   # SKILL.md 전문
-# ★ 토큰을 반드시 같이 넣을 것 — 빠뜨리면 401 → 로컬 인덱스로 **조용히** 폴백한다 (결과는 나오므로 눈치채기 어렵다)
-TOKEN=$(python3 -c 'import sys;sys.path.insert(0,"'$HOME'/Developer/my-company/content-lab");from scripts.auth_store import get_store;s=get_store();print(s.redeem(s.create_code("claude-code 로컬 MCP")))')
-claude mcp add --scope user skill-library -e AISKILLBOX_TOKEN="$TOKEN" -- python3 ~/Developer/my-company/content-lab/scripts/library/mcp_server.py
-#   외부 기기: -e AISKILLBOX_URL=https://aiskillbox.600g.net (표준 라이브러리만 — venv 불필요)
-#   폴백 여부 확인: 검색 결과 헤더가 "의미검색 포함" 이면 정상, "로컬 인덱스 폴백" 이면 토큰이 안 먹은 것
-#   ~/.claude.json 의 mcpServers.skill-library.env 를 보면 현재 토큰 설정 여부를 알 수 있다 (설정 변경 후 Claude Code 재시작 필요)
-# 테스트 — unittest 전용 (★ pytest 는 venv 에 없다). 388건 · ~2.4초 · 네트워크 0
+# 테스트 — unittest 전용 (★ pytest 없음). 네트워크 0 · 수 초
 venv/bin/python -m unittest discover -s tests -t .
-venv/bin/python -m unittest tests.test_mcp_transport -v                                   # 파일 하나
-venv/bin/python -m unittest tests.test_mcp_transport.TransportTest.test_bad_token_is_401   # 메서드 하나
+venv/bin/python -m unittest tests.test_mcp_transport -v
+venv/bin/python -m unittest tests.test_mcp_transport.TransportTest.test_bad_token_is_401
 
-# 헬스 + 외부 검증 (응답의 version 은 app.py:/healthz 하드코딩 — 릴리스마다 손으로 올린다. 2026-09-14 현재 "5.2")
-curl -s http://localhost:5050/healthz | python3 -m json.tool
-curl -s https://aiskillbox.600g.net/healthz | python3 -m json.tool
+# 라이브러리 — 토큰부터 발급 (게이트 안이라 없으면 401)
+TOKEN=$(venv/bin/python -c 'from scripts.auth_store import get_store;s=get_store();print(s.redeem(s.create_code("로컬 작업")))')
+curl -s -H "X-Auth-Token: $TOKEN" "localhost:5050/api/library/search?q=인스타+릴스&k=5" | python3 -m json.tool
+curl -s -H "X-Auth-Token: $TOKEN" "localhost:5050/api/library/skills/<slug>?format=raw"
+venv/bin/python -m scripts.library search "토큰 절약" -k 5     # ★ .env 를 안 읽는다 — venv 활성화 없이 돌리면 키워드만 (gotcha 42)
+venv/bin/python -m scripts.library stats
+venv/bin/python -m scripts.library build-catalog --out logs/catalog.html
+venv/bin/python -m scripts.library.repair sources            # 이중 출처 점검 (dry-run) · --apply 로 수선. mirror + 글로벌 동시, 멱등
+venv/bin/python -m scripts.library.regrade                   # 등급 재판정 — dry-run 기본, --apply --recategorize 로 적용
+venv/bin/python -m scripts.library.consolidate --dry-run <keeper> <absorbed>   # ⚠️ 이건 반대로 적용이 기본이다 — 먼저 --dry-run
+venv/bin/python -m scripts.library.consolidate <keeper> <absorbed>             #    absorbed 를 즉시 rmtree (백업 logs/backup_consolidate_*)
 
-# Notion 인티그레이션 권한 확인
-source .env && curl -s -X POST "https://api.notion.com/v1/search" \
-  -H "Authorization: Bearer ${NOTION_API_KEY}" \
-  -H "Notion-Version: 2022-06-28" \
-  -H "Content-Type: application/json" -d '{"page_size":10}' \
-  | python3 -c "import json,sys;print(len(json.load(sys.stdin).get('results',[])),'건 접근 가능')"
+# stdio MCP 를 Claude Code 에 붙일 때 — 토큰 없으면 401 → 로컬 인덱스로 조용히 폴백한다 (결과는 나오니 눈치채기 어렵다)
+claude mcp add --scope user skill-library -e AISKILLBOX_TOKEN="$TOKEN" -- python3 ~/Developer/my-company/content-lab/scripts/library/mcp_server.py
+#   외부 기기는 -e AISKILLBOX_URL=https://aiskillbox.600g.net 추가. 폴백 여부는 검색 결과 헤더("의미검색 포함" 이면 정상)
 
-# DB 전수 큐레이션 batch
-python -m scripts.curate_db analyze              # 변경 X, 분석만
-python -m scripts.curate_db fix-emoji            # 제목 첫 이모지 → 아이콘 이동
-python -m scripts.curate_db fix-meta             # Gemini로 카테고리/등급 재평가
-python -m scripts.curate_db polish-body --limit 1 --dry  # 본문 1건 미리보기
-python -m scripts.curate_db all                  # 전체 순차
+# 초대코드 (삭제 = 그 코드로 붙은 기기·커넥터 전부 즉시 로그아웃)
+venv/bin/python -m scripts.auth_store create "폰" && venv/bin/python -m scripts.auth_store list
+# 전 기기 로그아웃 복구: /login → "관리자 첫 등록" 에 ADMIN_PIN
 
-# v2.3 보편 정보 템플릿 전환 워크플로 (DB 정리 — 항상 백업부터)
-python -m scripts.backup_all                                    # 1) 백업 (logs/backup_v27_{date}/)
-python -m scripts.audit_loss                                    # 2) 손실 점검 (백업 vs 현재 노션)
-python -m scripts.audit_pages                                   # 3) 가독성/일관성 종합 점검
-python -m scripts.rebuild_template --engine gemma               #    dry-run (LLM 재작성 미리보기)
-python -m scripts.rebuild_template --engine gemma --apply       #    적용 (캐시 자동 사용, 100단위 chunk)
-python -m scripts.rebuild_template --engine gemma --apply --use-cache  # 캐시만 사용 (LLM 재호출 X)
-python -m scripts.rebuild_template --engine gemma --apply --only 옵시디언 --min-score 0.65  # 단일 + 임계값 조정
-python -m scripts.recategorize --apply                          # 카테고리 재분류 + 아이콘 동기화
-python -m scripts.rename_headings --apply                       # H2 헤더 한글 친화 통일
-python -m scripts.demote_h2_to_h3 --apply                       # 비표준 H2 → H3 강등
-python -m scripts.strip_meta_quotes --apply                     # TL;DR/메타 quote 박스 제거
-python -m scripts.restore_from_backup --apply "키워드"           # 백업에서 원본 raw_blocks 복원 (LLM 변환 실패 시)
-
-# 원격 MCP 커넥터 (claude.ai 웹/모바일/Cowork) — v5.0
-curl -s https://aiskillbox.600g.net/.well-known/oauth-protected-resource | python3 -m json.tool
-venv/bin/python -m scripts.mcp_remote client list          # 붙어있는 커넥터
-venv/bin/python -m scripts.mcp_remote client delete <id>   # 커넥터 끊기 (딸린 토큰까지 폐기)
-#   커넥터 연결은 초대코드에 묶인다 → 초대코드 삭제하면 그 커넥터도 즉시 끊긴다
-#   (묶이는 코드 = 동의 화면에서 로그인한 코드. 재연결 때 커넥터 전용 코드로 로그인해야 이 설계가 유지된다)
-grep -a "POST /oauth/token" logs/launchd_stderr.log | tail -5              # ★ 생사 진단 1순위 — 갱신이 오면 살아있다
+# 원격 MCP 커넥터 (claude.ai)
+venv/bin/python -m scripts.mcp_remote client list
+grep -a "POST /oauth/token" logs/launchd_stderr.log | tail -5              # ★ 생사 1순위 — 갱신이 오면 살아있다
 grep -a "POST /mcp" logs/launchd_stderr.log | grep -a '" 401 ' | tail -5   # 401 뒤에 /oauth/token 이 안 오면 진짜 단절, 요청 자체가 없으면 idle
-#
-#   ★ 새 커넥터를 붙일 때는 dynamic_registration 을 켜지 말고 클라이언트를 손으로 발급한다.
-#     켜는 동안 인터넷 누구나 등록할 수 있고 등록 개수 상한이 없다. 아래가 그 안전한 경로:
 venv/bin/python -m scripts.mcp_remote client create "Claude" \
-  --redirect-uri https://claude.ai/api/mcp/auth_callback \
-  --redirect-uri https://claude.com/api/mcp/auth_callback
-#   → 출력된 client_id/secret 을 claude.ai 커넥터 추가 화면의 [고급 설정] 에 넣는다.
-#     secret 은 이때 한 번만 보인다. 비워두면 claude.ai 가 동적 등록을 시도하다 404 로 실패한다.
-#   부득이 dynamic_registration 을 켰다면 되돌린 직후 반드시 `client list` 로 낯선 클라이언트 확인.
+  --redirect-uri https://claude.ai/api/mcp/auth_callback --redirect-uri https://claude.com/api/mcp/auth_callback
+#   ★ dynamic_registration 은 켜지 말 것 — 켜는 동안 누구나 등록 가능, 상한 없음. 위 수동 발급이 정식 경로.
+#     secret 은 이때 한 번만 보인다 → claude.ai 커넥터 추가 화면 [고급 설정] 에 넣는다.
+
+# 헬스 (version 은 app.py 하드코딩 — grep -n '"version"' app.py 로 확인, 릴리스마다 손으로 올린다)
+curl -s localhost:5050/healthz | python3 -m json.tool
+
+# 푸시 확인 — 스킬과 코드의 유일본이 이 맥에 있다
+git status --short && git log --oneline origin/main..HEAD
 ```
 
 ## High-level architecture
 
+### 요청 조립과 게이트
+
+게이트는 `before_request` **하나**(`auth_routes.py`)라 등록 순서와 무관하게 전 라우트에 걸린다. `/catalog`·`/skill/<slug>`·`/api/library/*` 는 **전부 게이트 안**이다 (`library/routes.py` 의 docstring "공개 API" 는 v4.6 이전 stale). chat/library/mcp_remote 는 try/except 로 등록하지만 **`register_auth` 만 의도적으로 무보호** — 게이트 실패 시 무보호로 뜨는 대신 기동 실패(healthz 죽음 → 112 감지)가 낫다.
+
 ### 데이터 흐름 (collect.py 한 사이클)
 
 ```
-URL 입력 (CLI / 웹UI / Telegram)          텍스트 붙여넣기 (웹UI [✍️ 텍스트] 탭 / CLI --text)
-  ↓                                          ↓
-scripts/scraper/router.py                 scripts/scraper/plain_text.py
-  ── detect_source() → 전용 스크래퍼          ── 스크랩 생략, 본문을 ScrapeResult 로 포장
-     → Playwright → requests 폴백 (3단)         출처 = paste://<sha16> (또는 사용자가 준 원본 URL)
-  ↓ ScrapeResult                            ↓ ScrapeResult (source_type="text")
-scripts/analyzer/media_understand.py ── (meta["media"] 가 있을 때만) 영상 → Gemini Files API, 슬라이드 → Claude(Read) → Gemini inline, 유튜브 → URL 직접
-  ── 음성·화면 텍스트를 본문 끝 [영상 내용]/[슬라이드 텍스트] 섹션으로. 캐시 logs/media_cache.json (provider 기록)
-  ↓ 텍스트가 보강된 ScrapeResult (500자 게이트는 그 뒤)
-scripts/analyzer/gemini.py ── Claude Sonnet 5(구독 claude -p) → Gemini 2.5 Flash → Flash Lite → Gemma 4 26B(로컬) 4단 폴백 (v5.2)
-  ↓ AnalysisResult (8섹션 + 메타)
-중복 검사 (mirror + 글로벌 슬러그 + Notion URL) → 있으면 scripts/analyzer/merger.py 로 합병
+URL (CLI / 웹 / Telegram)                      텍스트 붙여넣기 (웹 [✍️ 텍스트] 탭 / CLI --text)
+  ↓                                              ↓
+scripts/scraper/router.py                      scripts/scraper/plain_text.py (스크랩 생략, paste://<sha16>)
+  IG embed 선행 → 사전차단 2종 → 전용 스크래퍼 → Playwright×2 → requests → Jina 4단
+  각 결과를 pick_best() 로 겨룬다 (임계 미달 ≠ 부재, gotcha 38). MIN_TEXT_LEN=500 (env SCRAPER_MIN_TEXT_LEN)
+  ↓ ScrapeResult
+scripts/analyzer/media_understand.py ── meta["media"] 가 있을 때만. 영상 → Gemini Files API, 슬라이드 → Claude(Read) → Gemini, 유튜브 → URL
+  ↓ (500자 게이트는 이 뒤)
+scripts/analyzer/gemini.py:analyze ── Claude Sonnet 5(claude -p) → Gemini Flash → Flash Lite → Gemma(로컬)
+  ↓ AnalysisResult
+중복 5단 사다리 (collect.py ~380-431) — 순서가 곧 안전장치, 오합병 사고 3건의 방어가 전부 여기 있다:
+  ① 글로벌 슬러그 + _lab_origin 가드(非 content-lab 이면 _next_free_slug 로 회피)
+  ② mirror 슬러그  ③ _sources_contain 미스면 GENERIC_SLUGS 차단 + _confirm_semantic_merge LLM 게이트
+  ④ mirror frontmatter sources 일치(installer.py — 본문 스캔 아님)  ⑤ 임베딩 dedup + 같은 LLM 게이트
+  → 있으면 analyzer/merger.py 합병
   ↓
-scripts/skill_builder/md_generator.py ── ECC 표준 SKILL.md 렌더 (프론트매터 + 본문)
-  ↓ 동시 저장
-  ├─ ~/.claude/skills/{slug}/SKILL.md   (글로벌 ECC, 모든 Claude Code 세션 자동 인식)
-  └─ ./skills/{slug}/SKILL.md            (git 추적용 mirror = **라이브러리 원본** — 저장 즉시 /api/library, /catalog, MCP 에서 검색됨)
-  ↓ (config notion.register_on_collect=true 일 때만)
-scripts/notion_client/register.py ── Notion DB 등록 (또는 update if existing)
+scripts/skill_builder/md_generator.py ── frontmatter 6키 + 자유 본문. 본문 속 `## 출처` 는 _strip_source_section 이 뗀다 (출처는 frontmatter sources 가 단일 진실)
+  ├─ ~/.claude/skills/{slug}/SKILL.md   (글로벌 ECC)
+  └─ ./skills/{slug}/SKILL.md            (mirror = 라이브러리 원본. 저장 즉시 검색·카탈로그·MCP 에 반영)
+  ↓ (config notion.register_on_collect=true 일 때만) notion_client/register.py
+  ↓ (등록 성공 시에만) scripts/sync_hub.py — best-effort
 ```
 
-### LLM 폴백 체인 (`scripts/analyzer/gemini.py:analyze` · `analyzer/claude_cli.py`)
+### LLM 폴백 — 분석과 채팅이 **반대 방향**이다
 
-품질 우선 + 무료 폴백 + quota 무한 보장 (v5.2):
-0. **Claude Sonnet 5** (구독 `claude -p`, API 과금 X) — 도구 0개 + `--json-schema`(enum 강제) + `--setting-sources ""`. 성공하면 Gemini 쿼터를 아예 안 쓴다.
-   한도 메시지 → 30분 쿨다운(`analyzer.claude_cooldown_minutes`). 검증 재요청·보강도 Claude 로 (품질 유지), 막히면 Gemma
-1. **Gemini 2.5 Flash** (cloud, 무료 20/day per project — company-hq 와 키 공유)
-2. **Gemini 2.5 Flash Lite** (cloud, 실측 20/day)
-3. **Gemma 4 26B 또는 e4b** (Ollama localhost:11434, 무제한, cold start 20-30s)
+- **분석(`analyzer/gemini.py:analyze` · `claude_cli.py`)**: Claude Sonnet 5(`claude -p`, 구독·과금 X) → Gemini 2.5 Flash(20/day, company-hq 와 키 공유) → Flash Lite(20/day) → Gemma 4(Ollama, 무제한, cold start 20-90s). 한도 메시지 → 30분 쿨다운(`analyzer.claude_cooldown_minutes`). 스위치 `config.json analyzer.claude_enabled`(mtime 재적재) · 긴급 env `ANALYZER_CLAUDE=0`. 어느 LLM 이 만들었는지는 잡 summary `stages.analyze.provider`.
+- **채팅(`chat/engine.py`)**: `.env` 에 `ANTHROPIC_API_KEY` 가 있으면 **anthropic(과금 API, opus-4-8) 이 먼저** → claude_cli(구독, opus-5) → ollama. **delta 스트리밍·`--resume` 대화 기억은 claude_cli 전용** — anthropic 이 잡히면 status/tool/done 만 흐르고 앞 턴을 기억하지 못한다. 구독 강제는 `config.json chat.provider="claude_cli"`.
+- 같은 폴백 패턴이 `analyzer/merger.py` 와 `library/regrade.py` 에도 있다 (`library/consolidate.py` 는 merger 를 경유). 등급 rubric 은 `analyzer/prompt.py` 와 `library/regrade.py` 두 곳에 **같은 문장** — 어긋나면 안 된다.
 
-같은 패턴이 `analyzer/merger.py`, `curate_db.py` 의 `_gemini_reclassify` / `_gemini_polish_body` 에도 적용.
-환경변수로 모델/타임아웃 튜닝: `GEMMA_MODEL=gemma4:e4b`, `GEMMA_TIMEOUT=300`.
+### 검색·인덱싱 — 캐시가 4겹이다
 
-### Notion DB v2 스키마 (TEMPLATE.md 가 단일 진실)
+- **인덱스**(`library/index.py`): `skills/*/SKILL.md` → frozen 레코드. 무효화 키는 `f"{파일수}-{mtime 초}-{슬러그 디렉터리명 crc32}"` — **본문 내용은 키에 없다.** `cp -p` 복원이나 같은 초 안의 연속 수정은 감지되지 않는다 → `get_index(force=True)` 또는 재기동.
+- **검색**(`library/search.py`): 한글 2-gram BM25(title×3/desc×2/meta×1.5/body×1) + `scripts/skills/embeddings.json` 코사인 + RRF 융합. 임베딩 실패는 키워드만으로 강등되고 응답 `semantic_skip_reason` 에 사유가 실린다.
+- **질의 임베딩은 `@lru_cache`** — **실패(None)도 캐시된다.** 키를 고쳐도 같은 검색어로는 프로세스 수명 내내 키워드만이다. 검증은 다른 검색어로 하거나 재기동.
+- **임베딩 호출은 Gemini 쿼터 게이트 밖이다.** `logs/gemini_quota.json` 게이트는 generateContent 전용. 사이트·MCP·채팅 검색이 **질의마다 embedContent 1콜**을 공유 키로 태운다 (`embedder.py` 는 429 면 WARNING 한 줄 + None).
 
-**중요**: 4곳에서 같은 enum을 써야 함. 변경 시 모두 동시 업데이트:
-- `scripts/analyzer/prompt.py` (`CATEGORIES`, `TAGS`, `AI_TOOLS`, `TARGETS`)
-- `scripts/notion_client/register.py` (`CATEGORY_TO_DB`, `DB_TAGS`, `DIFFICULTY_TO_DB`, `CATEGORY_ICON`)
-- `TEMPLATE.md` (사람용 문서)
-- Notion DB select/multi_select 옵션 (실제 DB)
+### 원격 MCP ↔ stdio MCP — 같은 핸들러다
 
-속성 9개만: `스킬명 / 등급 / 난이도 / 카테고리 / AI 도구 / 태그 / 적용 대상 / 출처 URL / 상태`. v1에서 제거된 5개(수집일/핵심요약/적용메모/출처유형/관련스킬)는 본문 메타 callout에 흡수.
+`mcp_remote/transport.py` 가 등록 시점에 `mcp_server.use_local_backend()` 로 `_FORCE_LOCAL` 을 세우고, `POST /mcp` 는 stdio 와 **같은 `handle()`** 을 재사용한다. **도구를 하나 추가하면 로컬 stdio MCP 와 claude.ai 커넥터에 동시에 노출된다** — "로컬에만" 은 없다. 도구 목록의 단일 진실은 `mcp_server.py:TOOLS`.
 
-### 카테고리(7) vs 태그(15) 분리 원칙
-
-- **카테고리** = "어떤 작업 영역인가?" (select, 1개) — `프롬프트 / 자동화 / 콘텐츠 / 디자인 / 개발 / 업무 / 기타`
-- **태그** = "어떤 기술/방법을 쓰는가?" (multi_select) — `MCP / API / RAG / Function Calling / Vision / Multimodal / 프롬프트체이닝 / CoT / Tool Use / Webhook / Streaming / CLI / GitHub Actions / 자체호스팅 / 오픈소스`
-
-둘이 겹치지 않게 설계. Gemini 프롬프트에서 enum 강제 + register.py에서 enum 미일치 값은 자동 제거.
-
-### 표준 본문 구조 (v2.3 보편 정보, 2026-05-18)
-
-**v2.1 (8섹션 + TL;DR/메타 quote 박스) → v2.3 (callout + 보편 정보 + 한글 친화) 전환 완료**.
-
-`scripts/rebuild_template.py:REBUILD_PROMPT` 가 단일 진실. 모든 페이지가 따르는 형태:
-
-```
-💡 [callout] 이 스킬은 [무엇]을 [어떻게] 하는 [도구/방법]입니다. [한 줄 가치 제안].
-            (Notion callout 블록, 파란 배경 + 💡 아이콘, bold 강조)
-
-## 🔑 어떻게 작동하나요?   ← 메커니즘/원리 (긴 경우 ### H3 분할)
-## 🛠 따라 하기 (단계별)   ← numbered list (**굵은 짧은 라벨**: 설명)
-## 💡 실제 예시            ← 표/코드/대화 (코드는 [[CODE_BLOCK_N]] placeholder 로 보호)
-## ⚡ 이렇게 쓰면 효과적이다 ← 추천 시점 / 시너지 도구 / 수익화 가능성 / 적용 난이도 (보편 권장)
-## ⚠️ 주의할 점            ← 한도/유료/실패 케이스
-## 📎 출처
-(필요시) ## 📌 원본 코드/명령어 (자동 보존) ← placeholder 누락된 코드 자동 rescue
-```
-
-**v2.1 → v2.3 핵심 변경**:
-- `> **TL;DR** —` quote 박스 제거 → **💡 callout** 으로 시각 임팩트
-- `> **메타** ...` quote 박스 제거 → DB properties 와 중복이라 폐지 (등급/카테고리/난이도/도구/대상은 우상단 properties 가 단일 진실)
-- 영문 부제 (When to use / How it works / Steps / Examples / Caveats / Sources) 모두 제거 → 한글 친화 헤더만
-- `## 🏢 두근 환경 적용` → `## ⚡ 이렇게 쓰면 효과적이다` (두근 프로젝트 강제 매핑 폐기 — 보편 정보로)
-- bold (`**`) 적극 활용 — 핵심 명사·도구명·숫자
-- 긴 섹션은 `###` H3 소제목 분할 권장
-
-**보편 정보 원칙**: 두근컴퍼니/두근펫/매매봇/검은별/클로드코드/AI900/첼시인스타 같은 개인 프로젝트 매핑 강제 X. 다른 사용자·AI 가 RAG 로 읽고 자체 판단할 수 있게. `feedback_skill_pages_universal.md` 메모리 참조.
-
-### 코드 보호 placeholder 패턴 (`scripts/rebuild_template.py`)
-
-LLM 재작성 시 코드블록/인라인 코드/단축키 손실 방지:
-
-1. **추출 단계** (`protect_code`): `\`\`\`...\`\`\`` 와 `` `...` `` 를 본문에서 추출 → `[[CODE_BLOCK_N]]` / `[[INLINE_N]]` 토큰으로 치환
-2. **LLM 호출**: placeholder 포함된 텍스트 전달 (프롬프트에 "이 토큰은 절대 수정/번역/삭제 금지" 명시)
-3. **복원 단계** (`restore_code` + `_PLACEHOLDER_RE` fuzzy): LLM 출력에서 placeholder 자리에 원본 코드 그대로 삽입. LLM 이 토큰명 변형 (`[[CON_7]]`, `[[CB_N]]`) 해도 fuzzy 매칭으로 복원
-4. **누락 자동 rescue**: 매칭 실패한 placeholder 의 원본 코드 → 페이지 끝 `## 📌 원본 코드/명령어 (자동 보존)` 섹션에 자동 추가 — 데이터 손실 0
-
-이 패턴 덕분에 LLM paraphrase 강도와 무관하게 코드/명령어/단축키는 100% 보존.
-
-### LLM 보존율 검증 (`scripts/rebuild_template.py:preservation_score`)
-
-- 원본 markdown 에서 한글 3자+ / 영문 5자+ 핵심 키워드 추출 (빈도 top 40)
-- LLM 출력에 몇 % 보존됐는지 측정
-- **임계값 기본 0.70** (`--min-score` 로 조정). 미달 시 자동 skip → 페이지 안 건드림
-- 임계값 미달 페이지 → `restore_from_backup.py` 로 원본 그대로 복원 (정보 보존 우선)
-- `STOPWORDS` 에 두근 개인 프로젝트명 포함 — 보편 정보 변환 시 의도적으로 빠지는 키워드는 누락 카운트 X
-
-### SKILL.md ↔ Notion 본문 분리
-
-`md_generator.render_skill_md()` 는 YAML 프론트매터 + H1 + 8섹션 (SKILL.md 표준).
-**Notion 본문에 넣을 때는 `register.py:_strip_for_notion()` 이 프론트매터 + 최상위 H1 자동 제거**. 이걸 안 하면 YAML이 Notion 페이지 본문에 paragraph로 박혀버림 (실제 발생했던 버그).
-
-### 테스트 구조 (unittest, 네트워크 0)
-
-`tests/` 는 평면 구조 — `fixtures.py` 의 `render_skill_md(slug, spec)` + `make_mirror(skills)` 가 tmpdir 에 일회용 mirror 트리를 만든다. 서버 모듈은 전부 **주입 kwargs** 로 테스트한다: `register_library_routes(app, mirror_root=, embed_fn=, vectors_loader=)` · `register_transport(app, store=, cfg=)` · `register_auth(app, store=, login_template=)`. 상태를 가진 가드는 모듈 싱글턴이 아니라 register 함수 지역 변수여야 테스트 간 잠금이 새지 않는다 (gotcha 44). pytest 는 venv 에 없고 필요도 없다 — Makefile·pyproject 도 없다.
-
-## Module map
-
-```
-app.py                              ── Flask 진입점. 순차 잡 큐(단일 워커 스레드 + queue.Queue),
-                                        /healthz, /api/collect, /api/status/<id>, /api/jobs/active,
-                                        /api/push/*, /api/settings*, /sw.js (루트 스코프 SW 서빙)
-scripts/
-  collect.py                        ── 메인 파이프라인 (단계별 한글 에러 + 부분 성공 처리). Notion 등록 기본값은 config
-                                        notion.register_on_collect (CLI --notion/--no-notion 우선). summary.catalog_url 반환
-  notion_paging.py                  ── query_all_pages() — Notion DB 조회의 유일한 경로 (gotcha 23). 새 DB 스크립트는 예외 없이 이걸 쓴다
-  config_store.py                   ── config.json dotted-key 읽기/쓰기 (채팅 write_config · mcp_remote/config 가 사용)
-  aiskillbox_start.sh               ── launchd 진입 스크립트 — venv 없으면 생성·의존성 설치, .env 로드, exec venv/bin/python app.py
-  library/                          ── v4.5 스킬 라이브러리 (도서관). 설계: docs/superpowers/specs/2026-08-20-skill-library-design.md
-    index.py                        ──   skills/*/SKILL.md → frozen SkillRecord 인덱스. frontmatter 파서(외부 의존 0), 누락 필드 보정,
-                                          (파일수·mtime·crc32) 버전으로 2초 스로틀 재빌드, 서빙 전 시크릿 패턴 마스킹
-    search.py                       ──   한글 2-gram 토크나이저 + 필드 가중 BM25 (title×3/desc×2/meta×1.5/body×1) + embeddings.json
-                                          코사인 + RRF 융합. 질의 임베딩 실패 시 키워드만 (응답 semantic_used 로 표시), 예외 불출
-    catalog.py / catalog_template.py ──  게시판(/catalog) + 게시글 상세(/skill/<slug>) 렌더. 킷 구조 이식 + 메인 사이트
-                                          픽셀 레트로 테마 통일(본문 Pretendard, 라벨만 Galmuri). markdown 렌더 후 allowlist
-                                          sanitize + CSP nonce. 카드에는 본문 미포함(1.49MB→358KB). CLI: build-catalog|search|stats
-    routes.py                       ──   Flask GET /api/library/search|skills|skills/<slug>(?format=raw)|stats,
-                                          /catalog(+.html) · /skill/<slug> (둘 다 인덱스 버전 캐시+ETag), CORS *
-    mcp_server.py                   ──   stdio MCP (표준 라이브러리만). search_skills/get_skill/list_skills. AISKILLBOX_URL HTTP → 로컬 인덱스 폴백
-  auth_store.py                     ── v4.6 초대코드/기기토큰 저장소 (logs/auth.json 0600 — 코드 평문·토큰 해시,
-                                        cascade 회수, CLI create|list|delete)
-  auth_routes.py                    ── v4.6 전체 잠금 게이트(before_request, allowlist) + /login + /api/auth/redeem|bootstrap|codes
-  chat/engine.py                    ── 운영 채팅 엔진 (v4.4~4.8) — 프로바이더 체인 Anthropic API → claude CLI(기본: --output-format json
-                                        --json-schema --resume, gotcha 19·20·35) → Ollama. cli_normalize() 가 CLI 스키마 이탈을 흡수 (gotcha 34)
-  chat/routes.py                    ── POST /api/chat/stream (SSE status/delta/tool/done/ping) · /api/chat/reset · /api/fix/status
-  chat/tools.py                     ── 도구 REGISTRY 화이트리스트 (recent_jobs / tail_log / search_library / write_config / edit_skill_md / escalate_fix …).
-                                        mutating 도구는 safety.py PIN 세션(logs/chat_sessions.json, 30분) 필수. history.py 가 inbox/*.jsonl 기록
-  chat/fixer.py                     ── v4.4 escalate_fix — fix 잡 생성/조회 (logs/fix_jobs.json), 러너 detached spawn
-  chat/fix_runner.py                ── v4.4 fix 러너 (서버와 분리 프로세스). 스냅샷 → claude -p (기본 claude-sonnet-5,
-                                        .env FIX_CLAUDE_MODEL override · ~/.claude-aibox 폴더 존재 시 CLAUDE_CONFIG_DIR
-                                        로 별도 계정(Pro 플랜) 사용, 없으면 기본 Max 로그인)
-                                        → py_compile + 재스크랩 + node --check 검증 → 실패 시 건드린 파일만 원복
-                                        → 성공 시 launchctl 재기동 + Web Push. 동시 1건, 타임아웃 15분, 스냅샷 5개 보존
-  push.py                           ── Web Push — VAPID 로드 + 구독 저장(logs/push_subscriptions.json) + send_push (죽은 구독 자동 정리)
-  settings_store.py                 ── .env 안전 읽기/쓰기 (주석·순서 보존). 설정 창 PIN 보호 API 가 사용
-  curate_db.py                      ── DB 전수 큐레이션 CLI (analyze/fix-emoji/fix-meta/polish-body/find-dupes/all)
-  scraper/
-    router.py                       ── detect_source() + 3단 폴백 + 80자 미만 시 자동 폴백
-    youtube.py                      ── yt-dlp 자막(ko→en) + 메타. 자막 0자면 meta["media"]=[youtube] 로 영상 자체를 미디어 이해로 (≤30분)
-    github.py                       ── GitHub REST API (Playwright보다 10배 빠름, README+stars+topics)
-    instagram_embed.py              ── v5.1 인스타 공개 embed(/embed/captioned/) 스크래퍼 — contextJSON(이중 JSON 인코딩) 에서 캡션·작성자·
-                                          video_url·캐러셀 자식 이미지·accessibility_caption. 미디어는 meta["media"] 로만 넘김. 실패는 ok=False
-    social.py                       ── Instagram/TikTok/Twitter yt-dlp (IG 는 v5.1 부터 embed 실패 시 폴백 전용 — 릴스는 항상 login required)
-    web.py                          ── Playwright + trafilatura + UA 회전 4종 (mobile UA 1종 포함)
-    plain_text.py                   ── v4.9 붙여넣은 텍스트 → ScrapeResult (네트워크 0). paste://<sha16> 식별자,
-                                        제목 자동 추출(마크다운 헤딩 > 첫 의미 줄), TEXT_MIN_LEN=200
-    mcp_fallback.py                 ── requests 폴백 (정적 페이지만)
-    jina.py                         ── v5.4 최후 폴백 — r.jina.ai 로 마크다운 읽기 (키 불필요). parse() 가 Title/본문 분리 +
-                                          blob: 죽은 링크·"Image N:" 자리표시자 제거. **브라우저 UA 금지** (gotcha 50)
-  analyzer/
-    prompt.py                       ── ANALYSIS_PROMPT_TEMPLATE (enum 강제 + 외부 도구 대체 매핑 14종)
-    claude_cli.py                   ── v5.2 구독 프로바이더 — call_claude_json(prompt, schema=)(도구 0개, --json-schema SKILL_SCHEMA) ·
-                                          call_claude_read_files(prompt, files)(Read 만, 임시 폴더 cwd). 한도 쿨다운, config analyzer.*, runner 주입 (gotcha 49)
-    gemini.py                       ── analyze() (Claude → Gemini → Gemma, 결과 .provider) + call_gemma_json() + AnalysisResult. 일별 Gemini 호출 수를
-                                          logs/gemini_quota.json 에 기록하고 GEMINI_FLASH_RPD(기본 20)·GEMINI_QUOTA_SOFT(0.80) 에 닿은 모델은 호출 자체를 스킵
-    merger.py                       ── merge_with_existing() — 중복 시 기존+신규 합병 (출처 URL 누적). v5.2 부터 Claude → Gemini → Gemma (MERGE_SCHEMA), 결과 .provider
-    embedder.py                     ── Gemini 임베딩 (x-goog-api-key 헤더 — gotcha 22). dedup 캐시 scripts/skills/embeddings.json 이
-                                          라이브러리 의미검색과 공용. 키/쿼터 없으면 None → 호출측이 키워드로 강등 (gotcha 42)
-    media_understand.py             ── v5.1 미디어 이해 단계 — enrich(scrape_res, fetch=, upload=, generate=, read_images=, cache_path=). 영상은 Gemini
-                                          Files API resumable 업로드+ACTIVE 대기, 이미지 ≤10장은 v5.2 부터 Claude(Read) 먼저 → 실패 시 Gemini inline 일괄,
-                                          유튜브는 file_data URL. 항목별 실패 격리, 예외 불출. 캐시·items 에 provider 기록
-    dedup_finder.py                 ── 의미 dedup 후보 탐색 (임계 config dedup.threshold, GENERIC_SLUGS 제외 — gotcha 28)
-  library/regrade.py                ── v5.3 활용도 등급 재판정 — load_all → build_batches(6) → Claude JUDGE_SCHEMA → apply_meta(프론트매터만).
-                                          grade 항상 교체, category 는 --recategorize, 난이도·도구는 비었을 때. 보고 logs/regrade_<date>.jsonl
-  library/consolidate.py            ── v5.3 스킬 통합 — result_from_skill(absorbed) → merger(Claude) → keeper 에 쓰고 absorbed 백업·삭제.
-                                          합병 LLM 실패면 무변경. 출처 합집합, 임베딩 갱신
-  skill_builder/
-    md_generator.py                 ── render_skill_md() — SKILL.md 프론트매터 + 8섹션
-    installer.py                    ── 글로벌(~/.claude/skills/) + mirror(./skills/) 동시 설치
-  notion_client/
-    register.py                     ── raw HTTP API (notion-client v3 호환 이슈 회피), 한글 에러 한글화
-    curator.py                      ── v2에서 no-op (관련 스킬 relation 제거됨)
-  # DB 정리/마이그레이션 (2026-05-18 추가) — 모두 dry-run 기본, --apply 명시 필요
-  backup_all.py                     ── 전체 페이지 raw_blocks JSON + markdown 백업 (logs/backup_v27_{date}/)
-  rebuild_template.py               ── 코어. LLM (Gemma 26B / Gemini) 으로 v2.3 보편 정보 재작성 + 코드 보호 placeholder + 보존율 검증 + 페이지 끝 rescue 섹션. --use-cache 옵션으로 LLM 재호출 생략
-  restore_from_backup.py            ── 백업 raw_blocks 그대로 페이지에 복원 (LLM 변환 실패 시 안전망). null 필드 제거 필수
-  recategorize.py                   ── LLM 으로 카테고리 자동 분류 + 페이지 아이콘 동기화
-  rename_headings.py                ── H2 헤더 텍스트 정규화 (영문 부제 제거, 한글 친화로 통일)
-  demote_h2_to_h3.py                ── 표준 8섹션 외 H2 → H3 강등 (LLM 출력에서 sub-section 이 H2 로 박힌 경우)
-  strip_meta_quotes.py              ── 첫 heading 이전 quote + divider 일괄 제거 (v2.1 → v2.3 메타 박스 폐기)
-  fix_visual.py                     ── 정적 cleanup (list dump / 빈 paragraph / HTML 잔재 / 빈 quote / 중복 quote / 빈 헤더 제거)
-  audit_pages.py                    ── 가독성/일관성 종합 점검 (표준 헤더 / 빈 섹션 / code language / 아이콘 매핑)
-  audit_loss.py                     ── 백업 vs 현재 노션 — 코드/명령어/단축키 손실 검사 (false positive 보정: rich_text annotations.code 처리)
-  mcp_remote/                       ── v5.0 원격 MCP 커넥터 (claude.ai 웹·모바일·Cowork). 설계: docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md
-    __init__.py                     ──   register_mcp_remote(app) — meta+grants+transport 를 한 번에 등록. app.py 가 모듈 레벨에서 1회 호출
-                                          (그 1회가 아래 가드 지역화의 전제 — 여러 번 부르면 잠금이 리셋된다)
-    config.py                       ──   config.json 의 mcp_remote 블록 (mtime 재적재 — dynamic_registration 토글을 재시작 없이 켜고 끈다).
-                                          **모든 절대 URL 은 여기 public_base_url 에서만 만든다**, https 아니면 load() 가 ValueError (gotcha 46)
-    guard.py                        ──   FailGuard — 5회 실패 → 5분 잠금, 키별 추적 + 만료/상한 축출 (gotcha 44)
-    oauth_store.py                  ──   logs/oauth.json (0600, atomic write, mtime 재적재 — auth_store.py 규약 그대로).
-                                          비밀은 전부 sha256 만. grant 에 승인 초대코드를 박아 **지연 폐기**: 초대코드 삭제 = 커넥터 즉시 끊김
-    oauth_meta.py                   ──   RFC 9728/8414 메타데이터 + RFC 7591 동적 등록. 토글 off 면 registration_endpoint 가 메타데이터에서
-                                          빠지고 /oauth/register 는 404 (404 판정이 가드보다 먼저 — 잠금 상태가 엔드포인트 존재를 누설하지 않게)
-    oauth_grants.py                 ──   authorize / token / revoke. PKCE S256 전용, 인가코드 60초·1회용·재사용 감지, refresh 회전.
-                                          redirect_uri 불일치는 **리다이렉트하지 않고** 오류 페이지 (오픈 리다이렉터 방지)
-    transport.py                    ──   POST /mcp (Streamable HTTP, stateless). mcp_server.handle() 재사용 + use_local_backend() 로
-                                          자기호출 루프 차단. 무토큰 401 + WWW-Authenticate 가 OAuth 흐름 전체의 방아쇠
-    cli.py / __main__.py            ──   python -m scripts.mcp_remote client create|list|delete
-templates/oauth_consent.html        ── OAuth 동의 화면 (읽기 전용 고지, 승인/거부)
-templates/index.html                ── 단일 페이지 — Hero + 입력 + 작업 큐 리스트 + 설정 모달 + 드로어
-templates/login.html                ── v4.6 초대코드 로그인 + 관리자 첫 등록(PIN) 페이지
-static/{app.js, style.css}          ── 클라이언트 — 비차단 제출, 다중 잡 큐 UI, PIN 설정창, Web Push 구독
-static/chat.js                      ── 채팅 클라이언트 — SSE 스트리밍, PIN 모달, 모바일 바텀시트
-static/sw.js                        ── 서비스워커 — push/notificationclick 핸들러 (백그라운드 알림)
-logs/{recent.json, jobs.json}       ── 영속화 (running 잡은 재시작 시 interrupted, queued 잡은 재투입)
-logs/push_subscriptions.json        ── Web Push 구독 (브라우저 PushSubscription JSON 목록, gitignore)
-logs/{auth.json, oauth.json, chat_sessions.json} ── 0600 상태 저장소. CLI 와 상주 서버가 같이 만지므로 mtime 재로드 필수 (gotcha 41)
-logs/gemini_quota.json              ── 일별 Gemini 호출 카운트/소진 플래그 (analyzer/gemini.py 쿼터 게이트, media_understand 도 공유)
-logs/media_cache.json               ── 미디어 이해 결과 캐시 (key → text). 합병·재수집 때 Gemini 재호출 0회
-logs/backup_v{25,26,27}_{date}/     ── 단계별 백업. v27 은 raw_blocks JSON 포함 (복원용)
-logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 ({pid}__{slug}.md). --use-cache 시 재사용
-```
-
-## Environment
-
-`.env.example` 복사 후 채우기 — `chmod 600 .env`:
-- `GEMINI_API_KEY` (필수) — https://aistudio.google.com/apikey
-- `NOTION_API_KEY` (필수) — https://www.notion.so/my-integrations + DB 페이지에 Connections 추가
-- `NOTION_DB_ID=35f14362-1b4b-814b-8947-cca66ca16dcb` (🧠 AI 스킬 마스터)
-- `NOTION_HUB_PAGE_ID=35f14362-1b4b-8103-940d-cd81547feda4` (📒 AI 스킬 수집소)
-- `SKILL_INSTALL_DIR=~/.claude/skills` (변경 시 ECC 환경과 분리됨 — 권장 X)
-- `GEMMA_MODEL=gemma4:e4b` / `GEMMA_TIMEOUT=300` (튜닝)
-- 그 외 코드가 읽는 env (이름만, 기본값은 코드): `ADMIN_PIN`(설정창·PIN bootstrap) · `AISKILLBOX_PORT`(5050) · `SCRAPER_MIN_TEXT_LEN` · `GEMINI_FLASH_RPD`/`GEMINI_FLASH_LITE_RPD`/`GEMINI_QUOTA_SOFT` · `GEMMA_NUM_CTX`/`GEMMA_NUM_PREDICT`/`OLLAMA_URL` · `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`(Web Push) · `AISKILLBOX_URL`/`AISKILLBOX_TOKEN`(stdio MCP 클라이언트 쪽) · `FIX_CLAUDE_MODEL`/`FIX_CLAUDE_CONFIG_DIR` · `NOTION_ARCHIVE_DB_ID` · `SKILL_LIBRARY_ROOT`. `.env.example` 은 첫 실행용 7개만 담는다.
-
+- `AISKILLBOX_URL` 이 없으면(현재 `.env` 에 없음) 검색 결과 텍스트의 `{BASE_URL}/skill/<slug>` 가 **localhost** 로 나간다 — 폰에서 링크를 눌러 보기 전엔 안 드러난다.
+- `config.json mcp_remote.enabled` 만 핫리로드 예외 — `enabled=false` 면 **라우트를 아예 안 만든다**(모듈 레벨 1회). off→on 은 kickstart. `dynamic_registration`·`allowed_origins`·TTL 은 요청마다 다시 읽힌다.
+- `register_mcp_remote(app)` 는 `app.py` 가 모듈 레벨에서 **1회** 호출 — 그 1회가 FailGuard 지역화의 전제다(여러 번 부르면 잠금이 리셋된다).
+- **모든 절대 URL 은 `config.json mcp_remote.public_base_url` 에서만** 만든다. CF Tunnel 이 TLS 를 종단해 Flask 는 자기를 http 로 보므로 `request.url_root` 를 쓰면 `http://` 가 새고 Claude 가 연결을 거부한다. `load()` 가 https 아닌 값을 캐시 갱신 전에 `ValueError` 로 거부한다 (gotcha 46).
 
 ### 원격 MCP 커넥터가 끊기는 이유 (전수)
 
-커넥터는 **액세스 토큰 1시간 / 리프레시 토큰 90일** 로 돈다. 90일은 카운트다운이 아니라 **"90일 연속 미사용" 타이머**다 — `rotate_refresh` 가 갱신 때마다 리프레시를 새로 발급하며 만료를 다시 90일 뒤로 민다. grant 에 최초 발급시각 기반의 절대 상한은 없다. 즉 90일에 한 번만 써도 영구 유지된다. 이 TTL(`config.json mcp_remote.refresh_ttl_seconds`)이 하는 일은 "방치된 커넥터를 언제 끊을까" 하나뿐이니 늘릴 이유가 없다 — 늘리면 안 쓰는 자격증명의 수명만 길어진다. 끊기는 경로는 아래가 전부다 — 진단은 항상 `grep -a "POST /oauth/token" logs/launchd_stderr.log | tail` 부터. **갱신 요청이 오고 있으면 커넥터는 살아있다.**
+커넥터는 **액세스 토큰 1시간 / 리프레시 토큰 90일** 로 돈다. 90일은 카운트다운이 아니라 **"90일 연속 미사용" 타이머**다 — `rotate_refresh` 가 갱신 때마다 리프레시를 새로 발급하며 만료를 다시 90일 뒤로 민다. 절대 상한은 없다. 이 TTL(`config.json mcp_remote.refresh_ttl_seconds`)이 하는 일은 "방치된 커넥터를 언제 끊을까" 하나뿐이니 늘릴 이유가 없다. 진단은 항상 `grep -a "POST /oauth/token" logs/launchd_stderr.log | tail` 부터. **갱신 요청이 오고 있으면 커넥터는 살아있다.**
 
 | # | 원인 | 증상 | 대응 |
 |---|---|---|---|
 | 1 | **초대코드 삭제** (설계된 폐기 경로) | 즉시 전부 401. `client list` 엔 남아있음 | 의도한 것. 되살리려면 재연결 |
 | 2 | **`client delete`** | 즉시 401, `client list` 에서 사라짐 | 재발급 후 재연결 |
-| 3 | **90일 연속 미사용** | 조용히 401 | 재연결. 쓰면 만료가 계속 밀리므로 실사용 중엔 해당 없음 |
-| 4 | **claude.ai 가 갱신을 멈춤** — 만료 액세스 토큰으로 시도당 1~2회 401 만 받고 `/oauth/token` 을 안 침 | 서버·터널·초대코드·리프레시 토큰 다 정상인데 401 반복, 갱신 요청 **뚝 끊김** | 2026-09-05 `transport.py` 가 401 챌린지에 `error="invalid_token"` 추가 (RFC 6750 §3.1, 회귀 테스트 4건). **그래도 09-06→09-08 재발**(36시간) — 헤더는 필요조건일 뿐, 원인은 claude.ai 쪽. 복구는 claude.ai 설정에서 재연결뿐 |
-| 5 | **커넥터를 지웠다가 재추가** | 추가 화면에서 실패 | `dynamic_registration:false` 라 `POST /oauth/register` 가 404. 위의 수동 발급 경로로 |
+| 3 | **90일 연속 미사용** | 조용히 401 | 재연결. 실사용 중엔 해당 없음 |
+| 4 | **claude.ai 가 갱신을 멈춤** — 만료 액세스 토큰으로 1~2회 401 만 받고 `/oauth/token` 을 안 침 | 서버·터널·초대코드·리프레시 다 정상인데 401 반복, 갱신 요청 **뚝 끊김** | 401 챌린지의 `error="invalid_token"`(RFC 6750) 누락이 원인이었고 2026-09-14 수정 후 401 은 0건. 재발 시 `mcp_health.py` 가 `AUTH_STUCK` 으로 잡아 자가 복구(헤더 회귀면 재시작 + 만료 토큰 청소) → 실패 시에만 알림. 그래도 안 되면 claude.ai 설정에서 재연결 |
+| 5 | **커넥터를 지웠다가 재추가** | 추가 화면에서 실패 | `dynamic_registration:false` 라 `/oauth/register` 가 404. 위의 수동 발급 경로로 |
 | 6 | **FailGuard 잠금** | 올바른 secret 인데 429 | client_id 당 5회 실패 → 300초. 기다리면 풀림 |
 | 7 | **서버/터널 다운** | 401 아니라 502·타임아웃 | `claude_112.sh` 가 자동 복구 |
 
-**4번이 위험한 이유**: 1·2·3은 원인이 명확한데 4는 모든 헬스체크를 통과한다. 서버 살아있고, 터널 정상이고, 초대코드 멀쩡하고, 리프레시 토큰도 12월까지 유효한데 claude.ai 만 죽은 액세스 토큰으로 401 을 반복했다 (2026-09-03 → 09-05, 이틀 방치). 그래서 `claude_112.sh` 에 **갱신 정체 감지**를 넣었다 — 리프레시가 살아있는데 액세스 토큰이 4시간 넘게 만료 상태면 텔레그램 알림 (하루 1회, `~/.claude_112_mcp_stale`). **이 감지는 idle 도 잡는다** — claude.ai 는 실사용 때만 갱신하므로 5시간(TTL 1h + 4h) 이상 안 쓰면 같은 경보가 온다 (2026-09-09 대조: 경보 7건 중 4건이 idle 오탐, 경보 직후 첫 사용에서 재인증 없이 정상 갱신). 진짜 단절의 시그니처는 **`/mcp` 401 이 찍히는데 그 뒤 `/oauth/token` 이 안 오는 것** — idle 은 401 자체가 없다. 경보를 받으면 재연결 전에 위 Common commands 의 grep 두 줄부터.
+**4번이 위험한 이유**: 모든 헬스체크를 통과한다 (2026-09-03 → 09-05 이틀 방치). 감시는 `~/claude_guard/mcp_health.py` 가 한다 (`claude_112.sh` 5번 항목이 7분마다 호출, 2026-09-24 재작성). 종전의 "액세스 토큰 N시간째 갱신 없음" 기준은 **고장이 아니라 안 쓴 것**을 재고 있었다 — claude.ai 는 커넥터를 쓸 때만 갱신하므로 자거나 다른 일 하면 무조건 걸렸고, 매일 오던 "재연결 필요" 가 전부 오탐이었다. 지금 판정은 `GRANT_EXPIRED`(사람이 재연결) → `AUTH_STUCK`(**`/mcp` 401 연속 + 뒤따르는 `/oauth/token`·200 없음** — 챌린지 헤더 자가점검·만료 토큰 청소로 자가 복구를 먼저 시도하고, 그래도 남을 때만 알림) → `HEALTHY` → `IDLE`(알림 없음). 진짜 단절의 시그니처는 401 뒤에 갱신이 안 오는 것이고, idle 은 401 자체가 없다. 판정 근거를 손으로 볼 때는 위 두 grep. `python3 ~/claude_guard/mcp_health.py --json --no-recover` 로 판정만 볼 수 있다.
 
-**도구는 읽기 전용 3종이 전부다** (`search_skills`/`get_skill`/`list_skills`, scope `skills:read`). 커넥터로 스킬을 수정·생성·삭제할 수는 없다 — 설계상 그렇다. 쓰기가 필요하면 사이트(`/collect`)나 CLI 를 쓴다.
+**도구는 읽기 전용 3종이 전부다** (scope `skills:read`). 쓰기가 필요하면 사이트 메인(`/`)의 [🔗 링크]/[✍️ 텍스트] 폼(→ `POST /api/collect`)이나 CLI. ⚠️ `scripts/app_publish.py`(미배선, gh CLI 로 외부 저장소에 커밋하는 쓰기 경로)를 `TOOLS` 에 배선하는 순간 이 문장·`templates/oauth_consent.html` 의 읽기 전용 고지·OAuth scope **세 곳이 동시에 거짓**이 된다. 배선하려면 `chat/tools.py` 의 `mutating`+PIN 게이트에 상응하는 방어부터.
 
-## Operational gotchas (실 운영 중 발견한 함정)
+### 테스트 구조 (unittest · 네트워크 0 · 디스크 부작용 0)
 
-1. **Notion DB 권한** — 인티그레이션이 Connection 안 붙어 있으면 모든 호출이 `object_not_found`. 진단: `curl /v1/search` 가 0건 반환. 해결: 노션 DB 페이지 우측 상단 `⋯` → Connections → 인티그레이션 추가.
+`tests/` 는 평면 구조 — `fixtures.py` 의 `render_skill_md(slug, spec)` + `make_mirror(skills)` 가 tmpdir 에 일회용 mirror 트리를 만든다. 서버 모듈은 전부 **주입 kwargs** 로 테스트한다: `register_library_routes(app, mirror_root=, embed_fn=, vectors_loader=)` · `register_transport(app, store=, cfg=)` · `register_auth(app, store=, login_template=)`. 상태를 가진 가드는 모듈 싱글턴이 아니라 register 함수 지역 변수여야 테스트 간 잠금이 새지 않는다 (gotcha 44). Makefile·pyproject 없음.
 
-2. **notion-client v3 호환성** — v3에서 `databases.query()` 메서드 삭제됨. `register.py`는 `requests`로 raw HTTP 직접 호출하므로 SDK 변경에 영향 없음.
+## Module map — 코드로 알 수 없는 제약만
 
-3. **SKILL.md 프론트매터 누수** — `render_skill_md()` 결과를 그대로 Notion에 보내면 YAML이 본문에 박힘. 반드시 `_strip_for_notion()` 통과시킬 것.
+각 파일은 docstring 이 있다(`md_generator.py:1-8` 이 v2.4 변경점을 자체 문서화하듯). 여기엔 파일을 열어도 안 보이는 제약만 둔다.
 
-4. **Gemma 4 콜드 스타트** — Ollama `OLLAMA_KEEP_ALIVE=0`(루트 워크스페이스 CLAUDE.md 정책)이라 idle 시 unload. 첫 호출은 60-90초+ (26B), 20-30초 (e4b). 본문 정리는 e4b 권장, 분류는 26B도 OK.
+- `scripts/notion_paging.py:query_all_pages()` — Notion DB 조회의 **유일한** 경로. `page_size` 단발 호출은 50건 넘으면 조용히 잘린다 (gotcha 23). 새 DB 스크립트는 예외 없이 이걸 쓴다.
+- `logs/{auth.json, oauth.json, chat_sessions.json, config.json}` — CLI 와 상주 서버가 같이 만지므로 **mtime 재로드 필수** (gotcha 41). 새 상태 파일을 만들면 같은 규약.
+- `analyzer/embedder.py` 의 캐시 `scripts/skills/embeddings.json` 은 dedup 과 라이브러리 의미검색이 **공용**이고 `CACHE_PATH` 가 저장소 실경로 하드코딩(주입점 없음).
+- `chat/tools.py:OP_COMMANDS` — 채팅이 실행할 수 있는 운영 명령 화이트리스트 3종(`restart_aiskillbox` · `reinstall_skills` · `gemini_quota_status`). 여기 없으면 못 돌린다.
+- `chat/fix_runner.py` — 서버와 분리 프로세스. `claude -p` 로 고치고 py_compile + 재스크랩 + node --check 검증, 실패 시 건드린 파일만 원복, 성공 시 kickstart. 동시 1건·15분·스냅샷 5개. `~/.claude-aibox` 폴더가 있으면 `CLAUDE_CONFIG_DIR` 로 별도 계정.
+- `scripts/{add_quick_card,batch_apply,batch_scrape_24,cleanup_pages,merge_duplicates,migrate_to_v22,rebuild_clean,rebuild_safe}.py` — 2026-05~08 일회성. **재실행 금지.** `sync_hub.py`·`oneshot/scan_existing_dedup.py` 만 현행.
+- `.claude/worktrees/` — v4.5 시절 전체 사본. gitignore 라 커밋은 안 되지만 파일은 실재.
 
-5. **이모지 이중 표시** — 페이지 아이콘 + 제목 시작 이모지 둘 다 있으면 카드/링크에서 `🔍 ⚡ 제목` 처럼 두 번. `register.py:_clean_title()` 이 제목 첫 이모지 자동 제거 + `CATEGORY_ICON` 으로 아이콘 자동 설정.
+## Environment
 
-6. **JOBS 메모리 영속화 + 순차 큐** — `app.py:_save_jobs()` 가 매 상태 변경 시 `logs/jobs.json` 저장. 잡은 **단일 워커 스레드**가 `queue.Queue` 에서 하나씩 꺼내 순차 처리 (동시 실행 X — Gemma 26B 동시 호출로 인한 메모리 압박 방지). 서버 재시작 시 `_load_jobs()` 가 `running` 잡은 `interrupted` 마킹, `queued` 잡은 그대로 두고 `_requeue_pending()` 가 큐에 재투입 (started_at 순). `/api/collect` 는 큐에 넣고 즉시 반환 — 클라이언트 입력칸이 바로 비고 다음 URL 을 계속 넣을 수 있음.
+`.env.example` 은 첫 실행용 7개만 담는다 — `chmod 600 .env`. 코드가 읽는 env 전체(이름만, 기본값은 코드):
 
-7. **캐시 무효화** — `app.py:index()` 가 `app.js` + `style.css` mtime 기반 `build_id` 를 매 응답에 주입. HTML에 `<script src="/static/app.js?v={{ build_id }}">`. 코드 수정 후 launchctl kickstart만 하면 사용자 강제 새로고침 없이 즉시 새 JS 로드.
+- **키**: `GEMINI_API_KEY`(필수) · `NOTION_API_KEY`·`NOTION_DB_ID`·`NOTION_HUB_PAGE_ID`·`NOTION_ARCHIVE_DB_ID`(Notion 켤 때만) · `ANTHROPIC_API_KEY`(**있으면 채팅이 과금 API 를 1순위로 잡는다**) · `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`(Web Push) · `ADMIN_PIN`
+- **분석**: `ANALYZER_CLAUDE`(**config 를 덮어쓰고 빈 문자열도 off** — `.env` 에 빈 값으로 남겨두면 `claude_enabled=true` 가 안 먹는다) · `ANALYZER_CLAUDE_MODEL` · `GEMINI_FLASH_RPD`/`GEMINI_FLASH_LITE_RPD`/`GEMINI_QUOTA_SOFT` · `GEMINI_MAX_OUTPUT` · `GEMMA_MODEL`/`GEMMA_TIMEOUT`/`GEMMA_NUM_CTX`/`GEMMA_NUM_PREDICT`/`OLLAMA_URL` · `MEDIA_*` 3종
+- **스크랩**: `SCRAPER_MIN_TEXT_LEN`(500) · `JINA_*` 4종
+- **서버**: `AISKILLBOX_PORT`(5050) · `SKILL_INSTALL_DIR`(`~/.claude/skills` — 바꾸면 ECC 와 분리됨) · `FIX_CLAUDE_MODEL`/`FIX_CLAUDE_CONFIG_DIR` · `LOG_LEVEL`
+- **stdio MCP 클라이언트 쪽만**: `AISKILLBOX_URL`/`AISKILLBOX_TOKEN` · `SKILL_LIBRARY_ROOT`(로컬 폴백 전용 — 서버 인덱스는 `index.py:MIRROR_DIR` 하드코딩)
 
-8. **Cloudflare Tunnel** — token-mode (Remotely-managed). config.yml 없음. Public Hostname 추가는 Cloudflare Zero Trust 대시보드 → Networks → Tunnels → 해당 터널 → Configure → Public Hostname.
+`.env` 를 로드하는 CLI: `collect`·`curate_db`·`library.catalog`(main 안에서만). **`library.consolidate`·`regrade`·`library search` 는 로드하지 않는다** — venv 활성화 없이 돌리면 임베딩 없이 진행된다 (gotcha 42 와 같은 클래스).
 
-9. **두근컴퍼니 에이전트 페르소나** — 아래 "Agent persona" 섹션은 `~/Developer/my-company/company-hq/server/team_prompts.json` 의 `content-lab` 시스템 프롬프트가 참조한다. 이 섹션을 함부로 삭제/대체하지 말 것. 변경 시 두근컴퍼니 에이전트 동작 영향.
+## Operational gotchas (실 운영 중 발견한 함정 — 지금도 지켜야 하는 규칙)
 
-10. **Notion API write 시 `null` 필드 제거 필수** — 페이지 fetch (read) 응답에는 `paragraph.icon: null` 같은 필드가 들어있는데 API write 가 이걸 reject (`should be an object or undefined`). `restore_from_backup.py:_strip_nulls()` 가 재귀적으로 None 제거 후 PATCH. raw_blocks 백업 그대로 보내면 안 됨.
+Notion write 경로 전용 함정(#1·2·3·5·10~16)은 `docs/notion-migration.md` 로 옮겼다. 번호는 상호참조 때문에 유지한다.
 
-11. **Notion code block language enum 매핑** — `code.language` 는 Notion 이 정한 enum 안에서만 허용. LLM 이 임의 언어 (예: `text`, `tsv`, `console`) 출력하면 reject. `rebuild_template.py:NOTION_CODE_LANGS` + `_LANG_ALIASES` + `_normalize_code_lang()` 가 안전하게 매핑 (모르면 `plain text`).
+4. **Gemma 4 콜드 스타트** — `OLLAMA_KEEP_ALIVE=0` 이라 idle 시 unload. 첫 호출 60-90초(26B), 20-30초(e4b). 본문 정리는 e4b, 분류는 26B 도 OK.
 
-12. **Notion 인티그레이션 권한은 페이지별** — 마스터 DB 에 Connection 추가했어도 같은 워크스페이스 다른 페이지에는 자동 상속 안 됨. 외부 page id 가 `2e91...` 같이 다른 prefix 면 별도 권한 추가 필요. 또는 Playwright 로 public share view scrape.
+6. **잡은 단일 워커 스레드가 순차 처리한다** — `app.py` 의 `queue.Queue`. 동시 실행 X (Gemma 26B 동시 호출 메모리 압박 방지). 상태는 매 변경마다 `logs/jobs.json` 에 영속화. 재시작 시 `running` 은 `interrupted`, `queued` 는 `_requeue_pending()` 으로 재투입. `/api/collect` 는 큐에 넣고 즉시 반환.
 
-13. **Notion page id prefix 충돌** — 같은 DB row 페이지들은 첫 8자 같음 (`35f14362-...`). 백업 파일명에 `pid[:8]` 만 쓰면 모든 파일이 같은 prefix → glob 매칭이 첫 1개만 반환 → **다른 페이지 본문이 잘못된 페이지에 박힘** (실 발생 버그). `backup_all.py` 와 `rebuild_template.py` 는 항상 **전체 32자** 사용.
+7. **캐시 무효화** — `app.py:index()` 가 `app.js`+`style.css` mtime 기반 `build_id` 를 주입. kickstart 만 하면 사용자 강제 새로고침 없이 새 JS.
 
-14. **delete 후 append 패턴의 위험** — `rebuild_template.py:replace_h2_with_h3` 와 페이지 children 교체 시: `delete_all_children()` 다음 `append_blocks()`. 만약 append 가 validation 으로 실패하면 **페이지가 통째로 비어버림**. → `restore_from_backup.py` 즉시 실행으로 복원. append 실패 사유는 보통 (10), (11) 케이스.
+8. **Cloudflare Tunnel** — token-mode(Remotely-managed), config.yml 없음. Public Hostname 은 Zero Trust 대시보드에서.
 
-15. **LLM 보편 정보 변환 한계** — 본문이 짧거나 광고성/특수 표현 위주 페이지는 보존율 0.40 미만으로 떨어짐 (실 사례: "클로드 MCP 메타 광고 자동화" 36%). 무리하게 변환하면 정보 손실 큼. 임계값 미달 페이지는 자동 skip → `restore_from_backup.py` 로 원본 보존 처리.
+9. **아래 "Agent persona" 섹션은 두근컴퍼니 `team_prompts.json` 이 참조한다** — 함부로 삭제·대체하지 말 것.
 
-16. **노션 DB row 는 사이드바에 펼쳐 보임** — 노션 UI 가 "허브 페이지 → DB → row 페이지" 트리를 사이드바에 자동 expand. 사용자가 "외부 페이지 여러 개 생긴" 줄 오해할 수 있음. 실제 구조는 `허브 1 + DB 1 + DB.rows = 페이지 수`. `/v1/search` 결과로 검증 가능.
+17. **Web Push 는 HTTPS + 루트 스코프 SW 필수** — `/sw.js` 는 `Service-Worker-Allowed: /`. iOS 는 홈화면 PWA(16.4+)에서만. 권한 요청은 사용자 제스처 안에서.
 
-17. **Web Push 는 HTTPS + 서비스워커 필수** — `new Notification()` 은 페이지가 떠 있을 때만 동작 → 백그라운드면 알림이 멈춤. 진짜 백그라운드 알림은 VAPID 키쌍(`.env`) + `static/sw.js` + 서버 발송(`scripts/push.py`). `/sw.js` 는 **루트 스코프**로 서빙해야 `/` 전체를 제어 (`Service-Worker-Allowed: /` 헤더). **iOS 는 홈화면에 추가한 PWA (16.4+) 에서만** Web Push 동작 — Safari 탭에서는 `Notification` 자체가 없음. 권한 요청은 반드시 사용자 제스처(제출/버튼) 안에서.
+18. **`/api/settings*` 는 `ADMIN_PIN` 게이트** — `X-Admin-Pin` 헤더, 상수시간 비교, 5회 실패 5분 잠금. 키 값은 응답에서 항상 마스킹. 새 비밀 엔드포인트는 같은 게이트.
 
-18. **설정 창 PIN 보호** — aiskillbox 는 `aiskillbox.600g.net` 으로 공개되고 앱 자체 인증이 없다. API 키 편집 엔드포인트(`/api/settings*`)는 `.env` 의 `ADMIN_PIN` 으로 보호 — `X-Admin-Pin` 헤더, `hmac.compare_digest` 상수시간 비교, 5회 실패 시 5분 잠금. 키 값은 응답에서 항상 마스킹(`settings_store.mask`). 새 비밀/공개 엔드포인트 추가 시 같은 PIN 게이트를 반드시 통과시킬 것.
+19. **Claude CLI `--bare` 는 OAuth 를 무시한다** — `ANTHROPIC_API_KEY` 만 인식해 구독 로그인이 `Not logged in`. `chat/engine.py` 에서 절대 금지. 대신 `--disable-slash-commands` + `--output-format json` + `--json-schema` + `--append-system-prompt`.
 
-19. **Claude CLI `--bare` 는 OAuth/keychain 무시** (v4.4.3 도입 시 발굴) — `claude -p ... --bare` 는 minimal 모드로 hooks/skills/auto-memory 를 배제해서 우리 API-style 호출에 이상적으로 보이지만, **인증을 오직 `ANTHROPIC_API_KEY` 만 인식** → 본계정 구독 (OAuth 로그인) 을 무시하고 `Not logged in · Please run /login` 반환. `chat/engine.py:_loop_claude_cli` 는 `--bare` 절대 금지. 대신 `--disable-slash-commands`(스킬 자동 로드 차단) + `--output-format json` + `--json-schema` + `--append-system-prompt` 조합으로 CLI 를 API 처럼 쓴다.
+20. **Anthropic tool `input_schema` 는 top-level `oneOf`/`allOf`/`anyOf` 미지원** — 필드를 전부 optional 로 두고 프롬프트로 강제 + 파싱 측 `reply` 우선.
 
-20. **Anthropic tool `input_schema` 는 top-level `oneOf`/`allOf`/`anyOf` 미지원** (v4.4.3 도입 시 발굴) — Claude CLI `--json-schema` 로 `{oneOf: [{tool,args}, {reply}]}` 강제하면 서버가 `API Error: 400 tools.6.custom.input_schema: input_schema does not support oneOf, allOf, or anyOf at the top level` 반환. 해결: 세 필드를 모두 optional 로 두고 프롬프트로 "tool+args 또는 reply 중 하나만" 강제 + 파싱 측에서 `reply` 우선 처리 (`_loop_claude_cli` 방어 로직).
+21. **Playwright `networkidle` 은 SPA 에 부적절** — heartbeat XHR 이 끊이지 않는 사이트(Notion/IG/TikTok)는 영원히 idle 이 안 된다. `web.py` 는 `domcontentloaded(60s) → load(60s) → commit(45s)`.
 
-21. **Playwright `wait_until="networkidle"` 은 SPA 폴백에 부적절** (2026-07-31 발굴) — Notion/Instagram/TikTok 등 heartbeat XHR (텔레메트리·연결 유지 폴링) 이 끊이지 않는 사이트는 절대 networkidle 상태가 안 됨 → 지정 timeout 다 소진 후 실패. `scripts/scraper/web.py` 의 goto 폴백 체인은 `domcontentloaded(60s) → load(60s) → commit(45s)` 3단으로 재구성 (networkidle 제거). commit 은 첫 응답 헤더만 받고 리턴하므로 그 뒤 `wait_for_selector` 가 실제 컨텐츠 대기.
+22. **Gemini 는 모든 endpoint 에서 URL `?key=` 금지** — `x-goog-api-key` 헤더로. 안 그러면 404 시 stderr 에 키 노출. 신규 호출 helper 를 만들 때마다.
 
-22. **Gemini API 는 모든 endpoint 에서 URL query `?key=` 금지** (2026-07-31 발굴) — `chat/engine.py` 는 v4.4.2 에서 `x-goog-api-key` 헤더로 이전했으나 `analyzer/embedder.py` 는 누락돼 있어 `text-embedding-004` 404 실패 시 stderr 에 키가 그대로 노출됨. **모든 신규 Gemini 호출은 반드시 헤더 방식**으로 통일 (`_call_gemini` 계열 helper 를 개별 파일마다 만들 때 이 규칙 필수). embedContent / generateContent / embedBatch 다 동일.
+23. **Notion `page_size` 단발 호출은 조용히 잘린다** — 50건 넘으면 뒤가 통째로 빠진 채 "전수 완료" 라고 출력됐다(69건 중 19건, 백업조차 없었음). `notion_paging.query_all_pages()` 만 쓴다. 오류도 경고도 없어 눈으로는 절대 안 잡힌다.
 
-23. **Notion DB 조회는 `page_size` 만 쓰면 조용히 잘린다** (2026-08-16 발굴, 영향 최대) — `page_size` 는 '한 번에 최대 몇 건'이지 '전부'가 아니다. DB 정리/감사 스크립트 14개가 `json={"page_size": 50}` 단발 호출을 복붙해 쓰고 있었고, DB 가 50건을 넘어간 뒤로 **뒤쪽 row 가 통째로 빠진 채 "전수 처리 완료" 라고 출력**됐다 (69건 중 19건 누락). `backup_all` 도 포함돼 있어서 그 19건은 **백업조차 존재하지 않았다** — gotcha #14 의 복원 안전망이 그 범위에서 무효였다는 뜻. 이제 `scripts/notion_paging.py:query_all_pages()` 단일 구현을 쓴다. **새 DB 스크립트는 예외 없이 이 헬퍼 경유.** 오류도 경고도 없이 조용히 빠지는 종류라 눈으로는 절대 안 잡힌다.
+24. **노션 '비공개' 판별은 렌더된 DOM 실측으로** — HTML 마케팅 카피는 공개 페이지에도 있다. `[data-block-id]` 0개 **AND** '페이지 찾지 못함' 안내 문구일 때만. `skip_reason` 은 재시도 불가라 오판이 영구 차단이 된다.
 
-24. **노션 '비공개' 판별에 HTML 마케팅 카피를 쓰면 안 된다** (2026-08-16 발굴) — 구버전 `_is_notion_private_landing` 은 HTML 에 Notion 마케팅 문구가 있고 추출 텍스트가 500자 미만이면 비공개로 확정했다. 그런데 **그 문구는 정상 공개 페이지의 렌더 결과에도 그대로 들어있다** (본문 4302자 공개 페이지에서 마커 2개 히트). 결국 실질 판별이 '텍스트 짧으면 비공개' 하나뿐이었고, `router._retry` 가 `skip_reason` 을 재시도 불가로 처리하는 탓에 **렌더가 한 번 느린 것만으로 공개 페이지가 영구 비공개 판정**을 받았다 (실사고 2026-08-11). 현재는 렌더된 DOM 실측으로 판정: `[data-block-id]` 0개 **AND** body innerText 에 '페이지 찾지 못함 / 사용 권한이 없거나' 안내 문구. 진짜 접근 불가 페이지만 잡힌다.
+25. **notion.site 는 Chrome UA 로 못 읽는다** — WebKit UA 만 렌더. `web.NOTION_UA_POOL` 은 WebKit 만, `_pick_ua` 가 회차별 순환.
 
-25. **notion.site 는 Chrome UA 로 못 읽는다** (2026-08-16 계측) — UA 풀 4종 전수 테스트 결과 Chrome UA 2종은 goto 가 domcontentloaded/load 둘 다 60s 타임아웃 나고 `page.content()` 가 빈 문자열. WebKit(Safari/iPhone) 2종만 정상 렌더. `random.choice` 라 50% 확률로 못 읽는 UA 를 뽑았다. `web.NOTION_UA_POOL` 이 WebKit 만 남기고, `_pick_ua(source_type, attempt)` 가 재시도 회차별로 UA 를 순환시킨다 (같은 UA 로 두 번 실패하지 않게).
+26. **trafilatura 는 Notion SPA 를 일부만 뜯을 수 있다** — 결과가 `MIN_GOOD_TEXT_LEN` 미만이면 trafilatura/bs4/`body.innerText` 셋 중 가장 긴 것.
 
-26. **trafilatura 는 Notion SPA 본문을 일부만 뜯을 수 있다** — '빈 결과일 때만 bs4 폴백' 이면 이 케이스를 못 건진다 (실사례: 렌더 1166자 중 311자만 추출 → MIN_TEXT_LEN 미달로 실패). 이제 추출 결과가 `MIN_GOOD_TEXT_LEN` 미만이면 trafilatura / bs4 / `body.innerText` **셋 중 가장 긴 것**을 채택한다.
+27. **LLM 이 개행을 리터럴 `\n` 로 뱉으면 본문이 한 줄이 된다** — `gemini._unescape_literal_newlines` 로 차단. **Notion rich_text 배열 한도는 100개** — 넘으면 그 블록이 아니라 요청 전체가 400.
 
-27. **LLM 이 개행을 리터럴 `\n` 두 글자로 뱉으면 본문이 통째로 한 줄이 된다** (2026-08-16 발굴) — JSON 파서는 진짜 이스케이프만 풀어주므로 모델이 한 번 더 이스케이프하면 그대로 남는다. 마크다운 구조가 전부 무너지고, Notion 등록 시 `heading_2` 하나에 rich_text 119개가 몰려 **페이지 등록 요청 전체가 400** 으로 죽는다 (실사고 2026-08-10 webswing-desktop-pet — 로컬엔 설치됐는데 Notion 에만 조용히 누락). 원인 차단은 `gemini._unescape_literal_newlines`, 방어는 `register._block` 의 rich_text 100요소 / heading 200자 가드. **Notion rich_text 배열 한도는 100개** — 넘으면 그 블록만이 아니라 요청 전체가 실패한다.
+28. **슬러그가 같다는 이유만으로 합병하지 않는다** — `untitled-skill` 같은 무의미 슬러그로 무관한 콘텐츠가 빨려 들어갔다. `GENERIC_SLUGS` 영구 제외 + 같은 URL 재수집이 아니면 `_confirm_semantic_merge` 통과 요구. 의미 dedup 후보에서도 제외(뒤섞인 스킬은 아무 주제에나 가까운 자석).
 
-28. **슬러그가 같다는 이유만으로 합병하면 안 된다** (2026-08-16 발굴) — `collect.py` 의 `find_global_by_slug` 히트 경로는 임계값·임베딩·LLM 게이트를 **전부 우회**하고 즉시 합병했다. LLM 이 이름 짓기에 실패하면 `untitled-skill` 같은 무의미 슬러그가 나오는데, 서로 무관한 콘텐츠가 여기로 전부 빨려 들어간다 (실사고: 주식 시장 분석 + Claude 프롬프트 60선이 한 스킬로 합쳐지고, 그 여파로 Claude 60 **노션 페이지 제목까지** 합병 제목으로 오염). 현재는 `GENERIC_SLUGS` 영구 제외 + 같은 URL 재수집이 아니면 슬러그 히트도 `_confirm_semantic_merge` 통과 요구. 의미 dedup 후보에서도 `GENERIC_SLUGS` 를 제외한다 (내용이 뒤섞인 스킬은 임베딩이 아무 주제에나 가까워 자석이 됨).
+29. **합병 게이트 평가는 패러프레이즈 페어로** — 같은 문구로 True 는 증거가 못 된다. 현재 프롬프트: 동일 5/5 · 패러프레이즈 4/4 · 오합병 0/6.
 
-29. **합병 게이트 평가는 동일 문구로 하면 안 된다** — 같은 SKILL.md 를 그대로 넣어 True 가 나오는 건 게이트가 작동한다는 증거가 못 된다. 실제 재수집은 **같은 콘텐츠를 LLM 이 다르게 요약**해서 들어오므로 패러프레이즈 페어로 검증해야 한다. 구 프롬프트는 동일 문구 5/5 통과였지만 패러프레이즈는 놓쳤다. 현재 프롬프트는 동일 5/5 · 패러프레이즈 4/4 · 다른스킬 오합병 0/6.
+30. **본문 부족을 등급 C 로 흘리지 않는다** — 로그인 벽·렌더 실패를 콘텐츠 품질 탓으로 오인시킨다. `collect.py` 가 분석 **직전** `MIN_TEXT_LEN` 미만이면 글자수와 출처별 우회 안내(`_short_text_hint`)로 스크랩 실패 종료.
 
-30. **본문 부족을 등급 C 로 흘려보내면 사용자가 원인을 오해한다** (2026-08-18) — 스크랩이 짧게 끝나도 `text` 가 비어있지만 않으면 분석 단계로 넘어갔고, Gemini 가 빈약한 입력에 등급 C 를 매겨 사용자에겐 **"스킬로 등록할 가치 없는 콘텐츠"** 로 표시됐다. 실제 사유는 로그인 벽이나 렌더 실패인데 콘텐츠 품질 탓으로 오인된다 (실사고 2026-08-13 ChatGPT 공유 링크 106자). 이제 `collect.py` 가 분석 **직전에** `MIN_TEXT_LEN`(스크래퍼 폴백과 동일 기준, `SCRAPER_MIN_TEXT_LEN` 로 조정) 미만이면 실제 글자수와 출처별 우회 안내(`_short_text_hint`)를 담아 스크랩 실패로 종료한다 — LLM 쿼터도 아낀다. 등급 C 메시지는 본문이 충분히 확보된 경우에만 쓰이며 판정 사유를 함께 보여준다.
+31. **카탈로그는 LLM 산출물을 공개 도메인에 HTML 로 렌더한다** — `catalog.py` 가 allowlist sanitize(script/style/iframe 내용까지 제거, href 는 http(s)/# 만) + CSP nonce(`default-src 'none'`). 태그를 새로 허용할 땐 `_ALLOWED_TAGS/_ALLOWED_ATTRS` 에만 + `test_xss_body_is_neutralized` 유지. API 는 `index.redact_secrets` 가 키 모양을 마스킹.
 
-31. **카탈로그/라이브러리는 LLM 산출물을 공개 도메인에 HTML 로 렌더한다 — XSS 면을 스스로 막아야 한다** (v4.5) — SKILL.md 본문은 스크랩한 웹페이지를 LLM 이 요약한 것이라 악성 페이지가 `<script>`/`onerror` 를 심을 수 있고, 같은 origin localStorage 에 채팅 PIN 세션 토큰이 있다. `catalog.py` 는 markdown 렌더 결과를 HTMLParser allowlist 로 sanitize (script/style/iframe 은 내용까지 제거, href 는 http(s)/# 만), 모든 속성은 `html.escape`, 엔진 `<script>` 만 CSP nonce 로 허용 (`default-src 'none'`). **카탈로그에 태그/속성을 새로 허용할 때는 `_ALLOWED_TAGS/_ALLOWED_ATTRS` 에만 추가하고 테스트 `test_xss_body_is_neutralized` 를 유지할 것.** API 쪽은 `index.redact_secrets` 가 키 모양 문자열을 인덱스 단계에서 마스킹한다 (API/카탈로그/MCP 공통).
+32. **라이브러리 인덱스는 mirror(`skills/`)만 본다** — `~/.claude/skills/` 는 수동 설치 스킬이 섞여 있다. 손으로 글로벌만 고치면 라이브러리엔 반영 안 됨 — mirror 도 같이, 또는 채팅 `edit_skill_md`. 정확한 건수는 `/healthz` 의 `library.total`.
 
-32-b. **사람 링크와 AI 링크를 섞지 말 것** (v4.7) — 같은 SKILL.md 를 세 경로로 낸다: 사람은 `/skill/<slug>`(게시글 HTML), AI 는 `/api/library/skills/<slug>`(JSON) 또는 `?format=raw`(마크다운 전문), MCP 는 `get_skill`. 검색 응답은 셋을 각각 `page_url` / `detail_url` / slug 로 내려주므로 **UI 는 page_url, 도구는 detail_url** 을 쓴다. 카드 제목이 외부 원본을 가리키면 게시판에서 이탈하므로 금지 — 외부 링크는 [원본 ↗] 버튼과 상세 페이지의 출처 목록에만 둔다.
+32-a. **전체 잠금 allowlist 를 함부로 늘리지 말 것** — 목록은 `auth_routes.py:_ALLOW_EXACT`(정확 일치, gotcha 43). 새 공개 엔드포인트는 진짜 비밀이 없는지 확인 후 거기에만.
 
-32-a. **전체 잠금(v4.6) allowlist 를 함부로 늘리지 말 것** — 게이트 예외는 `/login` · `/api/auth/redeem|bootstrap` · `/healthz` · `/static/*` · `/sw.js` · `/favicon.ico` · OPTIONS 와 v5.0 원격 MCP 경로(`/mcp` · `/oauth/*` 4종 · `/.well-known/*` 3종, gotcha 43) 뿐이다 (`scripts/auth_routes.py:_ALLOW_EXACT/_ALLOW_PREFIX`). 새 공개 엔드포인트가 필요하면 진짜 비밀이 없는지 확인 후 여기에만 추가. `register_auth` 는 **의도적으로 try/except 없이** 등록 — 게이트 실패 시 무보호로 뜨는 대신 기동 실패(healthz 죽음 → 112 감지). MCP/에이전트는 `AISKILLBOX_TOKEN` env (401 이면 MCP 는 로컬 인덱스 폴백). 전 기기 로그아웃 사고 복구 = `/login` 관리자 첫 등록(PIN) 또는 `python -m scripts.auth_store create`.
+32-b. **사람 링크와 AI 링크를 섞지 말 것** — 사람은 `/skill/<slug>`(HTML), AI 는 `/api/library/skills/<slug>`(JSON, `?format=raw`), MCP 는 `get_skill`. 검색 응답의 `page_url`/`detail_url` 을 각각. 카드 제목이 외부 원본을 가리키면 금지 — 외부 링크는 [원본 ↗] 에만.
 
-32. **라이브러리 인덱스는 mirror(`skills/`)만 본다** — `~/.claude/skills/` 는 수동 설치 스킬이 절반 가까이 섞여 있어 검색 corpus 로 부적합 (2026-09 기준 221건 중 origin 이 content-lab 인 mirror 111건만이 라이브러리 — 정확한 수는 `/healthz` 의 `library.total`). 수집 파이프라인은 두 곳에 동시에 쓰므로 mirror 만 읽어도 같은 내용. 손으로 `~/.claude/skills/<slug>/SKILL.md` 만 고치면 라이브러리엔 반영 안 됨 — mirror 도 같이 고치거나 채팅 `edit_skill_md` 사용.
+33. **카탈로그/상세는 메인과 다른 HTML — 모바일 규약을 따로 심는다** — viewport `maximum-scale=1`·safe-area 가 빠져 게시판만 확대되고 노치에 톱바가 잘렸다. standalone PWA 는 뒤로가기가 없어 그 톱바가 유일한 탈출구. 새 페이지는 `MobileUxTest` 통과.
 
-33. **카탈로그/상세는 메인 사이트와 다른 HTML 이다 — 모바일 규약을 따로 심어야 한다** (v4.8) — `templates/index.html` 의 viewport(`maximum-scale=1, user-scalable=no`)·safe-area(`--safe-top`) 규약이 `catalog_template.py` 이식 때 빠져서, ① 게시판에서만 핀치/더블탭 확대가 되고 ② `viewport-fit=cover` + 노치 조합에서 톱바가 상태바 밑으로 잘렸다. **상세 페이지는 standalone PWA 로 열리면 브라우저 뒤로가기 버튼이 아예 없어** 그 잘린 톱바가 유일한 탈출구였다 (사용자 신고 "글 들어가면 뒤로가기 어려움"). 지금은 톱바 `← 목록` + 스크롤 시 뜨는 플로팅 FAB + 글 끝 버튼 + 왼쪽 엣지 스와이프 4중. 카탈로그 → 글 → 뒤로 왕복은 `sessionStorage` 로 검색어·필터·스크롤을 복원한다 (`html{scroll-behavior:smooth}` 때문에 복원은 `behavior:'auto'` 명시 + 레이아웃 완성 전 clamp 대비 rAF 재시도). **새 페이지를 이 템플릿에 추가할 때 `MobileUxTest` 를 통과시킬 것.**
+34. **claude CLI structured output 은 스키마를 살짝 어긴다** — `reply` 를 `args` 안에, `tool` 칸에 `StructuredOutput`, `args` 없이 top-level 인자 — 3종 실측. `engine.cli_normalize()` 가 흡수하고 **REGISTRY 에 없는 이름은 도구로 치지 않는다**. 스키마 바꾸면 `CliNormalizeTest` 같이.
 
-34. **claude CLI structured output 은 스키마를 살짝 어긴다 — 정규화 없이 믿으면 답이 사라진다** (v4.8) — 실측 이탈 3종: ① `{"args": {"reply": "..."}}` (reply 를 args 안에) → 인사 한 마디가 "(응답 필드 누락)" 으로 표시됨, ② `{"reply": "...", "tool": "StructuredOutput"}` (tool 칸에 출력도구 이름) → 미등록 도구를 dispatch 해 8라운드를 태우고 "최대 호출 라운드 도달", ③ `{"tool": "recent_jobs", "limit": 3}` (args 없이 top-level 인자). `engine.cli_normalize()` 가 셋을 모두 흡수하고 **REGISTRY 에 없는 이름은 도구로 치지 않는다**. 스키마를 바꾸면 `CliNormalizeTest` 를 같이 갱신할 것.
+35. **CLI 라운드는 `--resume` 으로 잇는다** — 새로 띄우면 ~20.7k 토큰 컨텍스트가 매번 `cache_creation`. `--resume` 이면 `cache_read` 로 바뀌고 멀티턴 기억이 공짜로 생긴다. `conv_id → sid` 는 `engine.CLI_SESSIONS`(6h, 50). `--strict-mcp-config` 로 사용자 MCP 로드 차단.
 
-35. **CLI 라운드를 매번 새로 띄우면 컨텍스트를 매번 다시 산다** (v4.8) — `--setting-sources ""` 를 줘도 Claude Code 기본 시스템 컨텍스트 ~20.7k 토큰이 라운드마다 `cache_creation` 으로 새로 생성된다. `--resume <session_id>` 로 이어가면 `cache_read 30,792 / cache_creation 201` (실측) — 비용·지연이 확 준다. 부수효과로 **멀티턴 기억이 공짜로 생긴다** (그전엔 매 메시지가 무맥락 단발이라 "아까 그거" 가 안 통했다). session_id 는 stream-json 의 `system/init` 과 `result` 이벤트에 있고, `conv_id → sid` 매핑은 `engine.CLI_SESSIONS` (6시간 TTL, 최대 50). `--strict-mcp-config` 로 사용자 MCP 서버(노션/Gmail 등) 로드도 차단한다.
+36. **실패 안내가 가리키는 경로가 실재하는지 확인할 것** — "텍스트로 옮겨 등록하세요" 라고 안내하면서 `/api/collect` 가 비URL 을 400 으로 튕겼다. 지금은 `plain_text.py`. 안내문만 읽어서는 안 잡히는 자기모순.
 
-36. **"직접 텍스트로 옮겨 등록하세요" 라고 안내하면서 그 수단이 없었다** (v4.9) — `collect.py` 의 실패 안내(`_short_text_hint`, IG/노션 사전 차단 메시지)는 오래전부터 붙여넣기를 권해 왔는데, `/api/collect` 가 `http(s)://` 로 시작하지 않는 입력을 400 으로 튕겼다. 안내받은 대로 해도 막히는 자기모순 상태. 이제 `scripts/scraper/plain_text.py` 가 그 경로다. **새 실패 안내를 쓸 때는 그 안내가 가리키는 경로가 실재하는지 확인할 것** — 이 케이스는 코드가 아니라 안내문만 읽어서는 안 잡힌다.
+37. **`paste://<hash>` 는 내부 식별자다** — 링크로 렌더되면 죽은 링크. 프롬프트에서 감추고(`build_prompt`), `md_generator._scrub_paste_links` 2차 방어. paste 출처를 새로 표시하는 곳마다 `is_paste_source()` 분기.
 
-37. **`paste://<hash>` 는 내부 식별자다 — 링크로 렌더되면 전부 죽은 링크** (v4.9) — 붙여넣은 텍스트도 중복 감지 축이 필요해서 본문 SHA-256 을 `paste://<sha16>` 로 만들어 `sources:` 에 넣는다. 그런데 이게 URL 모양이라 세 군데서 링크가 됐다: ① `md_generator` 의 `- [{u}]({u})`, ② 카탈로그 [원본 ↗] 버튼·출처 목록, ③ **LLM 이 프롬프트의 `URL: paste://...` 를 보고 본문에 `[제목](paste://...)` 를 직접 박음** (실측 확인). ③ 은 프롬프트에서 식별자를 아예 감춰 차단(`build_prompt` 가 "직접 입력한 텍스트 — 원본 링크 없음" 으로 치환)하고, 합병된 옛 본문 대비로 `md_generator._scrub_paste_links` 가 2차 방어. **paste 출처를 새로 표시하는 곳을 만들 때마다 `is_paste_source()` 분기를 넣을 것.**
+38. **임계 미달을 '없음' 으로 치환하지 않는다** — Playwright 가 459자를 확보했는데 폴백 103자가 최종이 됐다. `_retry` 는 최장 결과를 들고 나오고 `pick_best()` 가 (성공, 길이) 순으로 겨룬다. 미달과 부재는 다르다.
 
-38. **router 가 확보한 최선의 스크랩 결과를 버렸다** (v4.9, 실사고 2026-08-25) — `_retry` 는 `len(text) >= MIN_TEXT_LEN(500)` 이 아니면 `None` 을 반환했고, `scrape()` 는 그걸 '실패'로 보고 3단계 requests 폴백 결과로 넘어갔다. 실제로는 Playwright 가 459자를 확보한 상태였는데 폴백이 가져온 103자가 최종 결과가 됐다 — 사용자에겐 `"본문을 103자밖에 가져오지 못했습니다"` 로 표시돼 **실제 확보량보다 나쁜 숫자**를 봤고, 다른 사이트에서는 임계를 넘겼을 결과가 더 나쁜 결과로 대체된다. 지금은 `_retry` 가 회차 중 최장 결과를 들고 나오고, `pick_best()` 가 (성공여부, 길이) 순으로 폴백과 겨룬다. **임계 미달을 '없음' 으로 치환하지 말 것 — 미달과 부재는 다르다.** 검증: `tests/test_scrape_best_of.py` 12건 + 실 URL 재측(103자 → 459자).
+39. **`except` 안에서 같은 함수를 다시 부를 때는 거기도 감싼다** — 폴백 경로가 원래 경로보다 방어가 약한 게 이 코드베이스의 반복 패턴. 무방어 2차 파싱이 워커까지 올라가 한글 사유 없이 죽었다.
 
-39. **except 블록 안의 무방어 재시도가 잡을 통째로 죽인다** (v4.9) — `gemini.analyze()` 는 JSON 파싱 실패 시 Gemma 로 1회 폴백하는데, 그 2차 `_extract_json(raw_text)` 이 `except` 블록 안에서 감싸이지 않은 채 호출됐다. 두 모델이 다 파싱 불가면 예외가 `analyze()` 밖으로 전파 → `collect()` 는 analyze 를 감싸지 않으므로 워커까지 올라가 `job failed: JSON 블록 없음` traceback (실발생 3건). 사용자에겐 **한글 사유도 우회 안내도 안 갔다.** 이제 ok=False + 한글 error 로 정상 종료한다. **`except` 안에서 같은 함수를 다시 부를 때는 거기도 감싸라 — 폴백 경로가 원래 경로보다 방어가 약한 게 이 코드베이스의 반복 패턴이다.**
+40. **`[hidden]` 은 UA 스타일이라 author `display` 에 항상 진다** — cascade origin 문제. `style.css` 에 `[hidden]{display:none !important}` 전역. `hidden` 으로 토글하는 요소에 display 를 주는 순간 이 함정.
 
-40. **`[hidden]` 은 UA 스타일이라 author 의 `display` 선언에 항상 진다** (v4.9) — 특이도(specificity) 문제가 아니라 **cascade origin** 문제다. `.text-wrap{display:flex}` 를 쓰는 순간 그 요소의 `hidden` 속성이 무력화돼 링크 패널과 텍스트 패널이 **동시에 렌더**됐다 (헤드리스 실측에서 잡힘 — 눈으로는 "그냥 폼이 긴가보다" 로 보인다). `static/style.css` 에 `[hidden]{display:none !important}` 전역 선언. **`hidden` 으로 토글하는 요소에 display 를 주는 순간 이 함정.**
+41. **`logs/` 밑 상태 파일을 CLI 와 서버가 같이 만지면 mtime 재로드가 필수다** — `auth.json` 을 한 번만 읽어서, CLI 로 발급한 코드가 서버에서 거부되고 **`delete` 한 토큰이 서버에서 계속 200** 이었다(분실 기기 접근을 끊었다고 믿지만 안 끊긴 상태). 지금은 mtime 비교 + `_save()` 가 자기 write 를 기록해 루프 방지. `tests/test_auth_store_reload.py`.
 
-41. **`auth.json` 을 한 번만 읽어서, 상주 서버가 디스크 변경을 영원히 못 봤다** (v4.9, 실측) — `AuthStore._load` 가 `if self._loaded: return` 이라 기동 후 첫 로드가 끝나면 파일이 바뀌어도 다시 안 읽었다. 서버는 launchd KeepAlive 로 24시간 떠 있으니 사실상 영구 고착. 실패 두 방향 모두 실측 확인: ① CLAUDE.md 가 안내하는 절차 그대로 `python -m scripts.auth_store create` 로 발급한 코드가 서버에서 **거부**된다 ("초대코드가 올바르지 않아요") — 코드를 건네받은 사람은 이유를 알 수 없다. ② 더 나쁜 쪽 — `delete <code>` 가 `"삭제됨 — 로그아웃된 기기 N대"` 를 출력하는데 **실행 중 서버는 그 토큰을 계속 200 으로 통과**시킨다. 분실 기기·협업 종료 시 접근을 끊었다고 믿지만 안 끊긴다. 지금은 mtime 비교로 외부 변경 시 재로드하고, `_save()` 가 자기 write 의 mtime 을 기록해 재로드 루프를 막는다. 회귀 테스트 `tests/test_auth_store_reload.py` 6건 (수정 전 코드에서 4건 실패 확인). **`logs/` 밑 상태 파일을 CLI 와 서버가 같이 만지는 구조라면 전부 같은 함정** — `config.json`·`fix_jobs.json` 등 신규 저장소를 만들 때 mtime 재로드를 기본으로 할 것.
+42. **degrade 는 사유까지 실어야 한다** — `library search` CLI 가 `.env` 를 안 읽어 의미검색이 조용히 키워드로 강등됐다. 지금은 응답에 `semantic_skip_reason`(키 없음/캐시 빔/후보 없음/keyword 요청). bool 만 두면 원인 구분이 안 된다.
 
-42. **의미 검색이 조용히 꺼져도 아무 표시가 없었다** (v4.9) — `python -m scripts.library search` 는 `.env` 를 로드하지 않아 `GEMINI_API_KEY` 가 파일에 멀쩡히 있어도 embedder 가 키를 못 찾았고, 임베딩이 None → hybrid 가 **조용히 keyword 로 강등**됐다 (CLAUDE.md 는 이걸 '터미널 하이브리드 검색' 이라고 안내). 서버 경로(app.py)는 `.env` 를 읽으므로 정상이라 비교하지 않으면 안 드러난다. `catalog.main()` 안에서만 `.env` 를 로드(import 경로인 `routes.py` 에는 무영향)하고, 검색 응답에 **`semantic_skip_reason`** 을 추가해 "왜 빠졌는지"(키 없음 / 캐시 빔 / 후보 없음 / keyword 요청)가 드러나게 했다. **`semantic_used: false` 같은 bool 만 두면 원인 구분이 안 된다 — degrade 는 사유까지 실어야 한다.**
+43. **인증 게이트 예외는 정확 일치로** — prefix 로 두면 그 아래 새 라우트가 자동으로 게이트 밖(fail-open). `_ALLOW_EXACT` 에 적기 전까지 게이트 안(fail-closed) — 안 넣으면 302 로 막혀서 바로 드러난다(그게 옳은 방향). `/static/` 만 prefix. `test_unknown_oauth_subpath_is_gated`.
 
-43. **인증 게이트 예외를 prefix 로 두면 fail-open 이다** (v5.0) — v4.6 전체 잠금의 allowlist 에 원격 MCP 경로를 넣을 때 처음엔 `_ALLOW_PREFIX` 에 `"/oauth/"` 를 넣었다. 그러면 **그 아래 새 라우트를 추가하는 순간 자동으로 게이트 밖이 된다** — 인증을 깜빡한 엔드포인트가 아무 테스트도 실패시키지 않고 무보호로 공개된다. 지금은 `_ALLOW_EXACT` 에 경로를 정확 일치로 나열한다(fail-closed: 여기 적기 전까지 게이트 안 — 2026-09 기준 login·auth 2·healthz·sw.js·favicon·/mcp·oauth 4·well-known 3, 목록은 코드가 단일 진실). `/static/` 만 prefix 로 남았다. **새 OAuth·MCP 엔드포인트를 추가하면 자체 인증을 넣고 이 목록에도 반드시 추가할 것** — 안 넣으면 302 로 막혀서 바로 드러난다(그게 옳은 방향이다). 회귀 가드: `test_unknown_oauth_subpath_is_gated`.
+44. **상태를 들고 있는 가드는 모듈 싱글턴 금지 · 축출할 때 카운터를 통째로 비우지 않는다 · 잠금 상태기계는 PoC 부터** (같은 클래스에서 세 번 틀렸다)
+    ① 모듈 싱글턴이면 테스트마다 새 앱을 만들어도 가드가 재사용돼 뒤 테스트가 429. 관례는 register 함수 지역 변수 + closure.
+    ② `_fails` 를 `clear()` 하면 잠금이 영원히 안 생긴다 — `_fails` 는 `_until` 로 가는 입구. 무인증 authorize 플러딩으로 token 잠금까지 껐다(PoC).
+    ③ 두 버킷 공유 예산은 한쪽 플러딩이 다른 쪽을 굶긴다 — 버킷별 독립 상한. 그리고 "인증 성공 = 카운터 리셋" 을 없앴으면 같은 가드를 쓰는 옆 엔드포인트(`/oauth/revoke`)도 확인(실측 24회 시도 429 0건).
 
-44. **상태를 들고 있는 가드는 모듈 레벨에 두지 말고, 축출할 때 카운터를 통째로 비우지 마라** (v5.0 — 같은 클래스에서 세 번 틀렸다) — ① `_GUARD = FailGuard()` 를 **모듈 싱글턴**으로 두면 테스트마다 새 Flask 앱을 만들어도 가드 객체가 재사용돼, 잠금 테스트가 키를 5분 잠근 뒤 알파벳순 다음 테스트들이 400 대신 **429** 를 받아 실패한다(실측). 이 repo 관례는 원래 함수 지역 변수 + closure 다 (`auth_routes.py:register_auth` 의 `guard = _RedeemGuard()`) — 등록 함수가 기동 시 1회만 불리므로 운영에선 동일하게 공유된다. ② 키 상한을 걸 때 **`_fails` 를 통째로 `clear()` 하면 잠금이 영원히 안 생긴다** — `_fails` 는 `_until` 로 들어가는 **입구**라, 입구를 씻으면 어떤 키도 `max_fails` 에 도달하지 못한다. 무인증 `GET /oauth/authorize?client_id=<임의값>` 플러딩으로 도달 가능했고, 같은 가드를 token·revoke 가 공유하므로 **authorize 플러딩이 token 잠금까지 껐다**(PoC 재현). ③ 두 버킷에 **공유 예산**을 쓰면 한쪽 플러딩이 다른 쪽을 굶겨 활성 잠금이 축출된다 — 버킷별로 독립 상한을 건다. 그리고 `/oauth/token` 에서 "클라이언트 인증 성공 = 카운터 리셋" 을 없앴으면 **같은 가드를 쓰는 옆 엔드포인트(`/oauth/revoke`)에도 같은 패턴이 남아있지 않은지** 확인할 것 — 남아 있으면 그게 우회로가 된다(실측: 24회 시도에 429 0건). **교훈: 잠금/축출 상태기계는 머릿속으로 설계하지 말고 PoC 부터 돌릴 것.**
+45. **소유권 검사는 소비 *전에*** — `consume_code` 가 pop 한 뒤 `client_id` 를 보면 코드 값만 알면 남의 인가코드를 무흔적으로 파괴할 수 있다. 불일치면 **건드리지 않고 None**. 소유자 불일치 경로에서 `revoke_grants_of` 금지. `guard.fail` 키는 호출자 자신의 cid(피해자 cid 면 공격자가 정당한 클라이언트를 잠근다).
 
-45. **소유권 검사는 소비 *전에* 해야 한다** (v5.0) — `consume_code(code)` 가 무조건 `pop` 한 뒤에 `g["client_id"] != cid` 를 보면, 등록된 아무 클라이언트나 **코드 값만 알면 남의 유효한 인가코드를 파괴**할 수 있다. 게다가 그 경로는 `mark_code_spent` 를 안 거쳐 `code_was_seen` 이 False 로 남으므로 **재사용 감지·grant 폐기·경고 로그가 전부 안 걸린다** — 무흔적 DoS 다(클라이언트 A/B PoC 로 재현). 지금은 `consume_code`/`rotate_refresh` 가 키워드 전용 옵셔널 `client_id` 를 받아 불일치면 **건드리지 않고 None**. 단 소유자 불일치 경로에서 `revoke_grants_of` 를 부르면 안 된다 — 코드 값만 알면 남의 grant 를 날릴 수 있게 된다. 그리고 `guard.fail` 키는 **호출자 자신의 cid** 여야 한다(피해자 cid 면 공격자가 정당한 클라이언트를 잠근다).
+46. **원격 클라이언트에 URL 을 내보내는 엔드포인트는 전부 `public_base_url` 에서** — 위 "원격 MCP" 절 참조. `test_no_http_urls_anywhere`.
 
-46. **CF Tunnel 이 TLS 를 종단하므로 Flask 는 자기를 http 로 본다** (v5.0) — `request.url_root` 는 `http://` 를 준다. OAuth 메타데이터·`WWW-Authenticate`·issuer 에 `http://` 가 **한 번이라도** 새면 Claude 가 연결을 거부한다. 그래서 절대 URL 은 전부 `config.json` 의 `mcp_remote.public_base_url` 에서만 만들고, `mcp_remote/config.py:load()` 가 https 아닌 값을 **캐시 갱신 전에** `ValueError` 로 거부한다(잘못된 설정이 캐시에 눌러앉지 않게). 회귀 가드: `test_no_http_urls_anywhere` 가 메타데이터 응답 전문을 훑는다. **원격 클라이언트에 URL 을 내보내는 새 엔드포인트는 전부 이 규칙을 따를 것.**
+47. **인스타는 embed 엔드포인트가 답이다** — `instagram.com/<p|reel>/<sc>/embed/captioned/` 는 로그인 없이 200, `"contextJSON":"…"`(이중 JSON 인코딩 — `raw_decode` 로 풀고 다시 `json.loads`).
+    ① `video_url` 이 **없는 릴스도 있다** — 썸네일만 읽힘. 꼭 필요하면 `yt-dlp --cookies-from-browser chrome`.
+    ② 삭제된 게시물은 contextJSON 없음 + 본 페이지 프로필로 302 — 재시도 무의미.
+    ③ **미디어 URL 은 서명·만료가 붙어 매번 다르다** — 캐시 키는 `ig:<shortcode>:<idx>` / `yt:<id>`. URL 로 캐시하면 재수집마다 Gemini 재호출.
 
-47. **인스타는 embed 엔드포인트가 답이다 — yt-dlp·Playwright 는 캡션도 못 뜯거나 캡션만 뜯는다** (v5.1, 2026-09-12 실측) — `instagram.com/<p|reel>/<sc>/embed/captioned/` 는 로그인·쿠키 없이 200 이고 `"contextJSON":"…"`(JSON 문자열을 한 번 더 JSON 인코딩 — `raw_decode` 로 문자열을 풀고 다시 `json.loads`) 안에 캡션·`video_url`·캐러셀 자식이 있다. 함정 셋: ① `video_url` 이 **없는 릴스도 있다** (실측 Dc01G4vJP_5 — `is_video:true` 인데 URL 없음 → 썸네일만 이미지로 읽힘). 그런 릴스의 영상 본문이 꼭 필요하면 이 맥 크롬 쿠키로 `yt-dlp --cookies-from-browser chrome`. ② 삭제된 게시물은 embed 에 contextJSON 이 없고 본 페이지는 프로필로 302 — `ok=False` 로 기존 경로에 넘기되 재시도 무의미. ③ **미디어 URL 에는 서명·만료가 붙어 매번 다르다** — 캐시 키는 URL 이 아니라 `ig:<shortcode>:<idx>` / `yt:<id>` 로. 영상 이해 결과를 URL 로 캐시하면 재수집마다 Gemini 를 다시 태운다.
+48. **enum 을 검증하는 파서는 프롬프트가 보여주는 표기 전부를 받아야 한다** — 등급 기준을 `S-즉시적용` 으로 설명하니 모델이 그대로 돌려줬고 `_validate` 가 C 로 강등. 첫 글자가 enum 이면 정규화(`test_grade_normalize.py`). 프롬프트를 고칠 때 파서를 같이.
 
-48. **프롬프트에 enum 라벨을 풀어 쓰면 모델이 라벨을 그대로 돌려준다** (v5.1) — `prompt.py` 가 등급 기준을 `S-즉시적용 / A-참고가치` 로 설명하니 Gemini 가 `"grade": "S-즉시적용"` 을 반환했고, `_validate` 는 `GRADES` 밖이라며 **C 로 강등** → "스킬 가치 없음" 으로 안내되고 미등록됐다 (실사고 2026-08-28 fieldby). 이제 첫 글자가 enum 이면 그 글자로 정규화한다(`tests/test_grade_normalize.py`). **enum 을 검증하는 파서는 프롬프트가 보여주는 표기 전부를 받아야 한다** — 프롬프트를 고칠 때 파서를 같이 보라.
+49. **`claude -p` 를 파이프라인 프로바이더로 쓸 때는 도구 0개 · stdin 닫기 · 스키마 enum = 검증 enum**
+    ① `--tools ""` 없으면 기본 도구를 들고 "확인해볼게요" 류 행동. 파일 판독만 `--tools Read --allowedTools Read` + 그 파일만 든 임시 폴더를 cwd(밖은 non-interactive 에서 권한 프롬프트로 실패).
+    ② stdin 안 닫으면 3초 대기 — `subprocess.DEVNULL`.
+    ③ `--json-schema` 의 enum 이 곧 `_validate` 의 enum — `SKILL_SCHEMA` 와 `prompt.py` 상수가 어긋나면 옳은 답도 C 로 강등(`SchemaTest`).
+    ④ 한도는 stdout envelope `is_error + result` 에 "usage limit" 류로 — 보이면 쿨다운(사용자의 5시간 창을 나눠 쓴다). 119 가드엔 `sdk-cli` 로 잡힌다. 실측: 스킬 1건 50초·~20k 토큰.
 
-49. **`claude -p` 를 파이프라인 프로바이더로 쓸 때는 도구를 0개로 잠그고 stdin 을 닫아라** (v5.2, 2026-09-14 실측) — ① `--tools ""` 없이 부르면 CLI 가 기본 도구(Read/Bash/…)를 들고 시작해 분석 대신 "확인해볼게요" 류 행동을 하려 한다 (v4.4.3 채팅에서 겪은 것과 같은 함정 #19). 순수 생성은 `--tools ""` + `--json-schema`, 파일 판독만 `--tools Read --allowedTools Read` 로 **그 파일만 든 임시 폴더를 cwd** 로 (cwd 밖은 Read 도 권한 프롬프트에 걸려 non-interactive 에선 실패). ② stdin 을 안 닫으면 "no stdin data received in 3s, proceeding" 을 기다린다 — `subprocess.DEVNULL`. ③ `--json-schema` 의 enum 이 곧 `_validate` 의 enum 이어야 한다 — 프롬프트 라벨(`S-즉시적용`) 문제(#48)가 구조적으로 사라지지만, `SKILL_SCHEMA` 와 `prompt.py` 상수가 어긋나면 모델이 옳게 답해도 C 로 강등된다 (`SchemaTest` 가 지킨다). ④ 한도는 stdout envelope `is_error + result` 에 "usage limit" 류로 온다 — 이걸 보면 이 프로세스에서 더 두드리지 말고 쿨다운 (같은 5시간 창을 사용자의 코딩과 나눠 쓴다). 실측: 스킬 1건 50초·cache_creation ~9k + 본문, 슬라이드 2장 6초. 119 가드에는 `sdk-cli` 로 잡힌다 (A 경보 10분 150K — 건당 ~20k 라 여유).
+50. **r.jina.ai 는 브라우저 UA 를 403 으로 막는다** — 다른 스크래퍼와 정반대. `jina.py` 에 Safari UA 를 넣으면 403 이고 폴백 실패는 예외를 삼켜 **조용히 사라진다** — 로그 한 줄이 유일한 신호. `tests/test_jina_reader.py:UserAgentTest` 가 브라우저 UA 토큰을 금지.
 
-50. **r.jina.ai 는 브라우저 UA 를 403 으로 막는다 — 다른 스크래퍼와 정반대다** (v5.4, 2026-09-20 실측) — `web.py`·`instagram_embed.py` 는 차단을 피하려 Safari/Chrome UA 를 쓴다. 그 습관대로 `jina.py` 에 Safari UA 를 넣으면 **403 Forbidden** 이 온다 (실측: Safari UA 403 / curl UA 200 / `aiskillbox/5.4` 200). 게다가 폴백 실패는 예외를 삼키고 기존 결과를 유지하도록 설계돼 있어서 **조용히 사라진다** — 로그의 `Jina Reader 실패 ... 403` 한 줄이 유일한 신호다. `tests/test_jina_reader.py:UserAgentTest` 가 브라우저 UA 토큰을 금지해 재발을 막는다.
+51. **`from . import X` 는 sys.modules 가 아니라 패키지 속성을 먼저 본다** — `mock.patch.dict("sys.modules", …)` 가 무력화돼 실제 Playwright 가 돌았다(단독 통과·전체 실패). `mock.patch.object(scripts.scraper, "web", mock, create=True)` 로 **패키지 속성을 직접**.
 
-51. **`from . import X` 는 sys.modules 가 아니라 패키지 속성을 먼저 본다 — 모듈 교체 테스트가 조용히 무력화된다** (2026-09-20 발굴) — `test_scrape_best_of` 는 `mock.patch.dict("sys.modules", {"scripts.scraper.web": mock})` 로 Playwright 를 대역으로 바꿔 왔다. 그런데 `router.scrape` 안의 `from . import web` 는 `scripts.scraper` **패키지 객체의 속성**을 먼저 읽으므로, 앞선 테스트가 진짜 `web` 을 한 번이라도 import 해 두면 패치가 통째로 무시되고 **실제 Playwright 가 돈다**. 단독 실행은 통과하고 전체 실행만 깨지는 형태라 원인을 찾기 어렵다 (실측: 체인 테스트 5건이 example.com 을 진짜로 긁어 129자를 받고 30초 소요, 저장소 규칙 '네트워크 0' 위반). 해결: `mock.patch.object(scripts.scraper, "web", mock, create=True)` 로 **패키지 속성을 직접** 갈아끼운다 (`_stub_modules`).
+52. **테스트가 커밋된 파일을 실제 API 로 오염시킨다** (2026-09-25 실측) — `embeddings.json` 에 스킬이 아닌 `keeper` 키(3072차원 실벡터)가 있다. `test_consolidate.py` 가 `merge_pair("keeper","absorbed")` 를 부르고 `consolidate.py` 가 `embedder.get_or_embed` 를 그대로 타며 `CACHE_PATH` 는 실경로 하드코딩(주입점 없음). 결과: 전체 테스트마다 실제 임베딩 호출 + `git status` 오염 + 유령 키가 의미검색 후보에 섞임. `/healthz` 가 `total 127 / embedded 126` 인 이유. **embedder 를 주입 가능하게 만들고 테스트에서 패치할 것.** "디스크 부작용 0" 규칙 위반.
+
+53. **`library.consolidate`·`regrade` 는 `.env` 를 로드하지 않는다** — 문서대로 venv 활성화 없이 돌리면 합병 후 keeper 가 **임베딩 없는 상태로 남는다**(`embedder.py` 는 WARNING 만). 위 Environment 절 참조.
 
 ## Related docs in this repo
 
-- **`TEMPLATE.md`** — 스킬 페이지 표준 템플릿 v2.1 (단일 진실, enum/구조/외부 도구 매핑 14종 정의)
-- **`README.md`** — 사용자 facing 빠른 시작 가이드
-- **`DEPLOY.md`** — Cloudflare Tunnel + LaunchAgent 배포 가이드
-- **`lessons.md`** — 2026-05-14 이후 갱신 없음. 실제 함정 누적은 이 파일의 Operational gotchas 섹션
-- **`docs/superpowers/specs/`** — 설계 스펙 5건 (06-12 self-service · 07-15 remote-fix/pixel UX · 08-20 skill-library · 08-22 invite-auth · 08-27 remote-mcp-oauth) + `plans/2026-08-27-remote-mcp-oauth.md`. v4.5 이후 기능은 스펙 → 계획 → 구현 순으로 들어왔다
+- `docs/CHANGELOG.md` — 릴리스 이력 (이 문서에서 분리). 최신은 `git log --oneline`
+- `docs/notion-migration.md` — Notion 마이그레이션 명령·스키마·함정 (기본 off, 켤 때만)
+- `docs/superpowers/specs/` — 설계 스펙. v4.5 이후 기능은 스펙 → 계획 → 구현 순. `ls` 로 확인
+- `README.md` · `DEPLOY.md` — 사용자용 빠른 시작 · Cloudflare Tunnel + LaunchAgent 배포
+- `TEMPLATE.md` — v2.1 시절 Notion 페이지 템플릿. **현행 SKILL.md 구조와 무관**(단일 진실은 `analyzer/prompt.py:ALLOWED_HEADINGS`)
+- `lessons.md` — 2026-05-14 이후 갱신 없음. 함정은 위 gotchas
 
 ---
 
@@ -520,10 +305,10 @@ logs/rebuild_v27_{date}/            ── LLM 재작성 결과 markdown 캐시 
 
 URL 하나를 던지거나 본문을 그대로 붙여넣으면:
 1. 자동으로 스크래핑 (YouTube/IG/TikTok/Notion/Web/GitHub) — 붙여넣은 텍스트는 이 단계 생략
-2. Gemini → Gemma 4 폴백으로 핵심 AI 스킬 추출 + 등급 판정
-3. ECC 표준 `SKILL.md` 자동 생성 (8섹션 표준)
-4. 글로벌 `~/.claude/skills/{slug}/SKILL.md` + mirror에 설치
-5. Notion 마스터 DB v2 (9속성) 등록 (중복 시 자동 합병)
+2. Claude Sonnet 5(`claude -p`) → Gemini → Gemma 4 폴백으로 핵심 AI 스킬 추출 + 활용도 등급 판정
+3. ECC 표준 `SKILL.md` 자동 생성
+4. 글로벌 `~/.claude/skills/{slug}/SKILL.md` + mirror 에 설치 → 라이브러리에 즉시 등재
+5. (옵션, 기본 off) Notion 등록 — `config.json notion.register_on_collect`
 
 **핵심 가치**: 좋은 콘텐츠 한 번 보고 끝나지 않는다. 스킬 형태로 자산화해서 모든 두근컴퍼니 에이전트가 영구 활용.
 
@@ -532,41 +317,21 @@ URL 하나를 던지거나 본문을 그대로 붙여넣으면:
 - **무응답 금지** — 완료: `✅ 스킬화 — <slug> (등급 X, 카테고리 Y)`. 부분 성공: 어디까지 됐는지 명시. 에러: `❌ <한글 사유>` + 우회안.
 - **두근은 개발 초보** → 쉽게 설명, 선택지는 장단점과 함께
 - **80% 확신이면 실행 후 보고**, 되묻지 않음
-- **한 번에 끝내기** — 코드 수정 시 미정의 함수/import 잔존 확인 (`python -m py_compile`)
-- **자동 합병 정책** — `skip_duplicate=False` 가 기본. 중복은 합병하고 출처 누적 (사용자가 정성껏 쌓은 자산 보존)
-- **무료 도구 우선** — Gemini 1500/day, Playwright/yt-dlp/Notion API 모두 무료. 비용 발생 가능성 사전 고지.
+- **한 번에 끝내기** — 코드 수정 시 미정의 함수/import 잔존 확인 (py_compile)
+- **자동 합병 정책** — `skip_duplicate=False` 가 기본. 중복은 합병하고 출처 누적
+- **무료 도구 우선** — 구독 Claude · Gemini 무료 티어 · Playwright/yt-dlp 전부 무료. 비용 발생 가능성 사전 고지.
 
 ### 보안
 
-- `.env` (`GEMINI_API_KEY`, `NOTION_API_KEY`) 채팅 노출 금지
-- API 키 하드코딩 금지 — 환경변수만
+- `.env` 값 채팅 노출 금지. API 키 하드코딩 금지 — 환경변수만
 
-### 변경 로그
+---
 
-| 날짜 | 버전 | 변경 |
-|------|------|----------|
-| 2026-09-20 | v5.4 | **Jina Reader 폴백 + 터미널 도구 세팅.** 스킬 라이브러리에 들어온 도구들을 실제 환경에 적용: ① `scraper/jina.py` — Playwright·requests 가 `MIN_TEXT_LEN` 미만이면 `r.jina.ai` 로 한 번 더 읽는다 (무료·키 불필요). 사전 차단 URL 은 제외, 더 짧으면 기존 결과 유지. 실측: 렌더 실패로 95자였던 공개 노션 페이지 → 5,167자. 함정: **브라우저 UA 는 403** (gotcha 50). ② 전체 실행에서만 깨지던 체인 테스트의 근본 원인 발굴 — `from . import X` 가 패키지 속성을 먼저 봐서 `sys.modules` 패치가 무력화되고 실제 네트워크를 탔다 (gotcha 51). `_stub_modules` 로 패키지 속성 직접 패치. 테스트 369 → **388건**, 전체 실행 35초 → 2.4초. |
-| 2026-09-16 | v5.3 | **등급 기준 재정립 + 중복 간소화 도구 + C 도 등록.** 라이브러리 전수 검토(119건)에서 S 68/A 39 로 등급이 정보를 못 줬고, 같은 PDF 에서 나온 삼중 중복·같은 URL 이중 등록·오합병 덩어리(`loop-engineering.archived`)가 있었으며, 오합병·비공개 오탐·429 로 사라진 요청 5건이 있었다. 사용자 원칙: "유사·연관이면 묶어 간소화, 등급은 활용도이지 소장 가치가 아니다, B 이하도 버리지 않는다". ① rubric 을 활용도 4단계(S 즉시 실행/A 절차형/B 개념/C 정보)로 교체 — `prompt.py` 와 `library/regrade.py` 동일 문장. ② `collect.py` 등급 C 도 등록 (종전 "DB 에 안 올라감" 폐지, `register.py` 의 C 차단도 제거), 카탈로그에 C 필터 칩. ③ 의미 dedup 최종 확인 `_confirm_semantic_merge` Claude 우선 + 두 카테고리를 근거로. ④ `library/regrade.py` (6건/호출 배치 판정, 프론트매터 패치, dry-run 기본) · `library/consolidate.py` (keeper ← absorbed 흡수, 백업·출처 합집합·실패 시 무변경). ⑤ 데이터 (백업 `logs/backup_regen_20260916/`): 누락 7건 재수집(Fable 5 가드레일·marketingskills·S&P500 실험·Claude×Higgsfield→합병·codex-battery·Opus 4.8 oavoir→합병·GPT 이미지 2편→합병), 300~700자 껍데기 10건 Claude 재생성(대부분 새 슬러그), 중복군 통합 6쌍(맥락 프롬프트 3→1 `context-rich-prompting`, 커넥터 2→1 `claude-connectors`, NVIDIA 2→1 `nvidia-build-ai-free-api`, Claude API+SDK 2→1 `claude-api`, 빈티지 포스터 2→1 `photo-rubber-stamp-poster`), `.archived` 2건 삭제, 임베딩 116/116. 전수 등급 재판정 122건 중 50건 변경 → **S 64 · A 32 · B 7 · C 13** (종전 S 68·A 40·B 1·C 2·없음 11). 카테고리 다른 4쌍(headroom↔token-reduction, token-saving↔sub-agent-pattern, opus-4-8↔features, 인스타 2건)은 원칙대로 분리 유지. 119 → **116건**. IG 삭제 출처 2건(link-in-bio·ai-ecommerce)은 껍데기 그대로 소장. 테스트 350 → **369건**. |
-| 2026-09-14 | v5.2 | **분석 1순위 = Claude 구독 — SKILL.md 품질을 Max 플랜으로 올린다.** 그동안 본문을 쓰는 건 Gemini 2.5 Flash 였고 하루 20회 뒤엔 Gemma 26B 로컬이었다 (09-13 재처리 10건 중 후반이 Gemma). Claude 는 채팅·fix 러너에만 쓰고 있었는데, 영상만 못 받을 뿐 텍스트·이미지는 Claude 가 낫고 스킬 1건 ~20k 토큰이라 플랜 여유도 충분. ① `analyzer/claude_cli.py` — `claude -p` 래퍼 2종: `call_claude_json`(도구 0개 + `--json-schema SKILL_SCHEMA`, enum 을 스키마로 강제) · `call_claude_read_files`(Read 만, 임시 폴더 cwd). `--setting-sources ""`·`--strict-mcp-config`·stdin DEVNULL. 한도 메시지 → 30분 쿨다운. runner 주입으로 프로세스 0 테스트. ② `analyze()` 순서 Claude → Gemini → Gemma, 결과 `provider` 필드 + 잡 summary/로그에 기록. Gemini SDK/키가 없어도 Claude 로 분석된다 (종전엔 키 없으면 즉시 실패). 검증 재요청·body_too_short 보강은 1차가 Claude 면 Claude 로 (Gemma 로 품질 강등 X). ③ 슬라이드 판독 Claude 우선 (`read_images=` 주입점), 영상·유튜브는 Gemini 유지. ④ config `analyzer.*` 블록 (enabled/model/timeout/cooldown, 재시작 불필요), 긴급 env `ANALYZER_CLAUDE=0`. ⑤ **합병기도 같은 순서** — `merger.merge_with_existing` 이 Claude(`MERGE_SCHEMA`) → Gemini → Gemma. 합병 결과가 최종본이라 여기만 Gemma 면 analyze 를 올린 의미가 없다. Gemini 키 없이도 합병된다 (종전엔 키 없으면 합병 없이 신규로 덮어씀). **본문 cap 은 프로바이더별** — Claude 20,000자·Gemini/Gemma 4,000자 (`MERGE_BODY_CAP_*`). 실사고: 16.8k Claude 본문을 4,000자 cap 으로 합병해 12.4k 로 줄었다 — 합병 입력에서 잃으면 '둘 다 보존' 이 성립 안 한다. ⑥ 09-13 쿼터 소진(03:19 flash-lite 429) 뒤 Gemma 가 만든 6건을 백업(`logs/backup_claude_20260914/`) 후 Claude 로 재생성 (`regen.sh`, 건당 120초 간격으로 119 가드 아래). 결과: claude-agent-session → **claude-code-session-mention-handoff**(S, 6.6k→14.1k자) · vintage-photo-field-notes-generator → **vintage-field-notes-poster-prompt**(S, 18.9k→19.2k) · loop-engineering-ai(S, 8.5k→8.9k) · motion-transfer-character-swap-video → **higgsfield-genjutsu-motion-transfer-character-swap**(A, 15.3k→17.0k). higgsfield-genjutsu-music-video-guide 는 그것과 같은 스킬로 판정(0.945)돼 **Claude 합병기(전문 cap)로 흡수** — 합병본 21.0k자·출처 2건 — 후 삭제. ai-office 는 Claude 가 **C(기능명 나열뿐, 따라할 절차 없음)** 로 판정 — 옛 A 버전을 복원해 두었으니 지울지는 사람이 결정. 슬러그가 바뀐 2건은 옛 글로벌 설치본도 제거됨. 실측: 기존 스킬 본문 재분석 50초·S 등급·본문 2.8k자·경고 0, 슬라이드 2장 판독 6초·한글 100% (gotcha 49). 테스트 316 → **350건**. |
-| 2026-09-13 | v5.1 | **미디어 이해 — 릴스·피드·자막 없는 유튜브의 내용을 읽는다.** 로그 전수(05-14~09-12) 에서 인스타 릴스 5건은 yt-dlp 가 매번 "login required" 로 실패해 Playwright 가 **캡션만** 뜯었고 그걸로 스킬이 만들어졌다 (실사례 DdGu4P0MjXk: 영상은 "AI Office 8가지 대시보드", 스킬은 "AI 정보 큐레이션 마인드셋"). 피드 `/p/` 4건은 시도조차 없이 차단. ① `scraper/instagram_embed.py` — 공개 embed 엔드포인트의 contextJSON 에서 캡션·`video_url`·캐러셀 슬라이드 URL 을 로그인 없이 확보 (gotcha 47), router 가 IG 를 embed 우선으로. ② `analyzer/media_understand.py` — 스크랩과 분석 사이의 새 단계. 릴스 mp4 → Files API → flash-lite 가 8초·8k 토큰으로 음성+화면 자막 정리, 캐러셀 5장 inline 7초, 유튜브는 URL 을 file_data 로 직접(87초 영상 11초). 결과는 본문 끝 섹션으로 덧붙고 500자 게이트는 그 뒤. 캐시 `logs/media_cache.json` (key 기준). 항목별 실패 격리. ③ 유튜브 자막 0자 → 영상 자체를 미디어 이해로. ④ 등급 `S-즉시적용` → C 강등 버그 수정 (gotcha 48). ⑤ 실패/누락 재처리 — 캡션만으로 만든 릴스 스킬 3건 합병 보강, 엉뚱한 1건 교체(백업 `logs/backup_media_20260913/`), 차단됐던 피드 2건 신규, 등급 버그 1건 재수집. 삭제된 게시물 3건(DW_asMNk8wG·DYYyIEqACDx·DZPjiWcD6t2)은 복구 불가. 발견: `gemini-2.5-flash` 는 company-hq 와 키를 공유해 하루 20회가 매일 첫 호출에 소진되고, **flash-lite 도 하루 20회**(429 실측, env 기본값 1000 → 20 정정) — 재처리 10건 중 후반은 Gemma 로컬로 넘어갔다. 미디어 이해까지 제대로 쓰려면 aiskillbox 전용 프로젝트 키가 필요하다. 테스트 279 → **312건**. 설계: `docs/superpowers/specs/2026-09-12-media-understanding-design.md` |
-| 2026-08-30 | v5.0 | **원격 MCP 커넥터 — claude.ai 웹·모바일·Cowork 에서 스킬 라이브러리를 꺼내 쓴다.** 기존 `mcp_server.py` 는 **stdio 전용**이라 claude.ai 커스텀 커넥터로 못 붙었다(커넥터는 원격 MCP만 받는다). ① **`POST /mcp` Streamable HTTP** — stdio 서버의 순수 디스패치 `handle(msg)` 를 그대로 재사용해 읽기 전용 3종(`search_skills`/`get_skill`/`list_skills`) 노출. stateless(SSE·세션ID 없음 — 도구가 전부 즉답형). 같은 프로세스에서 부르므로 `use_local_backend()` 로 자기호출 루프 차단(안 하면 `_http_get` 이 자기 서버를 때리고 v4.6 게이트에 401). ② **OAuth 2.1 인가서버** — RFC 9728/8414 메타데이터, RFC 7591 동적 등록(config 토글, 기본 off), authorization_code + PKCE S256, refresh 회전, RFC 7009 폐기. ③ **폐기 모델에 새 개념을 안 만들었다** — 모든 grant 에 승인한 초대코드를 박고 검증 때마다 그 코드 생존을 확인(지연 폐기). **초대코드 삭제 = 그 코드로 붙은 커넥터도 즉시 끊김** — 기존 cascade 멘탈 모델 그대로, 폐기 UI 불필요. ④ 게이트 예외를 prefix→**exact-match** 로(gotcha 43, fail-open→fail-closed). ⑤ **리뷰가 잡은 실제 결함 4건** — 남의 인가코드를 파괴하는 무흔적 DoS(gotcha 45), refresh 토큰이 클라이언트에 바인딩 안 됨(RFC 6749 §6), `/oauth/revoke` 가 브루트포스 잠금을 씻어냄, 축출 로직이 새 잠금을 영원히 못 만들게 함(gotcha 44 — 뒤 둘은 수정 웨이브가 스스로 만든 회귀). 구현자의 "단일 클라이언트라 저위험" 논거는 기각됐고, **연결 첫날 클라이언트가 2개 등록되며 그 판단이 옳았음이 실증됐다.** ⑥ 실 HTTP 검증 — 임시 서버로 401 챌린지→메타데이터→동의→PKCE 토큰 교환→Bearer `/mcp initialize` 200 완주, 이후 공개 URL 에서 CF Tunnel 통과 확인. 테스트 181 → **275건**. 설계: `docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md` |
-| 2026-08-25 | v4.9 | **텍스트 직접 입력 + 최근 실패 3종 근절.** ① **[✍️ 텍스트] 탭** — 스크랩이 구조적으로 불가능한 출처(ChatGPT 공유·GPT 링크, IG 피드, 로그인 벽 뉴스레터)를 위해 본문 붙여넣기 경로 신설. 예전엔 실패 안내가 "직접 텍스트로 옮겨 등록하세요" 라고 하면서 정작 `/api/collect` 가 non-URL 을 400 으로 튕겨 **안내대로 해도 막히는 상태**였다 (gotcha 36). `scripts/scraper/plain_text.py` 가 본문을 `ScrapeResult(source_type="text")` 로 포장해 기존 파이프라인(분석 → 중복 합병 → SKILL.md → 라이브러리)을 그대로 태운다. 출처는 본문 SHA-256 기반 `paste://<sha16>` — 같은 글 재등록 시 중복으로 잡힌다 (실측 확인). 원본 URL 을 같이 주면 그게 출처가 된다. 임계는 200자 (스크랩용 500 은 '렌더 실패로 껍데기만 잡힘' 방어라 사람이 고른 본문엔 과하다). CLI `--text` / `--text-file` / `--title`, 링크칸 본문 붙여넣기 자동 전환, 모드 기억(localStorage). ② **paste 식별자 링크 누수 3곳 차단** (gotcha 37) — SKILL.md 출처 줄·카탈로그 [원본 ↗]·**LLM 이 본문에 직접 박은 `[제목](paste://...)`**. 셋 다 실측으로 발견, 프롬프트에서 식별자를 감추고 `_scrub_paste_links` 2차 방어. ③ **router 가 최선의 스크랩을 버리던 버그** (gotcha 38, 실사고 8/25) — 459자 확보해놓고 임계 미달이라 통째로 버린 뒤 폴백 103자를 채택. `pick_best()` 도입, 실 URL 재측 103자 → **459자**. ④ **analyze() 무방어 재폴백** (gotcha 39) — 2차 `_extract_json` 이 except 안에서 안 감싸여 `job failed: JSON 블록 없음` traceback 3건. ok=False + 한글 사유로 정상 종료. ⑤ **`[hidden]` 무력화** (gotcha 40) — `.text-wrap{display:flex}` 가 UA 의 `[hidden]{display:none}` 을 이겨 두 패널이 동시 렌더. 헤드리스에서만 잡힌 종류. ⑥ **회수(꺼내 쓰기) 경로 전수 실측 중 발견한 기존 버그 2건** — `auth.json` 을 한 번만 읽어 **CLI 발급 코드가 거부되고 CLI 삭제가 회수되지 않던 문제** (gotcha 41, 보안 영향), CLI 검색이 `.env` 미로딩으로 **의미 검색이 조용히 꺼지던 문제** + `semantic_skip_reason` 노출 (gotcha 42). 실측: 로그인→탭 전환→카운터→붙여넣기 자동전환→모드 기억→제출→큐 라벨, 모바일 폭 가로스크롤 0, 콘솔 에러 0. 회수 5경로(라이브러리 검색·HTTP API·MCP·게시판·ECC 글로벌) 전부 1위 검출 확인. 테스트 121 → **181건**. |
-| 2026-08-23 | v4.8 | **모바일 UX 수리 + 채팅 실시간화(Opus 5).** ① **게시판 모바일** — v4.7 이식 때 빠진 확대 잠금(`maximum-scale=1, user-scalable=no`)·safe-area 톱바 패딩 복원(gotcha 33). 필터바 `top` 하드코딩(52/48px) → JS 실측 `--topbar-h`. 모바일은 칩 4줄을 **[필터] 로 접고** 활성 개수 배지. ② **뒤로가기 4중화** — standalone PWA 엔 브라우저 뒤로가기가 없다: 톱바 `← 목록`(40px) + 스크롤 시 플로팅 FAB(← 목록 / ↑ 위로) + 글 끝 버튼 + 왼쪽 엣지 스와이프. 목록에서 들어왔으면 `history.back()` 으로 **검색어·필터·스크롤 위치까지 복원**(sessionStorage). ③ **채팅 실시간** — `POST /api/chat/stream` SSE (`status/delta/tool/done/ping`), `input_json_delta` 를 파싱해 **토큰 단위 스트리밍**(`partial_reply`), 도구 실행이 라이브로 보이고 [중지] 가능. 모델 기본 Sonnet 5 → **Opus 5** (`--fallback-model claude-sonnet-5`). ④ **대화 기억** — `conv_id` → `claude --resume` (gotcha 35). [새 대화] 버튼 = `POST /api/chat/reset`. ⑤ **실측 버그 4건** — 스키마 이탈로 답 유실(gotcha 34) · `list_skills` 슬러그가 전부 `SKILL.md`(`p.name` → `p.parent.name`) · 본문 `#앵커` 목차가 새 탭으로 열림 · 안 닫힌 ``` 펜스로 프롬프트 전문이 벽글 렌더(`close_open_fence`). 헤드리스 실측: 로그인→카드→상세→뒤로(스크롤 복원)→필터 유지→채팅 스트리밍, 콘솔 에러 0. 테스트 86 → **121건**. |
-| 2026-08-23 | v4.7 | **카탈로그 → 게시판(도서관) 전환 + 레트로 테마 통일.** ① **이탈 없는 구조** — 카드 제목이 외부 원본으로 나가던 것을 뒤집어, **제목 = 사이트 안 게시글**(`/skill/<slug>` 전용 페이지: 본문 전문·💡 콜아웃·SKILL.md 복사·링크 복사·출처 목록·**같은 카테고리 다른 글**), **외부는 [원본 ↗] 버튼 하나**. 모달 제거. ② **카드/목록 보기 전환** (기기에 기억, 목록 모드는 게시판식 한 줄). ③ **레트로 테마** — 메인 사이트의 픽셀+디지털 토큰 이식(도트그리드·스캔라인·하드섀도·네온 시안/마젠타, 커서 블링크), 본문은 Pretendard 유지하고 Galmuri11 은 뱃지·라벨·숫자만 (가독성 우선). ④ **경량화** — 카드에서 본문/템플릿 제거로 1.49MB → 358KB(84건). ⑤ 링크 정리: 잡 완료 카드·최근 목록·채팅이 `📖 읽기`(`/skill/<slug>`)로, API/검색/MCP 응답에 `page_url` 추가 (gotcha 32-b). 실측: 헤드리스에서 로그인→카드/목록/검색/상세/뒤로가기 + 모바일 폭, 콘솔 에러 0. 테스트 86건. |
-| 2026-08-22 | v4.6 | **초대코드 전체 잠금 + 노션 '링크 복사' 오탐 근절.** ① 사이트 전체(수집 UI·카탈로그·라이브러리 API) 로그인 필요 — 두근컴퍼니 초대 패턴 축소판: 코드→기기 영구 토큰(계정 없음), 쿠키 자동로그인, 코드 삭제 = cascade 로그아웃. `auth_store.py`(코드 평문·토큰 해시, 0600) + `auth_routes.py`(게이트 allowlist, redeem 5회/5분 잠금, PIN bootstrap 으로 닭-달걀 해소). 설정창 초대코드 관리 UI, `/login` 픽셀 페이지. 무인증 공개였던 `/api/collect` 구멍 봉쇄. MCP `AISKILLBOX_TOKEN` + 401→로컬 폴백, CORS X-Auth-Token. 테스트 +23 (전체 71). ② **노션 오탐** — '링크 복사'가 발급하는 `app.notion.com/p/<id>` 공개 공유 링크가 도메인 가드에 차단되던 실사고(8/19, 3건) 수정: `/p/` 경로만 가드 예외, 비로그인 렌더 실측(블록 57/5개) + 실패 링크 2건 재스크랩 성공(1,786/1,800자) 검증. ③ MCP 가 구버전 서버(HTML 404)를 만나면 로컬 인덱스 폴백 (JSON envelope 판별). |
-| 2026-08-20 | v4.5 | **스킬 라이브러리(도서관) — SKILL.md 단일 원본, 노션 옵션 강등.** 바탕화면 `스킬박스고도화.zip`(두근 스킬카탈로그 킷) 설계를 이식해 "노션 말고 페이지 자체로 관리하고 필요할 때 꺼내 쓰는" 구조로 전환. ① `scripts/library/index.py` — `skills/*/SKILL.md` 79건을 frozen 레코드로 인덱스 (mtime 변경 자동 감지, 재인덱스 명령 불필요, 누락 frontmatter 11건 보정). ② `search.py` — 한글 2-gram BM25(필드 가중) + 기존 dedup 임베딩 캐시 77건 재활용 코사인 + RRF 융합. 실측 8/8 질의 1위 정답, 키워드 30ms / 하이브리드 ~500ms(Gemini 호출), 키 없으면 자동 키워드 폴백. ③ `routes.py` — `GET /api/library/search|skills|skills/<slug>|stats`, `/catalog` (두근컴퍼니 에이전트·외부 도구용, CORS *). ④ `mcp_server.py` — 표준 라이브러리만 쓰는 stdio MCP (Claude Code·Cursor·Codex·다른 계정), HTTP → 로컬 인덱스 폴백, 시스템 python3.9 검증. ⑤ `catalog.py` — 킷 단일 HTML 템플릿 이식: 출처/카테고리/등급/AI도구 칩, SKILL.md 복사, 상세 모달, `#slug` 딥링크, allowlist sanitizer + CSP nonce (#31). 79건 1.49MB, 헤드리스 크로미움 검증. ⑥ 채팅 `search_library` 도구 + 시스템 프롬프트. ⑦ **Notion 등록 기본 off** — `config.json notion.register_on_collect=false` (app 워커·CLI 기본값, `--notion`/`--no-notion` 우선, 채팅 `write_config` 로 토글). UI: 📚 카탈로그 칩/드로어/완료 카드 링크, Notion 칩·섹션·헬스는 `notion_enabled` 일 때만. `/healthz` `library{total,embedded}`. 테스트 47건 (unittest, 네트워크 0). 설계 스펙 `docs/superpowers/specs/2026-08-20-skill-library-design.md`. 보류: `~/.claude/skills/` 전부 설치 → MCP 검색만으로 전환 (별건). |
-| 2026-08-16 | v4.4.6 | **비공개 오탐 · 슬러그 오합병 · 조용한 데이터 누락 3종 근절.** ① **노션 비공개 오탐** — 판별 마커가 공개 페이지 렌더 결과에도 들어있어 실질 기준이 '텍스트 짧으면 비공개' 뿐이었고, `skip_reason` 이 재시도까지 차단해 렌더 지연 한 번에 공개 페이지가 영구 차단됐다 (실사고 8/11). 렌더 DOM 실측(`[data-block-id]` 0개 + '페이지 찾지 못함' 문구)으로 교체 — 4케이스 검증 통과. ② **UA 룰렛** — notion.site 는 Chrome UA 2종으로 goto 60s 타임아웃 + html=0, WebKit 2종만 정상. `NOTION_UA_POOL` 분리 + 회차별 UA 순환. ③ **trafilatura 부분 추출** — 짧으면 bs4/innerText 중 최장 채택 (311자 → 1180자 복구). ④ **슬러그 경로 합병 우회** — `find_global_by_slug` 히트가 모든 게이트를 건너뛰어 무관한 콘텐츠가 `untitled-skill` 하나로 합쳐졌다. `GENERIC_SLUGS` 영구 제외 + 슬러그 히트도 의미 게이트 통과 요구. ⑤ **합병 게이트 프롬프트** — 동일 문구만 맞추고 패러프레이즈를 놓쳤음 (실제 재수집은 항상 패러프레이즈). 재작성 후 동일 5/5 · 패러프레이즈 4/4 · 오합병 0/6. ⑥ **리터럴 개행** — LLM 이 개행을 `\n` 두 글자로 뱉어 본문이 한 줄이 되고 Notion 등록 전체가 400 (8/10 webswing 누락 원인). 원인 차단 + rich_text 100요소 가드. ⑦ **page_size 무페이지네이션 (영향 최대)** — 14개 스크립트가 DB 앞 50건만 보고 '전수 완료'로 출력, 69건 중 19건이 백업조차 없었다. `scripts/notion_paging.py` 단일 헬퍼로 통일 + 전량 재백업. **데이터 복구**: webswing 본문 복원 + Notion 재등록, `untitled-skill` 분해(주식 분석 스킬 복원 · Claude 60 노션 제목 오염 복구), origin/sources 누락 9건 백필, 오합병 3건 출처별 재수집 분리. |
-| 2026-08-09 | v4.4.5 | **중복/합병 파이프라인 전면 재점검 (v4.4.4 후속 — 놓친 구멍 4개 + 데이터 정리).** ① **Notion 중복 페이지 양산 버그** — `check_duplicate(url)` 이 새 URL 로만 조회해 합병(특히 의미 dedup)마다 새 페이지 생성 (실사고: 6개 스킬 × 2~6페이지, 교차 오염 1건 포함). collect.py 가 누적 출처 URL 전체 loop + 합병 케이스 한정 `find_by_title` 2차 안전망으로 조회. **기존 중복 10페이지 아카이브 + keeper 5페이지 로컬 최신본으로 재푸시** (77→67건, find-dupes 중복 0). ② **의미 dedup LLM 확인 게이트** — 전수 페어 계측에서 실질 동일(0.94+)과 같은 주제·다른 스킬(0.91~0.94)이 점수로 안 갈림 → 임계값 통과 후 `_confirm_semantic_merge` (로컬 Gemma yes/no) 확정, 실패 시 보수적 신규 등록. 검증: 진짜 중복 페어 True / 유사-다른 페어 False. ③ **슬러그 충돌 가드** — `~/.claude/skills/` 의 수동 설치(非 content-lab) 스킬과 슬러그 충돌 시 합병하면 그 스킬이 파괴됨 → frontmatter `origin: content-lab` 확인, 아니면 `-2` 접미사 신규 등록. 의미 dedup 후보 경로도 동일 가드. ④ **find_existing_by_url 을 sources 한정** — 본문 전체 URL 스캔이라 다른 스킬 본문의 참고 링크(github/nodejs 등)에 걸려 무관 스킬로 합병되던 false positive 차단. ⑤ merger 출처 누적을 정규화 URL 비교로 (fbclid 변형 중복 누적 방지). ⑥ **임베딩 캐시 전수 백필** 10→62건 — 의미 dedup 이 corpus 대부분을 못 보던 사각 해소. 부산물: 과거에 못 잡은 실중복 그룹 5개 발견 (meta-ads 2종 / context-prompting 3종 / claude-connectors 2종 / nvidia-api 2종 / claude-api 2종) — 자동 합병 보류, 사용자 승인 후 통폐합 예정. |
-| 2026-08-09 | v4.4.4 | **채팅 속도/품질 + 중복 오표시 일괄 수정.** ① `_loop_claude_cli` 에 `--setting-sources ""` — 글로벌 CLAUDE.md/rules/스킬 목록 로드 차단 (라운드당 74k→6k 토큰, 25s→2.7s, 사용 한도 잠식 해소). CLI 실패 시 stdout envelope 에서 실제 사유 추출 (구버전은 stderr 만 봐서 "종료 코드 1:" 빈 메시지) + 1회 재시도. ② ollama 폴백 기본 qwen3:4b→**qwen2.5:14b** (영어 reasoning dump 근절, `think` 파라미터는 qwen3/deepseek-r1 만 전송) + 한글 없는 응답 1회 재정리 가드 + Claude 실패 폴백 시 "로컬 모델 대체" 안내 프리픽스. ③ **skipped 배지 분리** — 사전 차단(blocked)이 '≡ 이미 등록됨'으로 오표시되던 버그: collect.py `skip_kind` 필드 + app.js 배지 분기 (`🚫 수집 불가`). ④ dedup threshold 0.88→**0.9** (사용자 3회 요청분 — PIN 세션 문제로 미적용 상태였음). collect.py 임베딩 캐시 갱신이 config `dedup.components` 를 따르게 (하드코딩 불일치 수정) + 캐시 10건 새 기준 재임베딩. ⑤ **PIN 세션 디스크 영속화** (`logs/chat_sessions.json`, 0600) — 재시작마다 재인증하던 문제 해소. chat.js PIN 인증 성공 시 직전 막힌 요청 자동 재전송. ⑥ **합병 출처 유실 백필** — v4.4.3 이전 merger 가 `sources:` 못 읽어 합병마다 출처가 최신 1개로 덮인 버그(로그 "출처 0→1")의 사후 복구: launchd 로그 순차 페어링으로 6개 스킬 출처 복원 (fast-content 1→4, claude-as-marketing 1→4, ai-company-building 1→3 등). |
-| 2026-08-01 | v4.4.3 | **채팅 CLI 프로토콜 정식 옵션화** — v4.4.2 의 `_loop_claude_cli` 가 `-p "긴 프롬프트"` 로 JSON 을 뱉게 유도만 하고 CLI 는 자체 built-in 도구(Read/Bash/etc)를 우선 쓰려 해 사용자에겐 "확인해볼게요" 만 도착하던 문제. Claude CLI 정식 옵션 조합으로 재작성: `--output-format json --json-schema --disable-slash-commands --append-system-prompt`. envelope 응답의 `structured_output` 필드를 파싱 (`_cli_parse_envelope`). `-p` 에는 사용자 턴만 넣고 이전 대화·도구 결과는 transcript 로 요약. `CLI_ROUND_TIMEOUT` 120→180초. 실패 hint 도 provider 별로 정확히 (Gemini quota 오해 문구 제거). 검증: 조회(recent_jobs) / 진단-우선(tail_log) / mutating PIN 게이트(write_config) 3 시나리오 모두 도구 정상 호출 + 자연스러운 한글 응답. 함정 발굴: `--bare` 는 OAuth 무시(#19), tool `input_schema` 는 top-level oneOf 미지원(#20). **embedder 헤더 이전** — `analyzer/embedder.py` 가 `?key=` URL query 로 Gemini embedContent 호출 → 404 실패 로그에 API 키 노출. `x-goog-api-key` 헤더로 이전(#22). dedup embedding 재작동 (3072차원, `gemini-embedding-001`). **scraper goto 3단 폴백** — `web.py` 의 `wait_until="networkidle"` 폴백을 `load(60s) → commit(45s)` 로 대체 (#21). Notion 같은 SPA 재시도 실패율 감소 기대. |
-| 2026-07-20 | v4.4.2 | **채팅 기본 = 본계정 구독 (claude CLI)** — 사용자 지시로 Gemini 를 자동 체인에서 제외. 새 1순위 `claude_cli` 프로바이더: `claude -p --model claude-sonnet-5` 를 라운드마다 호출, 도구는 JSON 프로토콜(`{"tool":…}` / `{"reply":…}`)로 기존 REGISTRY 화이트리스트 + PIN 게이트 유지, cwd 는 빈 샌드박스(`logs/chat_sandbox` — 코드/.env 접근 차단). 폴백은 로컬 qwen3 만. **보안**: Gemini 키를 URL 쿼리 → `x-goog-api-key` 헤더로 이동 (HTTPError 로그에 키 노출 차단) + `tail_log` 출력 시크릿 마스킹(`_redact_secrets`). IME 조합 Enter 이중 전송 가드(isComposing/229 + `_sending`). |
-| 2026-07-17 | v4.4.1 | **채팅 고도화** — ① 엔진 멀티 프로바이더: ANTHROPIC_API_KEY 없으면(현재 상태) **Gemini function calling 무료 체인** (2.5-flash → 2.5-flash-lite 별도 쿼터 → 2.0-flash) → **로컬 Ollama qwen3:4b 네이티브 tool calling** (`think:false`) 최후 폴백. 도구 실행 후 재시도 금지(중복 실행 방지). Gemini `thinkingBudget:0`+functionResponse 조합의 출력 0토큰 이슈 → 빈 응답 시 thinking 허용+tools 제거 마무리 호출 워크어라운드 (`_loop_gemini`). 진단-우선 프롬프트("확인해볼게요" 예고만 금지). ② 모바일 채팅 UX: visualViewport 로 키보드 높이만큼 바텀시트 리프트(`--kb`), 그립 핸들 + 스와이프 다운 닫기, 헤더 ✕ 44px, 모바일에서 FAB-✕ 숨김(폼 가림 방지), 채팅 열림 시 배경 스크롤 락 + PTR 오발동 가드, 모바일 자동 포커스 억제(diag 딥링크 제외). NL 실테스트 4종 통과 (잡 요약 / 설정 조회 / 진단-우선 / PIN 게이트). |
-| 2026-07-17 | v4.4 | **자연어 수정 에스컬레이션** — 채팅에 `escalate_fix`/`fix_status` 도구. 스크랩 실패 등 코드 수정을 로컬 `claude -p`(Max 플랜, API 과금 X)에 위임: 스냅샷 → 수정 → py_compile+재스크랩 검증 → 실패 시 자동 원복 / 성공 시 자동 재기동 + Web Push. 실패 푸시에 `/?diag=<job_id>` 딥링크 (채팅 자동 진단 프리필). `/healthz` 에 `last_failure` (외부 모니터용). `/api/fix/status`. **픽셀+디지털 UX 리스타일** — 본문 Pretendard(가독성), 라벨/뱃지만 Galmuri11, 도트그리드+스캔라인, 하드섀도 청키 버튼, 코너 브래킷, 모바일 채팅 바텀시트(88dvh) + iOS 포커스 줌 방지(입력 16px). |
-| 2026-03-22 | v1.0 | 최초 생성 |
-| 2026-03-22 | v2.0 | 콘텐츠 분석 전용 에이전트 |
-| 2026-03-29 | v3.0 | 품질 평가 매트릭스, 인사이트 누적 |
-| 2026-05-14 | v4.0 | 스크래핑 + 스킬 자산화 통합. SKILL_AGENT.md 흡수. ECC 표준 SKILL.md + 글로벌 설치 + Notion master |
-| 2026-05-15 | v4.1 | TEMPLATE.md v2 (DB 슬림화 15→9, 카테고리 7, 태그 15 기술/방법 분리). LLM 폴백 체인 + Gemma 4. 본문 정리/이모지 정리 batch. Pull-to-Refresh + 완료 알림 + 검색 UI |
-| 2026-05-25 | v2.4 템플릿 | **폼 규칙화 폐지** — 본문 7섹션 강제 X, 원본의 자연스러운 결대로 자유 형식 (`body_md`). **속성 가지치기**: Notion DB 9속성 → 6속성 (스킬명/카테고리/등급/난이도/AI 도구/출처). 태그·적용대상·상태·날짜·tldr quote 박스·메타 stripe·30초 핵심 박스·이모지 아이콘 prefix 전부 제거. **강한 제목 + 💡 1줄**로 5초 안에 "각이 잡히게". `scripts/convert_v24.py` 로 디스크 22건 + Notion DB 일괄 정렬. `prompt.py` v2.4 (8-15자 동사형 제목, body_md 자유 형식). `md_generator.py` lean (frontmatter flat 6키 + # 제목 + 💡 + body + ## 출처). |
-| 2026-05-23 | v4.3 | **순차 잡 큐** — 요청마다 스레드 생성 → 단일 워커 + `queue.Queue` 순차 처리. 제출 즉시 입력칸 비움 + 비차단(다음 URL 계속 입력 가능) + 다중 잡 큐 UI. **Web Push** — VAPID + `static/sw.js` + `scripts/push.py`, 앱 백그라운드여도 완료 알림. **설정 창** — PIN(`ADMIN_PIN`) 보호 API 키 편집 UI (`scripts/settings_store.py`, `/api/settings*`). Gemma 폴백 버그 수정 (`call_gemma_json` think:false + num_ctx 16384 — JSON 필드 누락 root cause). `mcp_fallback.py` ImportError 수정 (`_extract_text` → `_bs4_extract`). |
-| 2026-05-18 | v4.2 | **v2.3 보편 정보 템플릿** 전환. TL;DR/메타 quote 박스 폐기 (DB properties 중복) → 💡 callout. 영문 부제 제거 → 한글 친화 헤더 (어떨 때 쓰나요? / 어떻게 작동하나요? / 따라 하기 / 실제 예시 / 이렇게 쓰면 효과적이다 / 주의할 점 / 출처). 두근 프로젝트 강제 매핑 폐기 → 보편 정보로 정리. 코드 보호 placeholder 패턴 (`[[CODE_BLOCK_N]]` / `[[INLINE_N]]` + fuzzy restore + 페이지 끝 rescue 섹션). 보존율 검증 (한글 3+ / 영문 5+ 핵심 키워드 빈도). DB 정리 스크립트 11종 추가 (backup_all/rebuild_template/restore_from_backup/recategorize/rename_headings/demote_h2_to_h3/strip_meta_quotes/fix_visual/audit_pages/audit_loss). 카테고리 재분류 (LLM 자동) + 페이지 아이콘 동기화 |
+## 이 문서를 유지하는 규칙
+
+이번 정리(2026-09-25)에서 stale 12건 중 9건이 아래 두 원인이었다.
+
+- **숫자를 본문에 박지 않는다.** 스킬 건수·테스트 건수·스펙 개수·healthz version — 조회법만 적는다. 절대 수치는 `docs/CHANGELOG.md` 행(그 시점 기록)에만.
+- **한 사실은 한 곳에만.** 새 기능은 gotcha(재발 방지 교훈) **또는** Module map 의 제약 **중 한 곳**. "What this is 불릿 + Module map 줄 + gotcha + 변경 로그" 4곳에 쓰던 습관이 릴리스당 ~2,000자를 키웠다.
+- **목록을 베끼지 않는다.** allowlist·ALLOWED_HEADINGS·enum·도구 목록은 상수를 가리킨다. 베낀 목록은 전부 썩었다(3/3).
+- **명령어는 실제로 돌려보고 적는다.** 인증·python 경로·dry-run 기본값이 틀린 채로 오래 남아 있었다.
