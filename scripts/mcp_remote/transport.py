@@ -1,7 +1,7 @@
 """MCP Streamable HTTP 전송 — POST /mcp (stateless).
 
 기존 stdio 서버의 순수 디스패치 mcp_server.handle(msg) 를 그대로 재사용한다.
-SSE 미지원(도구 3종이 전부 즉답형), 세션 ID 미발급(stateless).
+SSE 미지원(도구가 전부 즉답형 — 스킬 3종 + 디지몬 도감 4종), 세션 ID 미발급(stateless).
 
 설계: docs/superpowers/specs/2026-08-27-remote-mcp-oauth-design.md
 """

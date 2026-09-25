@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **aiskillbox** — URL 한 줄 또는 붙여넣은 텍스트 → 스크래핑 → AI 분석 → `SKILL.md` 자동 생성 → 글로벌(`~/.claude/skills/`) + mirror(`skills/`) 설치 → **스킬 라이브러리**에 즉시 등재(검색 API · 카탈로그 · MCP). 제출은 순차 큐, 완료 시 Web Push.
 
 - 사람이 보는 곳: https://aiskillbox.600g.net (`/catalog` 게시판, `/skill/<slug>` 게시글). Local: http://localhost:5050 (launchd `com.doogeun.aiskillbox`, Cloudflare Tunnel token-mode)
-- AI 가 보는 곳: `GET /api/library/search?q=` · stdio MCP(`scripts/library/mcp_server.py`, Claude Code 용) · 원격 MCP(`POST /mcp` + OAuth 2.1, claude.ai 웹·모바일·Cowork 용). **읽기 전용 3종 도구**(`search_skills`/`get_skill`/`list_skills`).
+- AI 가 보는 곳: `GET /api/library/search?q=` · stdio MCP(`scripts/library/mcp_server.py`, Claude Code 용) · 원격 MCP(`POST /mcp` + OAuth 2.1, claude.ai 웹·모바일·Cowork 용). **읽기 전용 도구 7종** — 스킬 3종(`search_skills`/`get_skill`/`list_skills`) + v5.3 디지몬 진화 도감 4종(`digimon_search`/`digimon_species`/`digimon_route`/`digimon_dim`, `scripts/library/digimon_tools.py` — 같은 맥 `~/discordbot` 서버 :9876 의 `/api/encyclo`·`/api/evo/route` 를 읽어 옴, 10분 캐시, 서버 다운이면 그 도구만 isError).
 - Notion 등록은 옵션(`config.json notion.register_on_collect`, 기본 **off**). 켤 때만 `docs/notion-migration.md`.
 
 설계 스펙은 `docs/superpowers/specs/` (`ls` 로 확인). 릴리스 이력은 `docs/CHANGELOG.md` 와 `git log --oneline`.
@@ -154,7 +154,7 @@ scripts/skill_builder/md_generator.py ── frontmatter 6키 + 자유 본문. �
 
 **4번이 위험한 이유**: 모든 헬스체크를 통과한다 (2026-09-03 → 09-05 이틀 방치). 감시는 `~/claude_guard/mcp_health.py` 가 한다 (`claude_112.sh` 5번 항목이 7분마다 호출, 2026-09-24 재작성). 종전의 "액세스 토큰 N시간째 갱신 없음" 기준은 **고장이 아니라 안 쓴 것**을 재고 있었다 — claude.ai 는 커넥터를 쓸 때만 갱신하므로 자거나 다른 일 하면 무조건 걸렸고, 매일 오던 "재연결 필요" 가 전부 오탐이었다. 지금 판정은 `GRANT_EXPIRED`(사람이 재연결) → `AUTH_STUCK`(**`/mcp` 401 연속 + 뒤따르는 `/oauth/token`·200 없음** — 챌린지 헤더 자가점검·만료 토큰 청소로 자가 복구를 먼저 시도하고, 그래도 남을 때만 알림) → `HEALTHY` → `IDLE`(알림 없음). 진짜 단절의 시그니처는 401 뒤에 갱신이 안 오는 것이고, idle 은 401 자체가 없다. 판정 근거를 손으로 볼 때는 위 두 grep. `python3 ~/claude_guard/mcp_health.py --json --no-recover` 로 판정만 볼 수 있다.
 
-**도구는 읽기 전용 3종이 전부다** (scope `skills:read`). 쓰기가 필요하면 사이트 메인(`/`)의 [🔗 링크]/[✍️ 텍스트] 폼(→ `POST /api/collect`)이나 CLI. ⚠️ `scripts/app_publish.py`(미배선, gh CLI 로 외부 저장소에 커밋하는 쓰기 경로)를 `TOOLS` 에 배선하는 순간 이 문장·`templates/oauth_consent.html` 의 읽기 전용 고지·OAuth scope **세 곳이 동시에 거짓**이 된다. 배선하려면 `chat/tools.py` 의 `mutating`+PIN 게이트에 상응하는 방어부터.
+**도구는 전부 읽기 전용이다** (스킬 3종 + 디지몬 도감 4종, scope `skills:read`). 디지몬 도구는 `digimon_tools.py` 가 따로 들고 `mcp_server.call_tool` 이 이름으로 넘긴다 — `TOOLS` 목록에 합쳐 노출(`tools/list`). 쓰기가 필요하면 사이트 메인(`/`)의 [🔗 링크]/[✍️ 텍스트] 폼(→ `POST /api/collect`)이나 CLI. ⚠️ `scripts/app_publish.py`(미배선, gh CLI 로 외부 저장소에 커밋하는 쓰기 경로)를 `TOOLS` 에 배선하는 순간 이 문장·`templates/oauth_consent.html` 의 읽기 전용 고지·OAuth scope **세 곳이 동시에 거짓**이 된다. 배선하려면 `chat/tools.py` 의 `mutating`+PIN 게이트에 상응하는 방어부터.
 
 ### 테스트 구조 (unittest · 네트워크 0 · 디스크 부작용 0)
 

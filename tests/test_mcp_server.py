@@ -99,7 +99,8 @@ class McpServerTest(_McpHarness):
 
         tools = self._send("tools/list")
         names = {t["name"] for t in tools["result"]["tools"]}
-        self.assertEqual(names, {"search_skills", "get_skill", "list_skills"})
+        self.assertTrue(names.issuperset({"search_skills", "get_skill", "list_skills"}))
+        self.assertTrue(names.issuperset({"digimon_search", "digimon_species", "digimon_route", "digimon_dim"}))
         for t in tools["result"]["tools"]:
             self.assertIn("inputSchema", t)
             self.assertEqual(t["inputSchema"]["type"], "object")

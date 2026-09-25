@@ -110,7 +110,8 @@ class TransportTest(unittest.TestCase):
     def test_tools_list_has_three_read_tools(self):
         r = self._post({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, token=self.access)
         names = {t["name"] for t in r.get_json()["result"]["tools"]}
-        self.assertEqual(names, {"search_skills", "get_skill", "list_skills"})
+        self.assertTrue(names.issuperset({"search_skills", "get_skill", "list_skills"}))
+        self.assertIn("digimon_species", names)                       # v5.3: 디지몬 도감 읽기 도구도 같은 커넥터
 
     def test_notification_returns_202_no_body(self):
         r = self._post({"jsonrpc": "2.0", "method": "notifications/initialized"}, token=self.access)

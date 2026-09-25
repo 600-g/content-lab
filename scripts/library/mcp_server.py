@@ -38,6 +38,14 @@ MAX_K = 20
 
 _FORCE_LOCAL = False
 
+try:                                                            # v5.3: 디지몬 진화 도감 읽기 도구 4종 (같은 서버·같은 커넥터)
+    from scripts.library import digimon_tools as _digimon      # 패키지로 실행될 때
+except ImportError:
+    try:
+        import digimon_tools as _digimon                       # stdio 로 파일 직접 실행될 때
+    except ImportError:
+        _digimon = None
+
 
 def use_local_backend() -> None:
     """같은 프로세스 안(Flask transport)에서 쓸 때 HTTP 백엔드를 건너뛴다.
@@ -287,6 +295,8 @@ def call_tool(name: str, args: dict) -> tuple[str, bool]:
         if name == "list_skills":
             items, mode = backend_list(str(args.get("category", "") or ""), str(args.get("grade", "") or ""))
             return fmt_list(items, mode), False
+        if _digimon is not None and name in _digimon.TOOL_NAMES:
+            return _digimon.call(name, args)
         return f"알 수 없는 도구: {name}", True
     except BackendError as e:
         return f"백엔드 오류: {e}", True
@@ -319,7 +329,9 @@ def handle(msg: dict) -> Optional[dict]:
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
             "instructions": (
                 "두근컴퍼니 스킬 라이브러리. 작업 전에 search_skills 로 관련 SKILL.md 가 있는지 확인하고, "
-                "있으면 get_skill 로 본문을 가져와 그대로 따르세요."
+                "있으면 get_skill 로 본문을 가져와 그대로 따르세요. "
+                "디지몬(디지펫 바이탈 디스코드) 진화·스탯·DIM 질문은 digimon_* 도구로 — 숫자는 봇 화면 실측값이고 "
+                "'사이트 값' 은 검증 전입니다."
             ),
         })
     if is_notification:
@@ -327,7 +339,7 @@ def handle(msg: dict) -> Optional[dict]:
     if method == "ping":
         return _ok(req_id, {})
     if method == "tools/list":
-        return _ok(req_id, {"tools": TOOLS})
+        return _ok(req_id, {"tools": TOOLS + (list(_digimon.TOOLS) if _digimon is not None else [])})
     if method == "tools/call":
         name = str(params.get("name", ""))
         args = params.get("arguments") or {}
