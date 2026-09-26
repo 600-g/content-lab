@@ -6,9 +6,12 @@ import unittest
 from scripts.library import digimon_tools as dt
 from scripts.library import mcp_server
 
-ENC = {"ok": True, "site_agree": {"match": 8, "mismatch": 2},
+ENC = {"ok": True, "site_agree": {"match": 8, "mismatch": 2}, "ranks": {"성장기": ["파피몬", "아구몬"]},
        "species": {
+           "아구몬": {"name": "아구몬", "stage": "성장기", "attr": "백신", "stats": {"hp": 90, "atk": 20, "spd": 30}, "dims": ["아구몬 EX"], "from": [], "to": [],
+                   "rank": {"stage": "성장기", "total": 140, "grade": "A", "pos": 2, "n": 2}},
            "파피몬": {"name": "파피몬", "stage": "성장기", "attr": "데이터", "stats": {"hp": 100, "atk": 15, "spd": 40}, "dims": ["파피몬 EX"], "dims_est": [],
+                   "rank": {"stage": "성장기", "total": 155, "grade": "S", "pos": 1, "n": 2},
                    "from": [{"name": "뿔몬", "cond": {"evotime_h": 1}, "kind": "measured"}],
                    "to": [{"name": "가루몬", "cond": {"vital": 1200, "pp": 5, "battle": 48, "evotime_h": 24}, "kind": "measured"}],
                    "site_to": [{"name": "가루몬", "cond": {"vital": "1200"}}, {"name": "고릴라몬", "cond": {"vital": "1000", "pp": "5"}}]},
@@ -64,6 +67,13 @@ class DigimonToolsTest(unittest.TestCase):
         self.assertFalse(err); self.assertIn("1. 파피몬 EX 알 → 파피몬 → 가루몬", text)
         text, err = dt.call("digimon_search", {"query": "파피"})
         self.assertFalse(err); self.assertIn("- 파피몬 · 성장기", text); self.assertIn("[DIM] 파피몬 EX", text); self.assertNotIn("알 ·", text)
+
+    def test_rank_and_grade(self):
+        text, err = dt.call("digimon_species", {"name": "파피몬"})
+        self.assertIn("등급 S — 성장기 총합 155 · 1위/2", text)
+        text, err = dt.call("digimon_rank", {"stage": "성장기", "sort": "atk"})
+        self.assertFalse(err); self.assertTrue(text.splitlines()[1].startswith("1. 아구몬 [A] 체력 90 · 전투력 20"))
+        self.assertTrue(dt.call("digimon_rank", {"sort": "zzz"})[1])
 
     def test_backend_down_is_error_not_crash(self):
         def boom(path):

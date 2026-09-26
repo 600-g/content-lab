@@ -50,6 +50,15 @@ TOOLS: list[dict] = [
                         "required": ["name"]},
     },
     {
+        "name": "digimon_rank",
+        "description": "단계별 스탯 순위: 봇 도감에서 스탯이 확인된 종을 같은 단계끼리 총합(체력+전투력+속도) 또는 체력/전투력/속도 높은 순으로. "
+                       "등급은 같은 단계 안 상위 10% S · 35% A · 70% B · 나머지 C. '성숙기에서 체력 제일 높은 애?' 에 씁니다.",
+        "inputSchema": {"type": "object", "properties": {"stage": {"type": "string", "description": "단계 (유년기 I|유년기 II|성장기|성숙기|완전체|궁극체|초궁극체). 비우면 전 단계 상위만"},
+                                                         "sort": {"type": "string", "description": "total|hp|atk|spd (기본 total)"},
+                                                         "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "표시 수 (기본 10)"}},
+                        "required": []},
+    },
+    {
         "name": "digimon_dim",
         "description": "DIM 하나의 진화 트리 전체: 획득처, 단계(열)별 디지몬 이름, 진화선(부모 → 자식), 아직 이름을 모르는 칸 수. 추정·사이트 근거는 표시합니다.",
         "inputSchema": {"type": "object", "properties": {"dim": {"type": "string", "description": "DIM 이름 (예: 파피몬 EX, 에인션트 워리어즈)"}},
@@ -176,6 +185,9 @@ def fmt_species(enc: dict, name: str) -> str:
     lines = [f"# {name}", f"단계 {s.get('stage') or '?'} · 속성 {s.get('attr') or '?'}"]
     if st:
         lines.append(f"기본 스탯: 체력 {st.get('hp', '?')} · 전투력 {st.get('atk', '?')} · 속도 {st.get('spd', '?')} (봇 도감 실측)")
+        r = s.get("rank")
+        if r:
+            lines.append(f"등급 {r['grade']} — {r['stage']} 총합 {r['total']} · {r['pos']}위/{r['n']} (같은 단계 안 상위 10% S·35% A·70% B)")
     else:
         lines.append("기본 스탯: 봇 도감 기록 없음")
     dims = list(s.get("dims") or []) + [f"{d}(추정)" for d in (s.get("dims_est") or [])]
@@ -252,6 +264,29 @@ def fmt_search(enc: dict, query: str) -> str:
     return "\n".join(out)
 
 
+def _stat(sp: dict, n: str, k: str) -> int:
+    st = sp[n]["stats"]
+    return st["hp"] + st["atk"] + st["spd"] if k == "total" else st[k]
+
+
+def fmt_rank(enc: dict, stage: str, sort: str, limit: int) -> str:
+    ranks, sp = enc.get("ranks") or {}, enc.get("species") or {}
+    if not ranks:
+        return "순위 자료가 아직 없습니다 (도감 재빌드 전)."
+    label = {"total": "총합", "hp": "체력", "atk": "전투력", "spd": "속도"}[sort]
+    stages = [s for s in ranks if not stage or _norm(s) == _norm(stage) or _norm(stage) in _norm(s)]
+    if not stages:
+        return f"'{stage}' 단계가 없습니다. 있는 단계: " + ", ".join(ranks)
+    out = []
+    for stg in stages:
+        names = sorted(ranks[stg], key=lambda n: (-_stat(sp, n, sort), -_stat(sp, n, "total"), n))[: (limit if stage else 3)]
+        out.append(f"# {stg} — {label} 높은 순 (스탯 확인 {len(ranks[stg])}종)")
+        for i, n in enumerate(names, 1):
+            st, r = sp[n]["stats"], sp[n].get("rank") or {}
+            out.append(f"{i}. {n} [{r.get('grade', '?')}] 체력 {st['hp']} · 전투력 {st['atk']} · 속도 {st['spd']} · 총합 {st['hp'] + st['atk'] + st['spd']}")
+    return "\n".join(out)
+
+
 def call(name: str, args: dict) -> tuple[str, bool]:
     """(text, is_error). 이름이 이 모듈 것이 아니면 (None, …) 대신 '알 수 없는 도구'."""
     try:
@@ -272,6 +307,15 @@ def call(name: str, args: dict) -> tuple[str, bool]:
             if not found:
                 return f"'{args.get('dim')}' DIM 이 없습니다. 있는 DIM: " + ", ".join(sorted(enc.get("dims") or {})), True
             return fmt_dim(enc, found), False
+        if name == "digimon_rank":
+            sort = str(args.get("sort") or "total").lower()
+            if sort not in ("total", "hp", "atk", "spd"):
+                return "sort 는 total|hp|atk|spd 중 하나입니다.", True
+            try:
+                limit = max(1, min(50, int(args.get("limit") or 10)))
+            except (TypeError, ValueError):
+                limit = 10
+            return fmt_rank(_enc(), str(args.get("stage") or "").strip(), sort, limit), False
         if name == "digimon_route":
             enc = _enc()
             found = find_species(enc, str(args.get("name", "")))
