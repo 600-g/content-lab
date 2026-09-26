@@ -265,10 +265,8 @@ def fmt_search(enc: dict, query: str) -> str:
 
 
 def _stat(sp: dict, n: str, k: str) -> int:
-    st, r = sp[n]["stats"], sp[n].get("rank") or {}
-    if k == "total":                                       # 도감 v9.28: 훈련 환산 점수 (없으면 단순 합)
-        return r.get("score") if r.get("score") is not None else st["hp"] + st["atk"] + st["spd"]
-    return st[k]
+    st = sp[n]["stats"]
+    return st["hp"] + st["atk"] + st["spd"] if k == "total" else st[k]
 
 
 def fmt_rank(enc: dict, stage: str, sort: str, limit: int) -> str:
