@@ -107,6 +107,9 @@ def register_transport(app: Flask, *, store=None, cfg: Optional[dict] = None) ->
 
         responses = []
         for msg in messages:
+            _m = msg.get("method")
+            if _m in ("tools/list", "tools/call", "initialize"):     # 커넥터가 도구 목록을 다시 받았는지 보려면 이 줄을 grep
+                logger.info("mcp %s %s", _m, (msg.get("params") or {}).get("name", "") if _m == "tools/call" else "")
             try:
                 resp = mcp_server.handle(msg)
             except Exception as e:  # noqa: BLE001
