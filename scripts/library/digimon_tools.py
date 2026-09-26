@@ -52,7 +52,7 @@ TOOLS: list[dict] = [
     {
         "name": "digimon_rank",
         "description": "단계별 스탯 순위: 봇 도감에서 스탯이 확인된 종을 같은 단계끼리 총합(체력+전투력+속도) 또는 체력/전투력/속도 높은 순으로. "
-                       "등급은 같은 단계 안 상위 35% S · 70% A · 90% B · 나머지 C · 꼴찌 D (궁극체는 15%·45%·80%, 동점은 가운데 순위). '성숙기에서 체력 제일 높은 애?' 에 씁니다.",
+                       "등급은 같은 단계 안 훈련 환산 점수(체력÷약15 + 전투력÷약5 + 속도÷약5) 상위 35% S · 70% A · 90% B · 나머지 C · 꼴찌 D (궁극체는 15%·45%·80%, 동점은 가운데 순위). '성숙기에서 체력 제일 높은 애?' 에 씁니다.",
         "inputSchema": {"type": "object", "properties": {"stage": {"type": "string", "description": "단계 (성장기|성숙기|완전체|궁극체|초궁극체 — 유년기는 순위 밖). 비우면 전 단계 상위만"},
                                                          "sort": {"type": "string", "description": "total|hp|atk|spd (기본 total)"},
                                                          "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "표시 수 (기본 10)"}},
@@ -187,7 +187,7 @@ def fmt_species(enc: dict, name: str) -> str:
         lines.append(f"기본 스탯: 체력 {st.get('hp', '?')} · 전투력 {st.get('atk', '?')} · 속도 {st.get('spd', '?')} (봇 도감 실측)")
         r = s.get("rank")
         if r:
-            lines.append(f"등급 {r['grade']} — {r['stage']} 총합 {r['total']} · {r['pos']}위/{r['n']} (같은 단계 안 상위 35% S·70% A·90% B·꼴찌 D, 궁극체 15/45/80)")
+            lines.append(f"등급 {r['grade']} — {r['stage']} 훈련 환산 {r.get('score', r['total'])} (단순 합 {r['total']}) · {r['pos']}위/{r['n']} (같은 단계 안 환산 점수 상위 35% S·70% A·90% B·꼴찌 D, 궁극체 15/45/80)")
     else:
         lines.append("기본 스탯: 봇 도감 기록 없음")
     dims = list(s.get("dims") or []) + [f"{d}(추정)" for d in (s.get("dims_est") or [])]
@@ -265,8 +265,10 @@ def fmt_search(enc: dict, query: str) -> str:
 
 
 def _stat(sp: dict, n: str, k: str) -> int:
-    st = sp[n]["stats"]
-    return st["hp"] + st["atk"] + st["spd"] if k == "total" else st[k]
+    st, r = sp[n]["stats"], sp[n].get("rank") or {}
+    if k == "total":                                       # 도감 v9.28: 훈련 환산 점수 (없으면 단순 합)
+        return r.get("score") if r.get("score") is not None else st["hp"] + st["atk"] + st["spd"]
+    return st[k]
 
 
 def fmt_rank(enc: dict, stage: str, sort: str, limit: int) -> str:
@@ -283,7 +285,7 @@ def fmt_rank(enc: dict, stage: str, sort: str, limit: int) -> str:
         out.append(f"# {stg} — {label} 높은 순 (스탯 확인 {len(ranks[stg])}종)")
         for i, n in enumerate(names, 1):
             st, r = sp[n]["stats"], sp[n].get("rank") or {}
-            out.append(f"{i}. {n} [{r.get('grade', '?')}] 체력 {st['hp']} · 전투력 {st['atk']} · 속도 {st['spd']} · 총합 {st['hp'] + st['atk'] + st['spd']}")
+            out.append(f"{i}. {n} [{r.get('grade', '?')}] 체력 {st['hp']} · 전투력 {st['atk']} · 속도 {st['spd']} · 환산 {r.get('score', '?')} (합 {st['hp'] + st['atk'] + st['spd']})")
     return "\n".join(out)
 
 
