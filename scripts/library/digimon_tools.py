@@ -53,7 +53,7 @@ TOOLS: list[dict] = [
         "name": "digimon_rank",
         "description": "단계별 스탯 순위: 봇 도감에서 스탯이 확인된 종을 같은 단계끼리 총합(체력+전투력+속도) 또는 체력/전투력/속도 높은 순으로. "
                        "등급은 같은 단계 안 상위 10% S · 35% A · 70% B · 나머지 C. '성숙기에서 체력 제일 높은 애?' 에 씁니다.",
-        "inputSchema": {"type": "object", "properties": {"stage": {"type": "string", "description": "단계 (유년기 I|유년기 II|성장기|성숙기|완전체|궁극체|초궁극체). 비우면 전 단계 상위만"},
+        "inputSchema": {"type": "object", "properties": {"stage": {"type": "string", "description": "단계 (성장기|성숙기|완전체|궁극체|초궁극체 — 유년기는 순위 밖). 비우면 전 단계 상위만"},
                                                          "sort": {"type": "string", "description": "total|hp|atk|spd (기본 total)"},
                                                          "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "표시 수 (기본 10)"}},
                         "required": []},
