@@ -70,7 +70,7 @@ class DigimonToolsTest(unittest.TestCase):
 
     def test_rank_and_grade(self):
         text, err = dt.call("digimon_species", {"name": "파피몬"})
-        self.assertIn("등급 S — 성장기 훈련 환산 155 (단순 합 155) · 1위/2", text)
+        self.assertIn("등급 S — 성장기 총합 155 · 1위/2", text)
         text, err = dt.call("digimon_rank", {"stage": "성장기", "sort": "atk"})
         self.assertFalse(err); self.assertTrue(text.splitlines()[1].startswith("1. 아구몬 [A] 체력 90 · 전투력 20"))
         self.assertTrue(dt.call("digimon_rank", {"sort": "zzz"})[1])
