@@ -6,6 +6,8 @@ grade: S
 category: 개발
 difficulty: 고급
 ai_tools: ["Claude", "Claude Code", "도구무관"]
+sources:
+  - https://github.com/600-g/shutdown-timer
 ---
 
 # 스스로 업데이트하는 앱 배포 파이프라인
@@ -242,6 +244,51 @@ https://github.com/OWNER/REPO/releases/latest/download/App.zip
 - [ ] 교체 실패 시 원래 상태로 돌아오는가
 - [ ] 타이밍으로 성공을 판정하는 곳이 없는가
 - [ ] 안내가 사용자 작업을 막지 않는가
+
+## 윈도우 .NET 앱에 적용할 때 (자동 종료 타이머 실측)
+
+위 구조를 C# WinForms 단일 exe 에 그대로 옮기며 확인한 구체값입니다. 기준 구현: `600-g/shutdown-timer` 의 `build.yml` · `build.sh` · `CLAUDE.md` · `PhoneShell.cs` 끝 `Updater` 클래스.
+
+**저장소 첫 세팅**
+- Public 저장소 → Settings → Actions → General → Workflow permissions → **Read and write** → 그 섹션의 Save. 빠지면 Release 생성이 권한 오류로 실패한다. 같은 페이지에 Save 가 여러 개라 **엉뚱한 섹션을 저장하기 쉬우니** 새로고침으로 재확인.
+- 워크플로에 `permissions: contents: write`, `concurrency` 로 동시 릴리스 방지.
+- 릴리스 스텝(태그를 CI 가 만들 때):
+```yaml
+- uses: softprops/action-gh-release@v2
+  with:
+    tag_name: ${{ steps.ver.outputs.tag }}
+    target_commitish: ${{ github.sha }}   # 태그가 이 빌드 커밋을 가리키게
+    files: AutoShutdownTimer.zip           # 에셋 이름 고정 (사이트·앱이 이 이름으로 찾음)
+    body_path: RELEASE_NOTES.md            # CHANGELOG 해당 절
+```
+
+**앱 쪽 필수값**
+- `.NET 4.5` 기본 TLS 는 1.0 → GitHub API 연결 불가. `ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;` (TLS 1.2) 를 지우지 말 것.
+- 업데이트 확인 타이머는 **생성자**에 둔다(`Shown` 아님). `--tray` 로 트레이에 숨어 시작하면 `Shown` 이 영영 안 와서 트레이 상주 사용자가 업데이트를 못 받는다. 첫 확인 6초 뒤, 이후 6시간마다.
+- 표시 방침: 설정 화면 버전 줄에 배지(`ShowUpdateBadge`) + 트레이 귀띔 하루 1회(레지스트리 `updNotice`=yyyyMMdd). 확인 창은 사용자가 그 줄을 눌렀을 때만.
+- 배치 실행 형태(환경변수 전달하려면 `UseShellExecute=false` 필수):
+```csharp
+psi = new ProcessStartInfo(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe",
+                           "/d /c \"\"" + bat + "\"\"");
+psi.UseShellExecute = false;   // true 로 바꾸면 EnvironmentVariables 가 예외
+```
+- 차단 표시(MOTW) 해제 두 겹 — 교체 배치 안:
+```text
+Get-ChildItem -LiteralPath $env:TMPD -Recurse -File | Unblock-File
+del "%TMPD%\AutoShutdownTimer.exe:Zone.Identifier" 2>nul
+```
+- 경로 전달 환경변수: `AST_EXE` / `AST_DIR` / `AST_PID`, 취소 신호 파일 `AST_CANCEL`, 대기 60초 초과 시 `goto :fail`, 백업은 `%EXE%.bak`, 크기 검증 기준 500KB.
+
+**운영 함정**
+- 저장소 안 윈도우 `.bat`(릴리스.bat·보안패치.bat)은 **CP949 + CRLF** 로 저장. UTF-8 이면 한글이 깨진다.
+- **로컬 클론이 제일 위험** — claude.ai 등이 GitHub 을 직접 고친 뒤 뒤처진 로컬 사본을 밀면 남의 수정을 덮는다. 로컬 작업은 `git pull` 먼저, 충돌해도 `--force` 금지(태그·커밋 어긋남은 되돌리기 어렵다).
+- 사이트 카드가 자체 서버(예: 맥의 `api.600g.net`)를 거치면 **그 서버가 꺼질 때 다운로드도 멈춘다.** GitHub 직행 주소(`/releases/latest/download/<에셋>`)는 항상 살아 있으니 비상시 그쪽으로.
+
+**확인 명령**
+```bash
+gh release list --repo 600-g/shutdown-timer --limit 3
+curl -s https://api.600g.net/api/apps | python3 -m json.tool
+```
 
 ## 주의사항
 
