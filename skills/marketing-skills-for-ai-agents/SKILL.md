@@ -1,8 +1,8 @@
 ---
 name: marketing-skills-for-ai-agents
-description: 이 스킬은 **coreyhaines31/marketingskills** GitHub 저장소를 프로젝트에 설치해 **Claude Code·Cursor·Codex** 등 AI 에이전트에게 전환최적화·카피·SEO·광고·그로스 등 47종 마케팅 업무의 검증된 작업 순서를 학습시키는 스킬 라이브러리입니다.
+description: GitHub **coreyhaines31/marketingskills** 를 프로젝트에 넣어 **Claude Code·Cursor·Codex** 에이전트가 CRO·카피·SEO·광고·그로스 등 47종 마케팅 업무를 검증된 작업 순서로 수행하게 하는 법 — `product-marketing` 기반 세팅, 자연어·슬래시 호출, 권장 순서.
 origin: content-lab
-grade: C
+grade: A
 difficulty: 중급
 category: 자동화
 ai_tools: ["Claude", "Claude Code", "Cursor", "Codex"]
@@ -12,22 +12,39 @@ sources:
 
 # 마케팅 스킬 47종 설치하기
 
-💡 이 스킬은 **coreyhaines31/marketingskills** GitHub 저장소를 프로젝트에 설치해 **Claude Code·Cursor·Codex** 등 AI 에이전트에게 전환최적화·카피·SEO·광고·그로스 등 47종 마케팅 업무의 검증된 작업 순서를 학습시키는 스킬 라이브러리입니다.
+💡 **coreyhaines31/marketingskills**를 프로젝트 폴더에 넣고 **`product-marketing`부터 채우면**, "랜딩페이지 전환율 올려줘" 한마디에 에이전트가 알맞은 마케팅 스킬을 골라 정해진 프레임워크대로 일합니다.
 
 ## 이게 뭔가요?
 
-**coreyhaines31/marketingskills**는 AI 에이전트가 참고할 마케팅 전문 지식을 마크다운(.md) 파일 하나하나에 담아둔 오픈소스 라이브러리입니다. 버전은 v2.8.1, 라이선스는 MIT이며 **Claude Code**·**Cursor**·Windsurf·**Codex** 등 파일 기반으로 컨텍스트를 읽는 에이전트 환경 어디서든 동작합니다.
+**coreyhaines31/marketingskills**는 AI 에이전트가 참고할 마케팅 전문 지식을 마크다운(.md) 파일 하나하나에 담아 둔 오픈소스 라이브러리입니다. 버전은 v2.8.1, 라이선스는 MIT이며 **Claude Code**·**Cursor**·Windsurf·**Codex** 등 파일 기반으로 컨텍스트를 읽는 에이전트 환경 어디서든 동작합니다.
 
-핵심 아이디어는 "AI 에이전트에게 미리 검증된 작업 순서를 알려주는 치트시트를 심어둔다"는 것입니다. 프로젝트 폴더에 이 스킬 파일들을 넣어두면, "랜딩페이지 전환율 올려줘" 같은 자연어 요청만으로도 에이전트가 알맞은 스킬(예: `cro`)을 스스로 골라 그 안에 정의된 프레임워크대로 작업을 수행합니다. 기술에 익숙한 마케터·창업자가 전환최적화·카피·SEO·광고·그로스를 자동화하려고 만든 프로젝트입니다.
+핵심 아이디어는 "AI 에이전트에게 미리 검증된 작업 순서를 알려주는 치트시트를 심어 둔다"는 것입니다. 프로젝트 폴더에 스킬 파일들을 넣어 두면, 자연어 요청만으로 에이전트가 알맞은 스킬(예: `cro`)을 스스로 골라 그 안에 정의된 프레임워크대로 작업합니다. 기술에 익숙한 마케터·창업자가 전환최적화·카피·SEO·광고·그로스를 자동화하려고 만든 프로젝트입니다.
 
-💰 유료 필요: 없음 (저장소 자체는 무료·MIT). 단, 이를 실행할 Claude Code / Cursor / Codex 등 에이전트 도구의 사용료는 별도.
-✅ 무료 대안: Claude Code 대신 Cursor 무료 티어나 로컬 Codex CLI로도 동일한 방식으로 스킬 파일을 읽혀 사용 가능.
+| 항목 | 내용 |
+|---|---|
+| 비용 | 저장소 자체는 무료(MIT). Claude Code / Cursor / Codex 등 에이전트 도구 사용료는 별도 |
+| 무료로 쓰려면 | Cursor 무료 티어나 로컬 Codex CLI로도 같은 방식으로 스킬 파일을 읽혀 사용 가능 |
+| 구성 | 스킬 47개 — 모두 `product-marketing` 컨텍스트 문서를 가장 먼저 읽음 |
 
 ## 따라하기
 
-1. **저장소 설치** — GitHub `coreyhaines31/marketingskills` 저장소를 클론하거나 ZIP으로 다운로드해 프로젝트 폴더 안에 넣는다.
-2. **기반 스킬부터 채우기** — 47개 스킬 전부가 가장 먼저 읽는 `product-marketing` 스킬을 열어 "이 제품이 뭐고, 타깃은 누구고, 어떻게 포지셔닝하는가"를 먼저 채운다. 이 컨텍스트 문서 품질이 나머지 46개 스킬 결과물의 품질을 좌우한다.
-3. **자연어로 요청하거나 슬래시 명령으로 직접 호출** — 아래처럼 말하면 에이전트가 알맞은 스킬을 자동으로 선택해 실행한다.
+### 1. 저장소 설치
+
+GitHub `coreyhaines31/marketingskills` 저장소를 클론하거나 ZIP으로 다운로드해 **작업할 프로젝트 폴더 안에** 넣습니다. 에이전트는 프로젝트 폴더의 파일을 읽어 스킬을 고르므로, 에이전트를 실행하는 폴더 안에 있어야 합니다.
+
+### 2. 기반 스킬 `product-marketing`부터 채우기
+
+47개 스킬 전부가 가장 먼저 읽는 `product-marketing` 스킬을 열어 다음 세 가지를 채웁니다.
+
+- 이 제품이 뭔가
+- 타깃은 누구인가
+- 어떻게 포지셔닝하는가
+
+이 컨텍스트 문서의 품질이 나머지 46개 스킬 결과물의 품질을 좌우합니다. 비워 둔 채 다른 스킬을 부르면 결과가 크게 떨어집니다.
+
+### 3. 자연어로 요청하거나 슬래시로 직접 호출
+
+자연어로 말하면 에이전트가 알맞은 스킬을 자동으로 고릅니다.
 
 | 이렇게 말하면 | 작동하는 스킬 |
 |---|---|
@@ -36,27 +53,33 @@ sources:
 | "가입 이벤트에 GA4 추적 붙여줘" | analytics |
 | "5통짜리 웰컴 이메일 시퀀스 만들어줘" | emails |
 
-직접 호출하려면 `/cro`, `/emails`, `/seo-audit`처럼 스킬 이름 앞에 `/`를 붙여 실행한다.
+특정 스킬을 확실히 쓰고 싶으면 `/cro`, `/emails`, `/seo-audit`처럼 스킬 이름 앞에 `/`를 붙여 직접 호출합니다.
 
-4. **스킬 간 연결 관계 파악** — 스킬은 서로를 참조하도록 설계되어 있다.
-   - `copywriting ↔ cro ↔ ab-testing`
-   - `revops ↔ sales-enablement ↔ cold-email`
-   - `seo-audit ↔ schema ↔ ai-seo`
-   - `customer-research → copywriting · cro · competitors`
+### 4. 처음 쓸 때 권장 순서
 
-5. **처음 쓸 때 권장 순서**
-   - 기반 세팅: `product-marketing`으로 제품/타깃/포지셔닝 컨텍스트부터 채우기
-   - 현황 진단: `seo-audit` / `analytics` / `customer-research`로 지금 상태 파악
-   - 전환 개선: `cro` · `copywriting`으로 핵심 페이지부터 손보기
-   - 트래픽 확보: 목표에 맞게 `ads` · `social` · `programmatic-seo` · `emails`
-   - 검증 & 반복: `ab-testing`으로 측정하고 개선 루프 돌리기
+| 단계 | 쓰는 스킬 | 목적 |
+|---|---|---|
+| 1. 기반 세팅 | `product-marketing` | 제품·타깃·포지셔닝 컨텍스트 채우기 |
+| 2. 현황 진단 | `seo-audit` / `analytics` / `customer-research` | 지금 상태 파악 |
+| 3. 전환 개선 | `cro` · `copywriting` | 핵심 페이지부터 손보기 |
+| 4. 트래픽 확보 | `ads` · `social` · `programmatic-seo` · `emails` | 목표에 맞게 선택 |
+| 5. 검증 & 반복 | `ab-testing` | 측정하고 개선 루프 돌리기 |
 
-### 스킬 카탈로그 (47개)
+### 5. 스킬 간 연결 관계
+
+스킬은 서로를 참조하도록 설계되어 있어, 한 스킬의 결과가 다음 스킬의 입력이 됩니다.
+
+- `copywriting ↔ cro ↔ ab-testing`
+- `revops ↔ sales-enablement ↔ cold-email`
+- `seo-audit ↔ schema ↔ ai-seo`
+- `customer-research → copywriting · cro · competitors`
+
+### 스킬 카탈로그(47개)
 
 **기반**
-- `product-marketing` — 제품·타깃·포지셔닝 컨텍스트 문서 작성 (가장 먼저 세팅)
+- `product-marketing` — 제품·타깃·포지셔닝 컨텍스트 문서 작성(가장 먼저 세팅)
 
-**전환 최적화 (CRO)**
+**전환 최적화(CRO)**
 - `cro` 랜딩페이지·폼 전환율 최적화 / `signup` 가입·등록·체험 활성화 흐름 개선 / `onboarding` 온보딩·활성화·첫 사용 경험 / `popups` 팝업·모달·배너 최적화 / `paywalls` 앱 내 페이월·업그레이드 화면
 
 **콘텐츠 & 카피**
@@ -85,18 +108,20 @@ sources:
 
 ## 활용 예시
 
-- 신규 SaaS 프로젝트 폴더에 저장소를 설치하고 `product-marketing`을 먼저 채운 뒤 "내 SaaS 홈페이지 카피 써줘"라고 입력 → 에이전트가 `copywriting` 스킬을 자동 선택해 포지셔닝 컨텍스트에 맞는 카피 초안을 생성.
-- "가입 이벤트에 GA4 추적 붙여줘"라고 요청 → `analytics` 스킬이 실행되며 이벤트 추적 세팅 절차를 안내.
-- `/seo-audit`을 직접 호출 → 기술·온페이지 SEO 점검 체크리스트를 즉시 실행.
+- **신규 SaaS 홈페이지 카피**: 프로젝트 폴더에 저장소를 넣고 `product-marketing`을 채운 뒤 "내 SaaS 홈페이지 카피 써줘" → 에이전트가 `copywriting` 스킬을 자동 선택해 포지셔닝 컨텍스트에 맞는 카피 초안을 만듭니다.
+- **이벤트 추적 세팅**: "가입 이벤트에 GA4 추적 붙여줘" → `analytics` 스킬이 실행되며 이벤트 추적 세팅 절차를 안내합니다.
+- **SEO 점검**: `/seo-audit`을 직접 호출 → 기술·온페이지 SEO 점검 체크리스트를 바로 실행합니다.
 
 ## 💡 아이디어
 
-- 두근컴퍼니 콘텐츠 프로젝트에도 동일한 패턴(스킬 마크다운 + 기반 컨텍스트 문서 우선 세팅)을 적용해 자체 마케팅 스킬 라이브러리를 만들 수 있음 — 기존 스킬 라이브러리 프로젝트([[project_skill_library]])와 구조가 유사해 참고할 가치가 있음.
+- **나만의 업무 스킬 라이브러리**: 같은 패턴(업무별 스킬 마크다운 + 모든 스킬이 먼저 읽는 기반 컨텍스트 문서)을 마케팅 외 분야에도 적용할 수 있습니다. 회사·제품 설명 문서를 하나 두고, 업무별 작업 순서를 .md로 쌓아 가면 에이전트가 같은 품질로 반복 작업을 수행합니다.
+- **진단 → 개선 → 검증 루프 자동화**: 권장 순서의 2~5단계를 정기적으로 돌려, `ab-testing` 결과를 다시 `cro`·`copywriting` 개선에 넣는 운영 루프로 만들 수 있습니다.
 
 ## 주의사항
 
-- 이 카탈로그에는 각 스킬의 실제 프롬프트 원문(.md 파일 내용)은 포함되어 있지 않다. 실제 사용을 위해서는 GitHub 저장소를 직접 설치해 파일을 확인해야 한다.
-- `product-marketing` 컨텍스트 문서를 채우지 않고 바로 다른 스킬을 호출하면 결과 품질이 크게 떨어진다.
+- 이 문서의 카탈로그에는 각 스킬의 실제 프롬프트 원문(.md 파일 내용)이 들어 있지 않습니다. 실제로 쓰려면 GitHub 저장소를 설치해 파일을 확인해야 합니다.
+- `product-marketing` 컨텍스트 문서를 채우지 않고 바로 다른 스킬을 호출하면 결과 품질이 크게 떨어집니다.
+- 에이전트 도구(Claude Code / Cursor / Codex 등) 사용료는 저장소와 별도로 발생합니다.
 
 ## 출처
 

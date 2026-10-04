@@ -1,5 +1,5 @@
 ---
-name: claude-code-token-saving-2
+name: claude-code-video-analysis-ffmpeg-whisper
 description: 영상 분석 시 **FFMPEG, Remotion, Whisper** 등의 도구와 심층 분석 프롬프트를 활용하여 **클로드 코드 토큰 사용량을 절감**하는 스킬입니다.
 origin: content-lab
 grade: A
