@@ -151,19 +151,22 @@ def _confirm_semantic_merge(analysis, slug: str, cand_path: Path, log) -> bool:
         cand_cat = m.group(1).strip() if m else "?"
         new_desc = (getattr(analysis, "callout", "") or getattr(analysis, "summary", "") or "")
         new_cat = getattr(analysis, "category", "") or "?"
-        # 사용자 원칙 (2026-09-16): 정확히 유사하고 카테고리가 겹치면 합쳐 간소화. 관점이 다르면 분리.
+        # 사용자 원칙 (2026-09-16 → 2026-10-05 확장): 중복·겹침·목적이 같으면 하나의 문서로 합성. 목적·결과물이 다르면 분리.
         prompt = (
-            "두 AI 스킬 문서가 '같은 스킬'인지 판정하라.\n"
-            "같은 스킬 = 한쪽만 남기고 다른 쪽을 지워도 정보 손실이 거의 없는 관계. "
-            "같은 주제를 다른 출처로 또 받은 경우가 흔하고, 그때는 합쳐서 하나로 간소화하는 것이 원칙이다.\n"
+            "두 AI 스킬 문서를 '한 문서로 합성해야 하는지' 판정하라.\n"
+            "합성 대상 = 다루는 대상(도구·기능)이 같거나, 대상이 달라도 독자가 이루려는 목적이 같아 "
+            "한 문서 안에서 방법별 절로 비교·선택하는 편이 더 유용한 관계. 합성은 둘을 재구성해 하나로 새로 쓰는 것이라 "
+            "정보는 사라지지 않는다. 같은 주제·같은 목적을 다른 출처로 또 받는 경우가 흔하고, 그때는 하나로 합치는 것이 원칙이다 "
+            "(사용자 지시 2026-10-05: 중복·겹침·목적이 같으면 하나의 문서로 고도화).\n"
             f"[기존] ({cand_cat}) {cand_title} — {cand_desc[:400]}\n"
             f"[신규] ({new_cat}) {analysis.skill_title_ko} — {new_desc[:400]}\n"
             "판정 기준:\n"
             "- 제목과 표현이 달라도 다루는 대상(도구·기능)과 목표가 같으면 same=true. "
             "같은 자료를 다르게 요약한 경우가 흔하므로 문구 차이는 근거가 못 된다.\n"
-            "- 다루는 도구가 다르거나, 목표·결과물이 다르거나, 한쪽에만 있는 핵심 절차가 있으면 same=false.\n"
-            "- '포괄적 vs 특정 기능' 같은 서술 범위 차이만으로 판단하지 말고 핵심 대상이 같은지를 봐라.\n"
-            "- 괄호 안은 카테고리다. 카테고리가 같으면 합치는 쪽으로, 다르면 같은 대상·같은 목표가 분명할 때만 same=true.\n"
+            "- 목적이 같으면 도구가 달라도 same=true (예: 같은 목적의 무료 모델 우회 방법 2가지, 같은 AI 비서 구축의 규모별 방법). "
+            "목적·결과물이 다르면 같은 도구를 써도 same=false (예: Claude 로 웹사이트 만들기 vs Claude 로 투자 분석).\n"
+            "- '포괄적 vs 특정 기능' 같은 서술 범위 차이만으로 판단하지 말고 핵심 대상이나 목적이 같은지를 봐라.\n"
+            "- 괄호 안은 카테고리다. 카테고리가 같으면 합치는 쪽으로, 다르면 같은 대상이나 같은 목적이 분명할 때만 same=true.\n"
             'JSON only: {"same": true, "reason": "1줄"}'
         )
         raw = call_claude_json(prompt, schema=_SAME_SCHEMA)
@@ -463,11 +466,14 @@ def collect(
     # ── 4. SKILL.md 생성 + 설치 ───────────────────────────────────
     try:
         skill_md = render_skill_md(analysis, url, scrape_res.source_type)
+        mirror_existed = find_mirror_by_slug(analysis.skill_name) is not None
         global_path, was_new = install_skill(analysis, skill_md)
         mirror_path = mirror_skill(analysis, skill_md)
+        if global_path is None:  # 전역 설치 정책 밖 — 신규 여부는 라이브러리 원본 기준
+            was_new = not mirror_existed
         summary["stages"]["install"] = {
             "stage": "스킬 파일 저장", "ok": True,
-            "global": str(global_path),
+            "global": str(global_path) if global_path else None,  # 전역 설치 정책 밖이면 None
             "mirror": str(mirror_path),
             "new": was_new,
         }

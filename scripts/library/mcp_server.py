@@ -36,6 +36,28 @@ LOCAL_ROOT = os.environ.get("SKILL_LIBRARY_ROOT") or None   # 테스트/커스�
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MAX_K = 20
 
+
+def _public_link_base() -> str:
+    """사람용 게시글 링크 주소 — 백엔드 호출 주소(BASE_URL)와 분리.
+
+    BASE_URL 은 기본이 localhost 라 폰·claude.ai 에서 누르면 죽은 링크였다.
+    우선순위: env AISKILLBOX_PUBLIC_URL → config.json mcp_remote.public_base_url → BASE_URL.
+    """
+    env = os.environ.get("AISKILLBOX_PUBLIC_URL", "").strip()
+    if env:
+        return env.rstrip("/")
+    try:
+        cfg = json.loads((PROJECT_ROOT / "config.json").read_text(encoding="utf-8"))
+        url = ((cfg.get("mcp_remote") or {}).get("public_base_url") or "").strip()
+        if url.startswith("https://"):
+            return url.rstrip("/")
+    except (OSError, ValueError):
+        pass
+    return BASE_URL
+
+
+LINK_BASE_URL = _public_link_base()
+
 _FORCE_LOCAL = False
 
 try:                                                            # v5.3: 디지몬 진화 도감 읽기 도구 4종 (같은 서버·같은 커넥터)
@@ -252,7 +274,7 @@ def fmt_search(res: dict, mode: str) -> str:
             f"   등급 {r.get('grade') or '-'} · {r.get('category')} · {', '.join(r.get('ai_tools') or []) or '도구 미지정'}\n"
             f"   {r.get('description', '')}\n"
             + (f"   ↳ {r.get('snippet')}\n" if r.get("snippet") else "")
-            + f"   get_skill(\"{r.get('slug')}\") 로 본문 · 사람용 게시글 {BASE_URL}/skill/{r.get('slug')}"
+            + f"   get_skill(\"{r.get('slug')}\") 로 본문 · 사람용 게시글 {LINK_BASE_URL}/skill/{r.get('slug')}"
         )
     if not res.get("results"):
         lines.append("\n결과 없음 — 다른 표현으로 다시 검색하거나 list_skills 로 목록을 보세요.")
@@ -330,6 +352,10 @@ def handle(msg: dict) -> Optional[dict]:
             "instructions": (
                 "두근컴퍼니 스킬 라이브러리. 작업 전에 search_skills 로 관련 SKILL.md 가 있는지 확인하고, "
                 "있으면 get_skill 로 본문을 가져와 그대로 따르세요. "
+                "사용자가 '스킬 찾아/스킬로 해줘/스킬 있어?' 라고 하면 되묻지 말고 바로: search_skills(요청을 자연어 질의로, "
+                "필요하면 표현을 바꿔 1~2회 더) → 가장 맞는 1건 get_skill → 본문의 절차를 사용자 상황에 맞춰 즉시 수행. "
+                "수행할 수 없는 단계(설치·로그인·유료 결제 등)는 그 단계만 짚어 알려주고, 맞는 스킬이 없으면 없다고 말하고 일반 방법으로 진행. "
+                "답변 끝에 사용한 스킬 이름과 사람용 게시글 링크를 한 줄로. "
                 "디지몬(디지펫 바이탈 디스코드) 진화·스탯·DIM 질문은 digimon_* 도구로 — 숫자는 봇 화면 실측값이고 "
                 "'사이트 값' 은 검증 전입니다."
             ),

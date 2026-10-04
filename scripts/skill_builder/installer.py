@@ -11,12 +11,19 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
+from scripts import config_store
+
 if TYPE_CHECKING:
     from ..analyzer.gemini import AnalysisResult
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_GLOBAL_SKILLS_DIR = "~/.claude/skills"
+
+# 전역 설치 정책 — 전역 스킬의 description 은 매 Claude Code 세션·모든 `claude -p` 컨텍스트에 실린다.
+# 터미널에서 바로 실행할 S급 개발·자동화만 전역, 나머지는 라이브러리(mirror·검색·MCP)에만.
+# config.json library.global_install = {"grades": [...], "categories": [...]} 로 덮어쓴다.
+DEFAULT_GLOBAL_INSTALL = {"grades": ["S"], "categories": ["개발", "자동화"]}
 LOCAL_MIRROR_DIR = Path(__file__).resolve().parents[2] / "skills"
 
 # 트래킹 파라미터 (중복 감지 시 무시)
@@ -66,20 +73,31 @@ def find_mirror_by_slug(slug: str) -> Path | None:
     return p if p.exists() else None
 
 
+def should_install_globally(grade: str, category: str) -> bool:
+    policy = config_store.get("library.global_install", None) or DEFAULT_GLOBAL_INSTALL
+    return (grade or "").strip() in policy.get("grades", []) and \
+        (category or "").strip() in policy.get("categories", [])
+
+
 def install_skill(
     result: "AnalysisResult",
     skill_md_content: str,
-) -> tuple[Path, bool]:
+) -> tuple[Path | None, bool]:
     """글로벌 ~/.claude/skills/{name}/SKILL.md에 설치 (있으면 갱신).
 
-    Returns: (path, was_new). 같은 슬러그면 갱신.
+    정책(should_install_globally) 밖의 신규 스킬은 전역에 깔지 않는다 → (None, False).
+    이미 전역에 있는 스킬은 정책과 무관하게 갱신한다 (합병 결과가 낡은 사본으로 남지 않게).
+    Returns: (path, was_new).
     """
     skills_dir = _global_skills_dir()
-    skills_dir.mkdir(parents=True, exist_ok=True)
     target_dir = skills_dir / result.skill_name
     target_path = target_dir / "SKILL.md"
 
     is_new = not target_path.exists()
+    if is_new and not should_install_globally(getattr(result, "grade", ""), getattr(result, "category", "")):
+        logger.info("스킬 %s: 전역 설치 정책 밖 — 라이브러리에만 저장", result.skill_name)
+        return None, False
+    skills_dir.mkdir(parents=True, exist_ok=True)
     target_dir.mkdir(parents=True, exist_ok=True)
     target_path.write_text(skill_md_content, encoding="utf-8")
     logger.info("스킬 %s: %s", "신규 설치" if is_new else "갱신(합병)", target_path)

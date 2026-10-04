@@ -52,7 +52,7 @@ def _parse_existing_skill_md(path: Path) -> dict:
     # source_urls 다중 추출 — v2.4 md_generator 는 `sources:` 로 씀 (v1은 source_url/source_urls).
     # 세 키 모두 매칭. 캡처 텍스트에서 http 로 시작하는 라인만 URL 로 채택.
     urls_m = re.search(
-        r"^(?:sources|source_urls?):\s*(.+?)(?=\n\w|\n---|$)",
+        r"^(?:sources|source_urls?):\s*(.+?)(?=\n\w|\n---|\Z)",  # \Z — MULTILINE 의 $ 는 첫 줄 끝에 걸려 첫 URL 만 읽었다
         fm_text,
         re.DOTALL | re.MULTILINE,
     )
@@ -91,7 +91,8 @@ def _merge_prompt(existing: dict, new_result: AnalysisResult, new_body_full: str
     """v2.3 합병 prompt — body_md 단일 필드, 새 헤딩 강제, 1500자 이상. cap 은 프로바이더별 본문 상한."""
     return f"""너는 두근컴퍼니의 AI 스킬 큐레이터다.
 
-같은 주제로 기존 스킬과 신규 분석이 들어왔다. **두 출처의 모든 핵심 정보를 보존**하면서 더 풍부한 단일 스킬로 합병하라.
+같은 주제·같은 목적의 기존 스킬과 신규 분석이 들어왔다. **두 출처의 모든 핵심 정보를 보존**하면서, 처음부터 한 사람이
+한 문서로 설계해 쓴 것처럼 **새로 합성한** 단일 스킬을 만들어라. 이어붙이기가 아니라 재구성이다.
 
 [기존 스킬 — {existing.get('collected_at','?')} 수집]
 - 슬러그: {existing.get('name','?')}
@@ -114,6 +115,9 @@ def _merge_prompt(existing: dict, new_result: AnalysisResult, new_body_full: str
 3. **빈 출처 없음** — 두 출처를 다 흡수했을 때 자연스러운 분량이 나와야 함
 
 [합병 규칙]
+0. **합성이지 이어붙이기가 아니다** — "여기에 더해", "또 다른 출처에서는", "합병", "기존 스킬/신규" 같은 흔적 금지.
+   겹치는 설명·단계는 하나로 합치고, 방법이 여러 개면 따라하기 맨 앞에 "어떤 방법을 언제 쓰나" 선택 표를 두고 ### 로 나눈다.
+   흩어진 주의사항은 한곳에, 서로 모순되면 버전·날짜를 밝혀 정리. 원문에 없는 사실·URL·가격은 지어내지 않는다.
 1. 중복 문장 제거, 누락된 통찰 통합.
 2. 등급/카테고리는 더 정확한 것 택.
 3. 슬러그는 **기존 그대로** 유지.

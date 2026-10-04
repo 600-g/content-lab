@@ -91,7 +91,6 @@ def _source_line(u: str) -> str:
 def render_skill_md(result: "AnalysisResult", source_url: str, source_type: str) -> str:
     """SKILL.md — v2.4 lean. 제목 + 💡 1줄 + body + 출처."""
     today = datetime.date.today().isoformat()  # noqa: F841 — 호환용 (현재 본문엔 미사용)
-    is_merged = bool(result.raw.get("_is_merged"))
     source_urls: list[str] = result.raw.get("_merged_source_urls") or [source_url]
 
     # body — v2.4 우선, legacy fallback
@@ -122,14 +121,14 @@ sources:
 ---
 """
 
-    merged_badge = " (합병됨)" if is_merged else ""
+    # 합병 표시는 제목에 붙이지 않는다 (2026-10-05 사용자 지시) — 합쳐진 문서는 처음부터 한 문서처럼 읽혀야 한다
     sources_md = "\n".join(_source_line(u) for u in source_urls)
     # v2.6: callout 은 💡 prefix 로 출력 → register 가 Notion callout 블록으로 변환
     callout_line = (getattr(result, "callout", "") or result.tldr or "").strip()
     callout_md = f"\n\n💡 {callout_line}\n" if callout_line else "\n"
 
     body = f"""
-# {result.skill_title_ko}{merged_badge}{callout_md}
+# {result.skill_title_ko}{callout_md}
 {body_md.strip()}
 
 ## 출처

@@ -59,6 +59,7 @@ venv/bin/python -m scripts.library.repair sources            # 이중 출처 점
 venv/bin/python -m scripts.library.regrade                   # 등급 재판정 — dry-run 기본, --apply --recategorize 로 적용
 venv/bin/python -m scripts.library.consolidate --dry-run <keeper> <absorbed>   # ⚠️ 이건 반대로 적용이 기본이다 — 먼저 --dry-run
 venv/bin/python -m scripts.library.consolidate <keeper> <absorbed>             #    absorbed 를 즉시 rmtree (백업 logs/backup_consolidate_*)
+source venv/bin/activate && python -m scripts.library.consolidate --content 합성본.md <keeper> <a> <b> …  # 묶음 전체를 새로 쓴 한 문서로 교체 (검사 통과해야 적용, --dry-run 은 검사만)
 
 # stdio MCP 를 Claude Code 에 붙일 때 — 토큰 없으면 401 → 로컬 인덱스로 조용히 폴백한다 (결과는 나오니 눈치채기 어렵다)
 claude mcp add --scope user skill-library -e AISKILLBOX_TOKEN="$TOKEN" -- python3 ~/Developer/my-company/content-lab/scripts/library/mcp_server.py
@@ -282,7 +283,9 @@ Notion write 경로 전용 함정(#1·2·3·5·10~16)은 `docs/notion-migration.
 
 51. **`from . import X` 는 sys.modules 가 아니라 패키지 속성을 먼저 본다** — `mock.patch.dict("sys.modules", …)` 가 무력화돼 실제 Playwright 가 돌았다(단독 통과·전체 실패). `mock.patch.object(scripts.scraper, "web", mock, create=True)` 로 **패키지 속성을 직접**.
 
-52. **테스트가 커밋된 파일을 실제 API 로 오염시킨다** (2026-09-25 실측) — `embeddings.json` 에 스킬이 아닌 `keeper` 키(3072차원 실벡터)가 있다. `test_consolidate.py` 가 `merge_pair("keeper","absorbed")` 를 부르고 `consolidate.py` 가 `embedder.get_or_embed` 를 그대로 타며 `CACHE_PATH` 는 실경로 하드코딩(주입점 없음). 결과: 전체 테스트마다 실제 임베딩 호출 + `git status` 오염 + 유령 키가 의미검색 후보에 섞임. `/healthz` 가 `total 127 / embedded 126` 인 이유. **embedder 를 주입 가능하게 만들고 테스트에서 패치할 것.** "디스크 부작용 0" 규칙 위반.
+52. **테스트가 커밋된 파일을 실제 API 로 오염시킨다** — `consolidate.merge_pair` 는 실경로 `embeddings.json` 을 갱신한다(`CACHE_PATH` 주입점 없음). `test_consolidate.py` 가 이걸 막지 않아 전체 테스트마다 실제 임베딩 호출 + 유령 `keeper` 키가 생겼다. 2026-09-27 부터 setUp 에서 `embedder.get_or_embed`·`invalidate` 를 패치한다. **새 테스트가 merge_pair·collect 를 부르면 같은 패치 필수** — 확인은 테스트 전후 `md5 scripts/skills/embeddings.json` 이 같은지.
+
+52-a. **frontmatter 여러 줄 값을 정규식으로 읽을 때 MULTILINE 의 `$` 는 첫 줄 끝이다** — `merger._parse_existing_skill_md` 가 `sources:` 의 첫 URL 만 읽어, 출처 2개 이상인 스킬을 다시 합병하면 나머지 출처가 조용히 사라졌다 (2026-09-27, 한 번에 여러 개를 흡수하는 `consolidate keeper a b c` 에서 발견). 끝 앵커는 `\Z`. `tests/test_merger_sources_parse.py`.
 
 53. **`library.consolidate`·`regrade` 는 `.env` 를 로드하지 않는다** — 문서대로 venv 활성화 없이 돌리면 합병 후 keeper 가 **임베딩 없는 상태로 남는다**(`embedder.py` 는 WARNING 만). 위 Environment 절 참조.
 
@@ -318,7 +321,7 @@ URL 하나를 던지거나 본문을 그대로 붙여넣으면:
 - **두근은 개발 초보** → 쉽게 설명, 선택지는 장단점과 함께
 - **80% 확신이면 실행 후 보고**, 되묻지 않음
 - **한 번에 끝내기** — 코드 수정 시 미정의 함수/import 잔존 확인 (py_compile)
-- **자동 합병 정책** — `skip_duplicate=False` 가 기본. 중복은 합병하고 출처 누적
+- **합성 정책 (2026-10-05)** — `skip_duplicate=False` 가 기본. 중복·겹침·**목적이 같으면** 하나의 문서로 합성하고 출처 누적. 이어붙이기·`(합병됨)` 표시 금지 — 처음부터 한 문서로 쓴 것처럼 재구성(방법이 여럿이면 선택 표 → 방법별 절). 여러 개를 한 번에 합칠 땐 묶음 전체를 읽고 새로 쓴 뒤 `consolidate --content` 로 적용(검사: 출처 합집합·대제목 6종·합병 흔적·슬러그).
 - **무료 도구 우선** — 구독 Claude · Gemini 무료 티어 · Playwright/yt-dlp 전부 무료. 비용 발생 가능성 사전 고지.
 
 ### 보안

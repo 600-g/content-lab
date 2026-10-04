@@ -270,7 +270,9 @@ def main() -> int:
         _update(fix_id, model=model, claude_account=account)
         print(f"[fix_runner] model={model}, account={account}")
         r = subprocess.run(
+            # 저장소 CLAUDE.md·프로젝트 설정만 — 사용자 전역 설정·전역 MCP 는 수정 작업에 불필요 (호출당 ~8k 절감)
             [claude_bin, "--dangerously-skip-permissions", "--model", model,
+             "--setting-sources", "project,local", "--strict-mcp-config",
              "-p", prompt],
             cwd=str(PROJECT_ROOT), capture_output=True, text=True,
             timeout=CLAUDE_TIMEOUT, env=env,
