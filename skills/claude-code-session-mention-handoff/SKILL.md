@@ -9,6 +9,9 @@ ai_tools: ["Claude", "Claude Code"]
 sources:
   - https://app.notion.com/p/3c573c7b15ad814dbf0dd3d6052f3edc?pvs=39
   - https://fieldby.notion.site/3b8d730b395381a083faf9e4d90a9527?pvs=149
+originals:
+  - claude-code-session-mention-handoff | 클로드 세션 간 업무 인계하기 | https://app.notion.com/p/3c573c7b15ad814dbf0dd3d6052f3edc?pvs=39
+  - claude-code-session-messaging | 클로드 코드 창 간 메시지 주고받기 | https://fieldby.notion.site/3b8d730b395381a083faf9e4d90a9527?pvs=149
 ---
 
 # 세션끼리 메시지 인계하기
@@ -254,3 +257,12 @@ We recommend resuming from a summary.
 
 - [https://app.notion.com/p/3c573c7b15ad814dbf0dd3d6052f3edc?pvs=39](https://app.notion.com/p/3c573c7b15ad814dbf0dd3d6052f3edc?pvs=39)
 - [https://fieldby.notion.site/3b8d730b395381a083faf9e4d90a9527?pvs=149](https://fieldby.notion.site/3b8d730b395381a083faf9e4d90a9527?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 클로드 세션 간 업무 인계하기 | `claude-code-session-mention-handoff` | [app.notion.com](https://app.notion.com/p/3c573c7b15ad814dbf0dd3d6052f3edc?pvs=39) |
+| 클로드 코드 창 간 메시지 주고받기 | `claude-code-session-messaging` | [fieldby.notion.site](https://fieldby.notion.site/3b8d730b395381a083faf9e4d90a9527?pvs=149) |

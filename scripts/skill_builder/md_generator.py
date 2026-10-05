@@ -135,4 +135,8 @@ sources:
 
 {sources_md}
 """
+    originals = result.raw.get("_originals") or []
+    if len(originals) >= 2:  # 합쳐진 문서면 원본 목록을 frontmatter + 출처 아래 표로 (2026-10-05)
+        from .originals import apply_to_md
+        return apply_to_md(frontmatter + body, originals)
     return frontmatter + body

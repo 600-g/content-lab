@@ -9,6 +9,9 @@ ai_tools: ["Claude", "Claude Code", "Codex"]
 sources:
   - https://github.com/ShawnPana/phone-harness
   - https://app.notion.com/p/phone-harness-3b9c601852d180209b71f3acd9e901dc?source=copy_link
+originals:
+  - phone-harness | AI 에이전트로 폰 제어하기 | https://github.com/ShawnPana/phone-harness
+  - phone-harness-install | 아이폰 미러링 AI 에이전트 설정 | https://app.notion.com/p/phone-harness-3b9c601852d180209b71f3acd9e901dc?source=copy_link
 ---
 
 # AI 에이전트로 실제 폰 조작하기
@@ -195,3 +198,12 @@ PY
 
 - [https://github.com/ShawnPana/phone-harness](https://github.com/ShawnPana/phone-harness)
 - [https://app.notion.com/p/phone-harness-3b9c601852d180209b71f3acd9e901dc?source=copy_link](https://app.notion.com/p/phone-harness-3b9c601852d180209b71f3acd9e901dc?source=copy_link)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| AI 에이전트로 폰 제어하기 | `phone-harness` | [github.com](https://github.com/ShawnPana/phone-harness) |
+| 아이폰 미러링 AI 에이전트 설정 | `phone-harness-install` | [app.notion.com](https://app.notion.com/p/phone-harness-3b9c601852d180209b71f3acd9e901dc?source=copy_link) |

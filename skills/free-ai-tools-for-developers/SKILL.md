@@ -12,6 +12,12 @@ sources:
   - https://m.blog.naver.com/PostView.naver?blogId=solrr&logNo=224418619146&proxyReferer=https%3A%2F%2Finstagram.com%2F&trackingCode=external&fbclid=PAVERFWAUdsaRwZG9mAmZkaWQWUO1o9BqbKqkK0DHck1oi-9lIP56y62V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp73rAKWehsPl-Zej89visYvHUNiAsT7hOeKIkWJoY1NVPP_-UeSytuGkFQfk_aem_mJAyEZiXjQ1YlmoDl1Jdmw
   - https://oavoir.notion.site/NVIDIA-AI-100-38fc7076b1958179ba98d5c3b4f7ca80?pvs=149
   - https://waiting-drug-536.notion.site/AI-API-37ad86104de28081a6f1d137b63af33a?pvs=149
+originals:
+  - free-ai-tools-for-developers | 무료 AI 도구 모아 활용하기 | https://rebornlabs.kr/ai-free?utm_source=instagram&utm_medium=reels&utm_campaign=vibeskills&ref=BS-019&utm_content=BS-019&fbclid=PAVERFWAUQyP1wZG9mAmZkaWQWUOOpC3L-8ODj1vexlLDdsZ2GHKIPIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp6e4dJhk37uH-yDX8HW9Xr8XoFZsMGrFdhC1ZHKAIKiPfHsPDypu-qPBc5bp_aem_nKqBkYw_-PimTBvY4hixXw
+  - any-ai-model-free-trial-promotion | AI 모델 24시간 완전 무료 체험 | https://app.notion.com/p/3acc601852d1809ca558f9c0c21fd010?source=copy_link
+  - kiro-free-trial-claude-gpt-access | Kiro 무료 프로모션으로 Claude 쓰기 | https://m.blog.naver.com/PostView.naver?blogId=solrr&logNo=224418619146&proxyReferer=https%3A%2F%2Finstagram.com%2F&trackingCode=external&fbclid=PAVERFWAUdsaRwZG9mAmZkaWQWUO1o9BqbKqkK0DHck1oi-9lIP56y62V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp73rAKWehsPl-Zej89visYvHUNiAsT7hOeKIkWJoY1NVPP_-UeSytuGkFQfk_aem_mJAyEZiXjQ1YlmoDl1Jdmw
+  - nvidia-build-ai-free-api | NVIDIA AI 100+ 모델 무료 API 활용 | https://oavoir.notion.site/NVIDIA-AI-100-38fc7076b1958179ba98d5c3b4f7ca80?pvs=149
+  - nvidia-ai-playground-free-api | NVIDIA AI 모델 무료 체험 및 API 활용 | https://waiting-drug-536.notion.site/AI-API-37ad86104de28081a6f1d137b63af33a?pvs=149
 ---
 
 # 유료 AI 무료로 쓰는 방법 총정리
@@ -287,3 +293,15 @@ https://app.kiro.dev/
 - [https://m.blog.naver.com/PostView.naver?blogId=solrr&logNo=224418619146&proxyReferer=https%3A%2F%2Finstagram.com%2F&trackingCode=external&fbclid=PAVERFWAUdsaRwZG9mAmZkaWQWUO1o9BqbKqkK0DHck1oi-9lIP56y62V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp73rAKWehsPl-Zej89visYvHUNiAsT7hOeKIkWJoY1NVPP_-UeSytuGkFQfk_aem_mJAyEZiXjQ1YlmoDl1Jdmw](https://m.blog.naver.com/PostView.naver?blogId=solrr&logNo=224418619146&proxyReferer=https%3A%2F%2Finstagram.com%2F&trackingCode=external&fbclid=PAVERFWAUdsaRwZG9mAmZkaWQWUO1o9BqbKqkK0DHck1oi-9lIP56y62V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp73rAKWehsPl-Zej89visYvHUNiAsT7hOeKIkWJoY1NVPP_-UeSytuGkFQfk_aem_mJAyEZiXjQ1YlmoDl1Jdmw)
 - [https://oavoir.notion.site/NVIDIA-AI-100-38fc7076b1958179ba98d5c3b4f7ca80?pvs=149](https://oavoir.notion.site/NVIDIA-AI-100-38fc7076b1958179ba98d5c3b4f7ca80?pvs=149)
 - [https://waiting-drug-536.notion.site/AI-API-37ad86104de28081a6f1d137b63af33a?pvs=149](https://waiting-drug-536.notion.site/AI-API-37ad86104de28081a6f1d137b63af33a?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 5개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 무료 AI 도구 모아 활용하기 | `free-ai-tools-for-developers` | [rebornlabs.kr](https://rebornlabs.kr/ai-free?utm_source=instagram&utm_medium=reels&utm_campaign=vibeskills&ref=BS-019&utm_content=BS-019&fbclid=PAVERFWAUQyP1wZG9mAmZkaWQWUOOpC3L-8ODj1vexlLDdsZ2GHKIPIGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp6e4dJhk37uH-yDX8HW9Xr8XoFZsMGrFdhC1ZHKAIKiPfHsPDypu-qPBc5bp_aem_nKqBkYw_-PimTBvY4hixXw) |
+| AI 모델 24시간 완전 무료 체험 | `any-ai-model-free-trial-promotion` | [app.notion.com](https://app.notion.com/p/3acc601852d1809ca558f9c0c21fd010?source=copy_link) |
+| Kiro 무료 프로모션으로 Claude 쓰기 | `kiro-free-trial-claude-gpt-access` | [m.blog.naver.com](https://m.blog.naver.com/PostView.naver?blogId=solrr&logNo=224418619146&proxyReferer=https%3A%2F%2Finstagram.com%2F&trackingCode=external&fbclid=PAVERFWAUdsaRwZG9mAmZkaWQWUO1o9BqbKqkK0DHck1oi-9lIP56y62V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp73rAKWehsPl-Zej89visYvHUNiAsT7hOeKIkWJoY1NVPP_-UeSytuGkFQfk_aem_mJAyEZiXjQ1YlmoDl1Jdmw) |
+| NVIDIA AI 100+ 모델 무료 API 활용 | `nvidia-build-ai-free-api` | [oavoir.notion.site](https://oavoir.notion.site/NVIDIA-AI-100-38fc7076b1958179ba98d5c3b4f7ca80?pvs=149) |
+| NVIDIA AI 모델 무료 체험 및 API 활용 | `nvidia-ai-playground-free-api` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/AI-API-37ad86104de28081a6f1d137b63af33a?pvs=149) |

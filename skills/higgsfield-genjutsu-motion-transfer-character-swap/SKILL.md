@@ -11,6 +11,10 @@ sources:
   - https://exultant-principle-9c5.notion.site/Higgsfield-Genjutsu-5-3d691cb23c4d81febdb6dccd1f17813f?pvs=149
   - https://yeongseon.kr/archive/3d4d86104de280fb9e40f337d6962d71.html?fbclid=PAVERFWAUYq7ZwZG9mAmZkaWQWUOky0tIFlIYUP_WiIVQubeRBOOa0h2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwnOvvdNLb7DmEDfDhYxsqwo3qVxVP8S4OOmLgGYcmkibkPC4kX_L1LDMuaL_aem_FS57y6wTmTI3bxFk25qYaQ
   - https://waiting-drug-536.notion.site/Kling-Motion-Control-3aed86104de280fdb4bcff4d311638fa?pvs=149
+originals:
+  - higgsfield-genjutsu-motion-transfer-character-swap | 영상 인물 통째로 바꾸기 | https://app.notion.com/p/3d7fd99f0e5f810a8da4e33e3c12e3cd?pvs=39 https://exultant-principle-9c5.notion.site/Higgsfield-Genjutsu-5-3d691cb23c4d81febdb6dccd1f17813f?pvs=149
+  - higgsfield-genjutsu-video | 힉스필드로 영상 제작하기 | https://yeongseon.kr/archive/3d4d86104de280fb9e40f337d6962d71.html?fbclid=PAVERFWAUYq7ZwZG9mAmZkaWQWUOky0tIFlIYUP_WiIVQubeRBOOa0h2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwnOvvdNLb7DmEDfDhYxsqwo3qVxVP8S4OOmLgGYcmkibkPC4kX_L1LDMuaL_aem_FS57y6wTmTI3bxFk25qYaQ
+  - kling-motion-control-video-generation | AI 인물 영상 클론 제작 | https://waiting-drug-536.notion.site/Kling-Motion-Control-3aed86104de280fdb4bcff4d311638fa?pvs=149
 ---
 
 # 영상 인물 바꾸기와 동작 복제
@@ -277,3 +281,13 @@ The final result preserves the original body choreography and formation, with @[
 - [https://exultant-principle-9c5.notion.site/Higgsfield-Genjutsu-5-3d691cb23c4d81febdb6dccd1f17813f?pvs=149](https://exultant-principle-9c5.notion.site/Higgsfield-Genjutsu-5-3d691cb23c4d81febdb6dccd1f17813f?pvs=149)
 - [https://yeongseon.kr/archive/3d4d86104de280fb9e40f337d6962d71.html?fbclid=PAVERFWAUYq7ZwZG9mAmZkaWQWUOky0tIFlIYUP_WiIVQubeRBOOa0h2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwnOvvdNLb7DmEDfDhYxsqwo3qVxVP8S4OOmLgGYcmkibkPC4kX_L1LDMuaL_aem_FS57y6wTmTI3bxFk25qYaQ](https://yeongseon.kr/archive/3d4d86104de280fb9e40f337d6962d71.html?fbclid=PAVERFWAUYq7ZwZG9mAmZkaWQWUOky0tIFlIYUP_WiIVQubeRBOOa0h2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwnOvvdNLb7DmEDfDhYxsqwo3qVxVP8S4OOmLgGYcmkibkPC4kX_L1LDMuaL_aem_FS57y6wTmTI3bxFk25qYaQ)
 - [https://waiting-drug-536.notion.site/Kling-Motion-Control-3aed86104de280fdb4bcff4d311638fa?pvs=149](https://waiting-drug-536.notion.site/Kling-Motion-Control-3aed86104de280fdb4bcff4d311638fa?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 3개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 영상 인물 통째로 바꾸기 | `higgsfield-genjutsu-motion-transfer-character-swap` | [app.notion.com](https://app.notion.com/p/3d7fd99f0e5f810a8da4e33e3c12e3cd?pvs=39) · [exultant-principle-9c5.notion.site](https://exultant-principle-9c5.notion.site/Higgsfield-Genjutsu-5-3d691cb23c4d81febdb6dccd1f17813f?pvs=149) |
+| 힉스필드로 영상 제작하기 | `higgsfield-genjutsu-video` | [yeongseon.kr](https://yeongseon.kr/archive/3d4d86104de280fb9e40f337d6962d71.html?fbclid=PAVERFWAUYq7ZwZG9mAmZkaWQWUOky0tIFlIYUP_WiIVQubeRBOOa0h2V4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwnOvvdNLb7DmEDfDhYxsqwo3qVxVP8S4OOmLgGYcmkibkPC4kX_L1LDMuaL_aem_FS57y6wTmTI3bxFk25qYaQ) |
+| AI 인물 영상 클론 제작 | `kling-motion-control-video-generation` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/Kling-Motion-Control-3aed86104de280fdb4bcff4d311638fa?pvs=149) |

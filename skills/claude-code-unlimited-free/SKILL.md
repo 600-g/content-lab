@@ -14,6 +14,14 @@ sources:
   - https://abounding-helmet-0e4.notion.site/50-300-36373c7b15ad81ccac8ded33f43886d5
   - https://wandering-mile-86e.notion.site/FreeLLMAPI-3e398dec8eed814d8e9cd2e698076403?pvs=149
   - https://github.com/diegosouzapw/OmniRoute?fbclid=PAVERFWAT5qhtwZG9mAmZkaWQWUNHYLf1kPOw6dg1dr2eXutgZpVf0EGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpygtIkWa1Avaq69_5wlE1kjoNdCyM4eJF9X0fDeS85ErLCZYU7Ab_BQEtVAR_aem_pghrJzxBaJS4VedSgGP73g
+originals:
+  - claude-code-unlimited-free | 클로드코드 한도 돌파하기 | https://fieldby.notion.site/3-3c7d730b395381c7b605cc88ea8b152c?pvs=149
+  - claude-code-token-saving | Claude Code 토큰 절약 치트시트 | https://waiting-drug-536.notion.site/73-34bd86104de28031b19ff79353c17b83
+  - claude-sub-agent-pattern | 클로드코드 한도 300% 활용법 | https://abounding-helmet-0e4.notion.site/50-300-36373c7b15ad81ccac8ded33f43886d5
+  - freellmapi-claude-code-free-setup | 클로드 코드를 무료 API로 연결 | https://wandering-mile-86e.notion.site/FreeLLMAPI-3e398dec8eed814d8e9cd2e698076403?pvs=149
+  - omniroute-ai-gateway | AI 모델을 통합 관리하는 무료 게이트웨이 | https://github.com/diegosouzapw/OmniRoute?fbclid=PAVERFWAT5qhtwZG9mAmZkaWQWUNHYLf1kPOw6dg1dr2eXutgZpVf0EGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpygtIkWa1Avaq69_5wlE1kjoNdCyM4eJF9X0fDeS85ErLCZYU7Ab_BQEtVAR_aem_pghrJzxBaJS4VedSgGP73g
+  - claude-code-headroom | Claude Code 토큰 비용 절감 | https://abounding-helmet-0e4.notion.site/Claude-Code-Headroom-38d73c7b15ad813190abf555ad0bf667?pvs=149
+  - claude-token-reduction | 클로드 토큰 20분의 1로 줄이기 | https://yeongseon.kr/archive/3bfd86104de2802cbe10d6ca4aee512f.html?fbclid=PAVERFWAUDr_VwZG9mAmZkaWQWUNnqK4_WfI9gCsn3Z63HcTEKOu2EoWV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp0umc4DTXWajmYL-XeAYxIqLLiuq9aOqsLlp0RYN5F2T_M5lzkcR1nBfebKF_aem_H_7ffADoSghuOtZdWg4ixQ
 ---
 
 # 클로드 코드 한도 늘려 쓰기
@@ -561,3 +569,17 @@ headroom doctor
 - [https://abounding-helmet-0e4.notion.site/50-300-36373c7b15ad81ccac8ded33f43886d5](https://abounding-helmet-0e4.notion.site/50-300-36373c7b15ad81ccac8ded33f43886d5)
 - [https://wandering-mile-86e.notion.site/FreeLLMAPI-3e398dec8eed814d8e9cd2e698076403?pvs=149](https://wandering-mile-86e.notion.site/FreeLLMAPI-3e398dec8eed814d8e9cd2e698076403?pvs=149)
 - [https://github.com/diegosouzapw/OmniRoute?fbclid=PAVERFWAT5qhtwZG9mAmZkaWQWUNHYLf1kPOw6dg1dr2eXutgZpVf0EGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpygtIkWa1Avaq69_5wlE1kjoNdCyM4eJF9X0fDeS85ErLCZYU7Ab_BQEtVAR_aem_pghrJzxBaJS4VedSgGP73g](https://github.com/diegosouzapw/OmniRoute?fbclid=PAVERFWAT5qhtwZG9mAmZkaWQWUNHYLf1kPOw6dg1dr2eXutgZpVf0EGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpygtIkWa1Avaq69_5wlE1kjoNdCyM4eJF9X0fDeS85ErLCZYU7Ab_BQEtVAR_aem_pghrJzxBaJS4VedSgGP73g)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 7개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 클로드코드 한도 돌파하기 | `claude-code-unlimited-free` | [fieldby.notion.site](https://fieldby.notion.site/3-3c7d730b395381c7b605cc88ea8b152c?pvs=149) |
+| Claude Code 토큰 절약 치트시트 | `claude-code-token-saving` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/73-34bd86104de28031b19ff79353c17b83) |
+| 클로드코드 한도 300% 활용법 | `claude-sub-agent-pattern` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/50-300-36373c7b15ad81ccac8ded33f43886d5) |
+| 클로드 코드를 무료 API로 연결 | `freellmapi-claude-code-free-setup` | [wandering-mile-86e.notion.site](https://wandering-mile-86e.notion.site/FreeLLMAPI-3e398dec8eed814d8e9cd2e698076403?pvs=149) |
+| AI 모델을 통합 관리하는 무료 게이트웨이 | `omniroute-ai-gateway` | [github.com](https://github.com/diegosouzapw/OmniRoute?fbclid=PAVERFWAT5qhtwZG9mAmZkaWQWUNHYLf1kPOw6dg1dr2eXutgZpVf0EGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpygtIkWa1Avaq69_5wlE1kjoNdCyM4eJF9X0fDeS85ErLCZYU7Ab_BQEtVAR_aem_pghrJzxBaJS4VedSgGP73g) |
+| Claude Code 토큰 비용 절감 | `claude-code-headroom` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/Claude-Code-Headroom-38d73c7b15ad813190abf555ad0bf667?pvs=149) |
+| 클로드 토큰 20분의 1로 줄이기 | `claude-token-reduction` | [yeongseon.kr](https://yeongseon.kr/archive/3bfd86104de2802cbe10d6ca4aee512f.html?fbclid=PAVERFWAUDr_VwZG9mAmZkaWQWUNnqK4_WfI9gCsn3Z63HcTEKOu2EoWV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp0umc4DTXWajmYL-XeAYxIqLLiuq9aOqsLlp0RYN5F2T_M5lzkcR1nBfebKF_aem_H_7ffADoSghuOtZdWg4ixQ) |

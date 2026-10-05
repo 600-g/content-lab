@@ -9,6 +9,9 @@ ai_tools: ["GPT"]
 sources:
   - https://app.notion.com/p/Chat-gpt-37686293e5b180e38f81fd76f9fb4da9?source=copy_link
   - https://rural-slash-4e3.notion.site/st-solrr-aa-381c2a2c7a0a80d2be19e5cc6ea02fff?pvs=149
+originals:
+  - pokemon-trainer-card-generator | AI로 포켓몬 트레이너 카드 만들기 | https://app.notion.com/p/Chat-gpt-37686293e5b180e38f81fd76f9fb4da9?source=copy_link
+  - maplestory-character-prompt | 사진으로 메이플스토리 캐릭터 생성 | https://rural-slash-4e3.notion.site/st-solrr-aa-381c2a2c7a0a80d2be19e5cc6ea02fff?pvs=149
 ---
 
 # 사진으로 게임 캐릭터 만들기
@@ -174,3 +177,12 @@ The final image must look like a genuine official Nexon MapleStory playable char
 
 - [https://app.notion.com/p/Chat-gpt-37686293e5b180e38f81fd76f9fb4da9?source=copy_link](https://app.notion.com/p/Chat-gpt-37686293e5b180e38f81fd76f9fb4da9?source=copy_link)
 - [https://rural-slash-4e3.notion.site/st-solrr-aa-381c2a2c7a0a80d2be19e5cc6ea02fff?pvs=149](https://rural-slash-4e3.notion.site/st-solrr-aa-381c2a2c7a0a80d2be19e5cc6ea02fff?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| AI로 포켓몬 트레이너 카드 만들기 | `pokemon-trainer-card-generator` | [app.notion.com](https://app.notion.com/p/Chat-gpt-37686293e5b180e38f81fd76f9fb4da9?source=copy_link) |
+| 사진으로 메이플스토리 캐릭터 생성 | `maplestory-character-prompt` | [rural-slash-4e3.notion.site](https://rural-slash-4e3.notion.site/st-solrr-aa-381c2a2c7a0a80d2be19e5cc6ea02fff?pvs=149) |

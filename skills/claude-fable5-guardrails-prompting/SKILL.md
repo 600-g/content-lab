@@ -9,6 +9,9 @@ ai_tools: ["Claude"]
 sources:
   - https://abounding-helmet-0e4.notion.site/Claude-Fable-5-12-Claude-39873c7b15ad81b6856ed95b0e179a51?pvs=149
   - https://wandering-mile-86e.notion.site/5-1-3db98dec8eed811eb328ceef3af4217c?pvs=149
+originals:
+  - claude-fable5-guardrails-prompting | 챗봇에 가드레일 12개 심기 | https://abounding-helmet-0e4.notion.site/Claude-Fable-5-12-Claude-39873c7b15ad81b6856ed95b0e179a51?pvs=149
+  - read-leaked-claude-system-prompt | 유출 시스템프롬프트 분석하기 | https://wandering-mile-86e.notion.site/5-1-3db98dec8eed811eb328ceef3af4217c?pvs=149
 ---
 
 # 유출 시스템 프롬프트 활용법
@@ -203,3 +206,12 @@ Fable 5 유출본에서 확인된 규칙과, 그것을 오늘 어떻게 응용�
 
 - [https://abounding-helmet-0e4.notion.site/Claude-Fable-5-12-Claude-39873c7b15ad81b6856ed95b0e179a51?pvs=149](https://abounding-helmet-0e4.notion.site/Claude-Fable-5-12-Claude-39873c7b15ad81b6856ed95b0e179a51?pvs=149)
 - [https://wandering-mile-86e.notion.site/5-1-3db98dec8eed811eb328ceef3af4217c?pvs=149](https://wandering-mile-86e.notion.site/5-1-3db98dec8eed811eb328ceef3af4217c?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 챗봇에 가드레일 12개 심기 | `claude-fable5-guardrails-prompting` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/Claude-Fable-5-12-Claude-39873c7b15ad81b6856ed95b0e179a51?pvs=149) |
+| 유출 시스템프롬프트 분석하기 | `read-leaked-claude-system-prompt` | [wandering-mile-86e.notion.site](https://wandering-mile-86e.notion.site/5-1-3db98dec8eed811eb328ceef3af4217c?pvs=149) |

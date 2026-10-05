@@ -9,6 +9,9 @@ ai_tools: ["Claude", "Claude Code"]
 sources:
   - https://app.notion.com/p/Claude-Opus-5-5-100-3e51061c8a63811e89d6e69afa5899dd?pvs=39
   - https://fieldby.notion.site/5-5-10-3e5d730b3953818ead9ff0ae6badc22e?pvs=149
+originals:
+  - claude-opus-5-5-recipes-and-tips | Opus 5.5로 결과물 원샷 제작 | https://app.notion.com/p/Claude-Opus-5-5-100-3e51061c8a63811e89d6e69afa5899dd?pvs=39
+  - claude-opus-5-5-prompt-showcase | 오퍼스5.5 프롬프트 따라하기 | https://fieldby.notion.site/5-5-10-3e5d730b3953818ead9ff0ae6badc22e?pvs=149
 ---
 
 # Opus 5.5 원샷 제작 레시피
@@ -273,3 +276,12 @@ ANIMATION_GUIDE.md를 먼저 읽고, 나비를 잡으려는 클로드 캐릭터�
 
 - [https://app.notion.com/p/Claude-Opus-5-5-100-3e51061c8a63811e89d6e69afa5899dd?pvs=39](https://app.notion.com/p/Claude-Opus-5-5-100-3e51061c8a63811e89d6e69afa5899dd?pvs=39)
 - [https://fieldby.notion.site/5-5-10-3e5d730b3953818ead9ff0ae6badc22e?pvs=149](https://fieldby.notion.site/5-5-10-3e5d730b3953818ead9ff0ae6badc22e?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| Opus 5.5로 결과물 원샷 제작 | `claude-opus-5-5-recipes-and-tips` | [app.notion.com](https://app.notion.com/p/Claude-Opus-5-5-100-3e51061c8a63811e89d6e69afa5899dd?pvs=39) |
+| 오퍼스5.5 프롬프트 따라하기 | `claude-opus-5-5-prompt-showcase` | [fieldby.notion.site](https://fieldby.notion.site/5-5-10-3e5d730b3953818ead9ff0ae6badc22e?pvs=149) |

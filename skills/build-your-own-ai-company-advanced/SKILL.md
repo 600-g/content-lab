@@ -19,6 +19,18 @@ sources:
   - https://instagram.com/p/DYYyIEqACDx/
   - https://app.notion.com/p/Claude-37cc601852d180d0a67ef81aa69742f0?source=copy_link
   - https://waiting-drug-536.notion.site/3-39ed86104de2802ea2c6ed01fd608b76?pvs=149
+originals:
+  - build-your-own-ai-company-advanced | AI 회사 설계하고 운영하기 | https://assorted-tennis-365.notion.site/_AI-_-_-_-3a9c680c75f08078a2a0ce1c4d43fcde?pvs=149
+  - munder-difflin-claude-code-ai-office-setup | 클로드로 AI 직원팀 사무실 차리기 | https://neat-product-c0f.notion.site/AI-3e819ffaaaf1819091fecad0e151a1f9?pvs=149
+  - agency-agents-seven-orchestrator | AI 에이전트 7명 설치하기 | https://wandering-mile-86e.notion.site/AI-264-3db98dec8eed819ebfa8ed6359d56248?pvs=149
+  - claude-cowork-employee-setup | AI 직원을 만들어 업무 자동화하기 | https://possible-timpani-b05.notion.site/3a3f67ccdbf8818eb8e0d2217ff9431a?pvs=149 https://abounding-helmet-0e4.notion.site/Record-a-Skill-AI-3a773c7b15ad812599c3fdbb01d62695?pvs=149
+  - ai-30 | AI 비서 30개 조합으로 업무 자동화 | https://drive.google.com/file/d/1ZcmioCwiHXGU4TfNEHeokosB5Ajs3wKM/view?fbclid=PAVERFWASk3ddleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAaeaSib1FytF8FziA3TEz-Tw96epSb7kWx5pZBBQ3cSQJozZbxldaa-b493M4A_aem_7sGFNXAtXVrmQJLNdq53Sw
+  - ai-ecommerce-task-automation | AI 이커머스 업무 비서: 자연어 기반 업무 자동화 | https://instagram.com/p/DYYyIEqACDx/
+  - claude-cowork-guide | 클로드 코워크 초보 가이드 | https://app.notion.com/p/Claude-37cc601852d180d0a67ef81aa69742f0?source=copy_link
+  - claude-cowork-global-instructions-template | Claude Cowork 지침 템플릿 설정 | https://waiting-drug-536.notion.site/3-39ed86104de2802ea2c6ed01fd608b76?pvs=149
+  - ai-office | AI 오피스 핵심 기능 8가지 파악하기 | https://www.instagram.com/reel/DdGu4P0MjXk/
+  - ai-office-automation-zip | AI 오피스 자동화 파일 실행 | https://drive.google.com/file/d/1rhHCd_JHlvY52p50OqE8y9jqcBTJrXxN/view?fbclid=PAVERFWATWSopwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp2Br5PtFQz3sN-L2_u9TToMUfDMgpHTot9GzqEymN9GNnVJv7y8nIVF9lsPX_aem_aHzTb8CJ3hQgbjL-yv9_bg
+  - create-your-own-ai-company | AI 직원 12명으로 콘텐츠 회사 만들기 | https://assorted-tennis-365.notion.site/AI-_-_-3a9c680c75f08065b285dca9b41ac6ed?pvs=149
 ---
 
 # AI 비서·직원·회사로 업무 자동화
@@ -866,3 +878,21 @@ agents-orchestrator 를 써서 이 앱을 알릴 준비를 해 줘. reddit-commu
 - [https://instagram.com/p/DYYyIEqACDx/](https://instagram.com/p/DYYyIEqACDx/)
 - [https://app.notion.com/p/Claude-37cc601852d180d0a67ef81aa69742f0?source=copy_link](https://app.notion.com/p/Claude-37cc601852d180d0a67ef81aa69742f0?source=copy_link)
 - [https://waiting-drug-536.notion.site/3-39ed86104de2802ea2c6ed01fd608b76?pvs=149](https://waiting-drug-536.notion.site/3-39ed86104de2802ea2c6ed01fd608b76?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 11개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| AI 회사 설계하고 운영하기 | `build-your-own-ai-company-advanced` | [assorted-tennis-365.notion.site](https://assorted-tennis-365.notion.site/_AI-_-_-_-3a9c680c75f08078a2a0ce1c4d43fcde?pvs=149) |
+| 클로드로 AI 직원팀 사무실 차리기 | `munder-difflin-claude-code-ai-office-setup` | [neat-product-c0f.notion.site](https://neat-product-c0f.notion.site/AI-3e819ffaaaf1819091fecad0e151a1f9?pvs=149) |
+| AI 에이전트 7명 설치하기 | `agency-agents-seven-orchestrator` | [wandering-mile-86e.notion.site](https://wandering-mile-86e.notion.site/AI-264-3db98dec8eed819ebfa8ed6359d56248?pvs=149) |
+| AI 직원을 만들어 업무 자동화하기 | `claude-cowork-employee-setup` | [possible-timpani-b05.notion.site](https://possible-timpani-b05.notion.site/3a3f67ccdbf8818eb8e0d2217ff9431a?pvs=149) · [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/Record-a-Skill-AI-3a773c7b15ad812599c3fdbb01d62695?pvs=149) |
+| AI 비서 30개 조합으로 업무 자동화 | `ai-30` | [drive.google.com](https://drive.google.com/file/d/1ZcmioCwiHXGU4TfNEHeokosB5Ajs3wKM/view?fbclid=PAVERFWASk3ddleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAaeaSib1FytF8FziA3TEz-Tw96epSb7kWx5pZBBQ3cSQJozZbxldaa-b493M4A_aem_7sGFNXAtXVrmQJLNdq53Sw) |
+| AI 이커머스 업무 비서: 자연어 기반 업무 자동화 | `ai-ecommerce-task-automation` | [instagram.com](https://instagram.com/p/DYYyIEqACDx/) |
+| 클로드 코워크 초보 가이드 | `claude-cowork-guide` | [app.notion.com](https://app.notion.com/p/Claude-37cc601852d180d0a67ef81aa69742f0?source=copy_link) |
+| Claude Cowork 지침 템플릿 설정 | `claude-cowork-global-instructions-template` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/3-39ed86104de2802ea2c6ed01fd608b76?pvs=149) |
+| AI 오피스 핵심 기능 8가지 파악하기 | `ai-office` | [instagram.com](https://www.instagram.com/reel/DdGu4P0MjXk/) |
+| AI 오피스 자동화 파일 실행 | `ai-office-automation-zip` | [drive.google.com](https://drive.google.com/file/d/1rhHCd_JHlvY52p50OqE8y9jqcBTJrXxN/view?fbclid=PAVERFWATWSopwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp2Br5PtFQz3sN-L2_u9TToMUfDMgpHTot9GzqEymN9GNnVJv7y8nIVF9lsPX_aem_aHzTb8CJ3hQgbjL-yv9_bg) |
+| AI 직원 12명으로 콘텐츠 회사 만들기 | `create-your-own-ai-company` | [assorted-tennis-365.notion.site](https://assorted-tennis-365.notion.site/AI-_-_-3a9c680c75f08065b285dca9b41ac6ed?pvs=149) |

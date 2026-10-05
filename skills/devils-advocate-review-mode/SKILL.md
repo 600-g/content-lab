@@ -9,6 +9,9 @@ ai_tools: ["Claude", "Claude Code", "Gemini", "GPT"]
 sources:
   - https://abounding-helmet-0e4.notion.site/37873c7b15ad819bb322de10b68e4982?pvs=149
   - https://abounding-helmet-0e4.notion.site/Council-34f73c7b15ad8196b771daa0a2bd85cf?pvs=149
+originals:
+  - devils-advocate-review-mode | 결정을 8렌즈로 반박 검토 | https://abounding-helmet-0e4.notion.site/37873c7b15ad819bb322de10b68e4982?pvs=149
+  - multi-agent-council-system | AI 위원회로 의사결정 고도화 | https://abounding-helmet-0e4.notion.site/Council-34f73c7b15ad8196b771daa0a2bd85cf?pvs=149
 ---
 
 # 큰 결정 AI 반박 검토
@@ -240,3 +243,12 @@ Claude Code 환경이 아직 없다면, 같은 구조를 대화창에 직접 지
 
 - [https://abounding-helmet-0e4.notion.site/37873c7b15ad819bb322de10b68e4982?pvs=149](https://abounding-helmet-0e4.notion.site/37873c7b15ad819bb322de10b68e4982?pvs=149)
 - [https://abounding-helmet-0e4.notion.site/Council-34f73c7b15ad8196b771daa0a2bd85cf?pvs=149](https://abounding-helmet-0e4.notion.site/Council-34f73c7b15ad8196b771daa0a2bd85cf?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 결정을 8렌즈로 반박 검토 | `devils-advocate-review-mode` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/37873c7b15ad819bb322de10b68e4982?pvs=149) |
+| AI 위원회로 의사결정 고도화 | `multi-agent-council-system` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/Council-34f73c7b15ad8196b771daa0a2bd85cf?pvs=149) |

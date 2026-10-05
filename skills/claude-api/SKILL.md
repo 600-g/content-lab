@@ -9,6 +9,9 @@ ai_tools: ["Claude"]
 sources:
   - https://github.com/anthropics/anthropic-quickstarts
   - https://github.com/anthropics/anthropic-sdk-python
+originals:
+  - claude-api | 클로드 API 앱 빠르게 만들기 | https://github.com/anthropics/anthropic-quickstarts
+  - anthropic-sdk-python | 파이썬으로 클로드 API 호출 | https://github.com/anthropics/anthropic-sdk-python
 ---
 
 # 클로드 API로 앱 만들기
@@ -154,3 +157,12 @@ print(message.content)
 
 - [https://github.com/anthropics/anthropic-quickstarts](https://github.com/anthropics/anthropic-quickstarts)
 - [https://github.com/anthropics/anthropic-sdk-python](https://github.com/anthropics/anthropic-sdk-python)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 클로드 API 앱 빠르게 만들기 | `claude-api` | [github.com](https://github.com/anthropics/anthropic-quickstarts) |
+| 파이썬으로 클로드 API 호출 | `anthropic-sdk-python` | [github.com](https://github.com/anthropics/anthropic-sdk-python) |

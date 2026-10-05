@@ -9,6 +9,9 @@ ai_tools: ["Claude", "도구무관"]
 sources:
   - https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149
   - https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149
+originals:
+  - claude-learn-anything-prompts | Claude에게 뭐든 배우기 | https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149
+  - complex-topic-staged-explanation | 복잡한 주제 단계별 비유 설명 및 이해도 확인 | https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149
 ---
 
 # Claude에게 뭐든 배우기
@@ -210,3 +213,12 @@ Claude가 지정한 주제를 비유로 설명하되 기초·중급·심화의 �
 
 - [https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149](https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149)
 - [https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149](https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| Claude에게 뭐든 배우기 | `claude-learn-anything-prompts` | [vaulted-decade-3b2.notion.site](https://vaulted-decade-3b2.notion.site/Claude-34cf563cd70681879269e2be7307ab0b?pvs=149) |
+| 복잡한 주제 단계별 비유 설명 및 이해도 확인 | `complex-topic-staged-explanation` | [vaulted-decade-3b2.notion.site](https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149) |

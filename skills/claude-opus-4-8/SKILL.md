@@ -9,6 +9,9 @@ ai_tools: ["Claude", "Claude Code"]
 sources:
   - https://oavoir.notion.site/Claude-Opus-4-8-370c7076b1958110ac09d5462ce09a88?pvs=149
   - https://resonant-frog-df5.notion.site/Claude-Opus-4-8-3783a1a3234380f0b5b4e646e6f65ec9?pvs=149
+originals:
+  - claude-opus-4-8 | Opus 4.8 풀세팅 마스터하기 | https://oavoir.notion.site/Claude-Opus-4-8-370c7076b1958110ac09d5462ce09a88?pvs=149
+  - claude-opus-4-8-features | Claude Opus 4.8 성능 및 기능 업데이트 | https://resonant-frog-df5.notion.site/Claude-Opus-4-8-3783a1a3234380f0b5b4e646e6f65ec9?pvs=149
 ---
 
 # Opus 4.8 풀세팅 가이드
@@ -627,3 +630,12 @@ Opus 모델을 더 빠른 출력 속도로 쓰는 기능입니다. Opus 4.8 Fast
 
 - [https://oavoir.notion.site/Claude-Opus-4-8-370c7076b1958110ac09d5462ce09a88?pvs=149](https://oavoir.notion.site/Claude-Opus-4-8-370c7076b1958110ac09d5462ce09a88?pvs=149)
 - [https://resonant-frog-df5.notion.site/Claude-Opus-4-8-3783a1a3234380f0b5b4e646e6f65ec9?pvs=149](https://resonant-frog-df5.notion.site/Claude-Opus-4-8-3783a1a3234380f0b5b4e646e6f65ec9?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| Opus 4.8 풀세팅 마스터하기 | `claude-opus-4-8` | [oavoir.notion.site](https://oavoir.notion.site/Claude-Opus-4-8-370c7076b1958110ac09d5462ce09a88?pvs=149) |
+| Claude Opus 4.8 성능 및 기능 업데이트 | `claude-opus-4-8-features` | [resonant-frog-df5.notion.site](https://resonant-frog-df5.notion.site/Claude-Opus-4-8-3783a1a3234380f0b5b4e646e6f65ec9?pvs=149) |

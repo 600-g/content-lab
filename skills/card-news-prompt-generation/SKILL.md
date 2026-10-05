@@ -10,6 +10,10 @@ sources:
   - https://maize-lipstick-ed8.notion.site/AI-361ff898004a8068be6fe1dc0a166203
   - https://drive.google.com/drive/mobile/folders/1VK_GmuLkmECb77XMI2pYPp5gdQx00XTN?usp=sharing&fbclid=PAVERFWAR61fZleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafICs6AuzCfHSH46zXzOKHwRfXTp3Wk4pbuI1sqdj-Kgm-mP780K1DUHdZeUg_aem_qoXaqOzMj4wyzOF87sjptg
   - https://waiting-drug-536.notion.site/373d86104de2800daa85c99b44d90bfd?pvs=149
+originals:
+  - card-news-prompt-generation | AI로 카드뉴스 프롬프트 자동 생성 | https://maize-lipstick-ed8.notion.site/AI-361ff898004a8068be6fe1dc0a166203
+  - card-news-automation-agent | 카드뉴스 자동화 에이전트 구축 | https://drive.google.com/drive/mobile/folders/1VK_GmuLkmECb77XMI2pYPp5gdQx00XTN?usp=sharing&fbclid=PAVERFWAR61fZleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafICs6AuzCfHSH46zXzOKHwRfXTp3Wk4pbuI1sqdj-Kgm-mP780K1DUHdZeUg_aem_qoXaqOzMj4wyzOF87sjptg
+  - automate-carousel-image-creation | 캐러셀 이미지 자동 제작 | https://waiting-drug-536.notion.site/373d86104de2800daa85c99b44d90bfd?pvs=149
 ---
 
 # AI 카드뉴스 제작 가이드
@@ -348,3 +352,13 @@ no text, no logos, square format"
 - [https://maize-lipstick-ed8.notion.site/AI-361ff898004a8068be6fe1dc0a166203](https://maize-lipstick-ed8.notion.site/AI-361ff898004a8068be6fe1dc0a166203)
 - [https://drive.google.com/drive/mobile/folders/1VK_GmuLkmECb77XMI2pYPp5gdQx00XTN?usp=sharing&fbclid=PAVERFWAR61fZleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafICs6AuzCfHSH46zXzOKHwRfXTp3Wk4pbuI1sqdj-Kgm-mP780K1DUHdZeUg_aem_qoXaqOzMj4wyzOF87sjptg](https://drive.google.com/drive/mobile/folders/1VK_GmuLkmECb77XMI2pYPp5gdQx00XTN?usp=sharing&fbclid=PAVERFWAR61fZleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafICs6AuzCfHSH46zXzOKHwRfXTp3Wk4pbuI1sqdj-Kgm-mP780K1DUHdZeUg_aem_qoXaqOzMj4wyzOF87sjptg)
 - [https://waiting-drug-536.notion.site/373d86104de2800daa85c99b44d90bfd?pvs=149](https://waiting-drug-536.notion.site/373d86104de2800daa85c99b44d90bfd?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 3개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| AI로 카드뉴스 프롬프트 자동 생성 | `card-news-prompt-generation` | [maize-lipstick-ed8.notion.site](https://maize-lipstick-ed8.notion.site/AI-361ff898004a8068be6fe1dc0a166203) |
+| 카드뉴스 자동화 에이전트 구축 | `card-news-automation-agent` | [drive.google.com](https://drive.google.com/drive/mobile/folders/1VK_GmuLkmECb77XMI2pYPp5gdQx00XTN?usp=sharing&fbclid=PAVERFWAR61fZleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafICs6AuzCfHSH46zXzOKHwRfXTp3Wk4pbuI1sqdj-Kgm-mP780K1DUHdZeUg_aem_qoXaqOzMj4wyzOF87sjptg) |
+| 캐러셀 이미지 자동 제작 | `automate-carousel-image-creation` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/373d86104de2800daa85c99b44d90bfd?pvs=149) |

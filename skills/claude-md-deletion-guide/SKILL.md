@@ -9,6 +9,9 @@ ai_tools: ["Claude", "Claude Code"]
 sources:
   - https://abounding-helmet-0e4.notion.site/CLAUDE-md-3b073c7b15ad81a5925bdc435abf9d25?pvs=149
   - https://waiting-drug-536.notion.site/4-317d86104de280078bbbe9e3bc98ff18
+originals:
+  - claude-md-deletion-guide | CLAUDE.md 삭제 가이드 | https://abounding-helmet-0e4.notion.site/CLAUDE-md-3b073c7b15ad81a5925bdc435abf9d25?pvs=149
+  - claude-code-memory-md-200-lines | Claude Code MEMORY.md 200줄 법칙 | https://waiting-drug-536.notion.site/4-317d86104de280078bbbe9e3bc98ff18
 ---
 
 # AI 지침·메모리 파일 정리법
@@ -169,3 +172,12 @@ wc -l ~/.claude/projects/<프로젝트해시>/memory/MEMORY.md
 
 - [https://abounding-helmet-0e4.notion.site/CLAUDE-md-3b073c7b15ad81a5925bdc435abf9d25?pvs=149](https://abounding-helmet-0e4.notion.site/CLAUDE-md-3b073c7b15ad81a5925bdc435abf9d25?pvs=149)
 - [https://waiting-drug-536.notion.site/4-317d86104de280078bbbe9e3bc98ff18](https://waiting-drug-536.notion.site/4-317d86104de280078bbbe9e3bc98ff18)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| CLAUDE.md 삭제 가이드 | `claude-md-deletion-guide` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/CLAUDE-md-3b073c7b15ad81a5925bdc435abf9d25?pvs=149) |
+| Claude Code MEMORY.md 200줄 법칙 | `claude-code-memory-md-200-lines` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/4-317d86104de280078bbbe9e3bc98ff18) |

@@ -9,6 +9,9 @@ ai_tools: ["Claude"]
 sources:
   - https://vaulted-decade-3b2.notion.site/Claude-39cf563cd7068033a169e7c216f57111?pvs=149
   - https://exultant-principle-9c5.notion.site/3-3c091cb23c4d81ac8615f74ae861c373?pvs=149
+originals:
+  - instagram-content-planning-with-claude | Claude로 인스타 콘텐츠 기획하기 | https://vaulted-decade-3b2.notion.site/Claude-39cf563cd7068033a169e7c216f57111?pvs=149
+  - instagram-content-automation-3-steps | 인스타 콘텐츠 자동화 3단계 | https://exultant-principle-9c5.notion.site/3-3c091cb23c4d81ac8615f74ae861c373?pvs=149
 ---
 
 # Claude 인스타 콘텐츠 운영
@@ -606,3 +609,12 @@ Notion 체크박스 형태로 만들어줘.
 
 - [https://vaulted-decade-3b2.notion.site/Claude-39cf563cd7068033a169e7c216f57111?pvs=149](https://vaulted-decade-3b2.notion.site/Claude-39cf563cd7068033a169e7c216f57111?pvs=149)
 - [https://exultant-principle-9c5.notion.site/3-3c091cb23c4d81ac8615f74ae861c373?pvs=149](https://exultant-principle-9c5.notion.site/3-3c091cb23c4d81ac8615f74ae861c373?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| Claude로 인스타 콘텐츠 기획하기 | `instagram-content-planning-with-claude` | [vaulted-decade-3b2.notion.site](https://vaulted-decade-3b2.notion.site/Claude-39cf563cd7068033a169e7c216f57111?pvs=149) |
+| 인스타 콘텐츠 자동화 3단계 | `instagram-content-automation-3-steps` | [exultant-principle-9c5.notion.site](https://exultant-principle-9c5.notion.site/3-3c091cb23c4d81ac8615f74ae861c373?pvs=149) |

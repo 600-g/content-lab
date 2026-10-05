@@ -75,6 +75,7 @@ class MergePairTest(unittest.TestCase):
             text = (root / "keeper" / "SKILL.md").read_text()
             self.assertIn("합쳐진 스킬", text); self.assertIn("https://example.com/absorbed", text)
             self.assertFalse((root / "absorbed").exists(), "흡수된 스킬은 지운다")
+            self.assertIn("`absorbed`", text, "원본 목록에 흡수된 문서")
         self.assertTrue((self.b / "absorbed" / "SKILL.md").exists(), "지우기 전 백업")
         self.assertEqual(out["provider"], "claude"); self.assertEqual(out["sources"], 2)
 
@@ -145,11 +146,20 @@ class ApplySynthesizedTest(unittest.TestCase):
     def test_replaces_keeper_and_absorbs_all(self):
         out = self._apply(SYNTH)
         self.assertTrue(out["ok"], out)
-        self.assertEqual((self.m / "keeper" / "SKILL.md").read_text(), SYNTH)
+        self.assertTrue((self.m / "keeper" / "SKILL.md").read_text().startswith(SYNTH.split("## 출처")[0][:200]))
         for slug in ("a", "b"):
             self.assertFalse((self.m / slug).exists()); self.assertTrue((self.b / slug / "SKILL.md").exists())
         self.assertFalse((self.g / "a").exists())
-        self.assertEqual((self.g / "keeper" / "SKILL.md").read_text(), SYNTH, "멤버 중 하나라도 전역이면 keeper 를 전역에")
+        self.assertEqual((self.g / "keeper" / "SKILL.md").read_text(), (self.m / "keeper" / "SKILL.md").read_text(),
+                         "멤버 중 하나라도 전역이면 keeper 를 전역에")
+
+    def test_originals_listed_in_synthesized_doc(self):
+        self._apply(SYNTH)
+        text = (self.m / "keeper" / "SKILL.md").read_text()
+        self.assertIn("### 합쳐진 원본 문서", text)
+        for slug in ("keeper", "a", "b"):
+            self.assertIn(f"`{slug}`", text)
+        self.assertIn("  - a | 제목 a | https://example.com/a", text)
 
     def test_missing_source_changes_nothing(self):
         out = self._apply(SYNTH.replace("  - https://example.com/b\n", ""))

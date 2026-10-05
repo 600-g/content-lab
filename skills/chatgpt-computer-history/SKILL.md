@@ -9,6 +9,9 @@ ai_tools: ["GPT", "Codex"]
 sources:
   - https://app.notion.com/p/3bf73c7b15ad8146b8eaee0de5b0cbf0?pvs=39
   - https://app.notion.com/p/3df73c7b15ad81548a93d0ffefe06230?pvs=39
+originals:
+  - chatgpt-computer-history | ChatGPT 맥 앱의 컴퓨터 기록 기능 | https://app.notion.com/p/3bf73c7b15ad8146b8eaee0de5b0cbf0?pvs=39
+  - chatgpt-appshots-window-capture | 앱샷으로 창 통째로 넘기기 | https://app.notion.com/p/3df73c7b15ad81548a93d0ffefe06230?pvs=39
 ---
 
 # ChatGPT에 작업 맥락 넘기기
@@ -195,3 +198,12 @@ OpenAI 가 **ChatGPT 맥 앱**에 도입한 기능으로(원문 기준 도입일
 
 - [https://app.notion.com/p/3bf73c7b15ad8146b8eaee0de5b0cbf0?pvs=39](https://app.notion.com/p/3bf73c7b15ad8146b8eaee0de5b0cbf0?pvs=39)
 - [https://app.notion.com/p/3df73c7b15ad81548a93d0ffefe06230?pvs=39](https://app.notion.com/p/3df73c7b15ad81548a93d0ffefe06230?pvs=39)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| ChatGPT 맥 앱의 컴퓨터 기록 기능 | `chatgpt-computer-history` | [app.notion.com](https://app.notion.com/p/3bf73c7b15ad8146b8eaee0de5b0cbf0?pvs=39) |
+| 앱샷으로 창 통째로 넘기기 | `chatgpt-appshots-window-capture` | [app.notion.com](https://app.notion.com/p/3df73c7b15ad81548a93d0ffefe06230?pvs=39) |

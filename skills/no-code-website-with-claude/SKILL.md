@@ -11,6 +11,10 @@ sources:
   - https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==
   - https://www.instagram.com/reel/Dcp66PwTPwR/
   - https://www.instagram.com/reel/DW_asMNk8wG/?igsh=MW1xcHVmMHRwbHhvYQ==
+originals:
+  - no-code-website-with-claude | AI로 8단계 웹사이트 만들기 | https://adu-website-guide.vercel.app/
+  - free-deployment-stack | 무료 도구로 웹 서비스 배포하기 | https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA== https://www.instagram.com/reel/Dcp66PwTPwR/
+  - link-in-bio | 고도화된 커스텀 링크인바이오 구축 및 자동화 | https://www.instagram.com/reel/DW_asMNk8wG/?igsh=MW1xcHVmMHRwbHhvYQ==
 ---
 
 # 코딩 없이 Claude로 웹사이트
@@ -254,3 +258,13 @@ insert into sales_monthly (sort_order, month, revenue, target) values
 - [https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==](https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==)
 - [https://www.instagram.com/reel/Dcp66PwTPwR/](https://www.instagram.com/reel/Dcp66PwTPwR/)
 - [https://www.instagram.com/reel/DW_asMNk8wG/?igsh=MW1xcHVmMHRwbHhvYQ==](https://www.instagram.com/reel/DW_asMNk8wG/?igsh=MW1xcHVmMHRwbHhvYQ==)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 3개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| AI로 8단계 웹사이트 만들기 | `no-code-website-with-claude` | [adu-website-guide.vercel.app](https://adu-website-guide.vercel.app/) |
+| 무료 도구로 웹 서비스 배포하기 | `free-deployment-stack` | [instagram.com](https://www.instagram.com/reel/Dcp66PwTPwR/?igsi=MTZnYjZxMTFhd2ZrNA==) · [instagram.com](https://www.instagram.com/reel/Dcp66PwTPwR/) |
+| 고도화된 커스텀 링크인바이오 구축 및 자동화 | `link-in-bio` | [instagram.com](https://www.instagram.com/reel/DW_asMNk8wG/?igsh=MW1xcHVmMHRwbHhvYQ==) |

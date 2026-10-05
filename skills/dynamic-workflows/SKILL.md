@@ -10,6 +10,10 @@ sources:
   - https://abounding-helmet-0e4.notion.site/Dynamic-Workflows-37573c7b15ad816288b6f6a8a2788049?pvs=149
   - https://abounding-helmet-0e4.notion.site/12-3b373c7b15ad81d8b5f8c41653a2b5d1?pvs=149
   - https://resonant-frog-df5.notion.site/Claude-Code-goal-Agent-View-35f3a1a32343814082d5f0245cb359e5
+originals:
+  - dynamic-workflows | 다이내믹 워크플로우 자동화 | https://abounding-helmet-0e4.notion.site/Dynamic-Workflows-37573c7b15ad816288b6f6a8a2788049?pvs=149
+  - graph-engineering-judgement-criteria | 그래프 엔지니어링 적용 기준 수립 | https://abounding-helmet-0e4.notion.site/12-3b373c7b15ad81d8b5f8c41653a2b5d1?pvs=149
+  - claude-code-goal-agent-view | Claude Code 자율실행 모드 (/goal + Agent View) | https://resonant-frog-df5.notion.site/Claude-Code-goal-Agent-View-35f3a1a32343814082d5f0245cb359e5
 ---
 
 # Claude Code 자율·병렬 작업
@@ -247,3 +251,13 @@ claude respawn --all
 - [https://abounding-helmet-0e4.notion.site/Dynamic-Workflows-37573c7b15ad816288b6f6a8a2788049?pvs=149](https://abounding-helmet-0e4.notion.site/Dynamic-Workflows-37573c7b15ad816288b6f6a8a2788049?pvs=149)
 - [https://abounding-helmet-0e4.notion.site/12-3b373c7b15ad81d8b5f8c41653a2b5d1?pvs=149](https://abounding-helmet-0e4.notion.site/12-3b373c7b15ad81d8b5f8c41653a2b5d1?pvs=149)
 - [https://resonant-frog-df5.notion.site/Claude-Code-goal-Agent-View-35f3a1a32343814082d5f0245cb359e5](https://resonant-frog-df5.notion.site/Claude-Code-goal-Agent-View-35f3a1a32343814082d5f0245cb359e5)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 3개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 다이내믹 워크플로우 자동화 | `dynamic-workflows` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/Dynamic-Workflows-37573c7b15ad816288b6f6a8a2788049?pvs=149) |
+| 그래프 엔지니어링 적용 기준 수립 | `graph-engineering-judgement-criteria` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/12-3b373c7b15ad81d8b5f8c41653a2b5d1?pvs=149) |
+| Claude Code 자율실행 모드 (/goal + Agent View) | `claude-code-goal-agent-view` | [resonant-frog-df5.notion.site](https://resonant-frog-df5.notion.site/Claude-Code-goal-Agent-View-35f3a1a32343814082d5f0245cb359e5) |

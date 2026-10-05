@@ -8,6 +8,10 @@ category: 프롬프트
 ai_tools: ["Claude", "GPT", "Gemini", "도구무관"]
 sources:
   - https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view
+originals:
+  - context-rich-prompting | 맥락으로 답변 품질 높이기 | https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view
+  - contextual-prompt-engineering | 맥락 기반 프롬프트 엔지니어링 (상황, 독자, 제약 활용) | https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view?fbclid=PAVERFWARzvMlleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAac9ReryTj2M2HecWc75nuN_1QNHYVheaZ7NCDQG1DaCdbZawL3NQf2QoIPCVw_aem_PZS53-BUbxksGQHRXQziBw
+  - context-based-prompt-engineering | 상황 기반 맥락 주입 프롬프트 엔지니어링 | https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view
 ---
 
 # 맥락으로 답변 품질 높이기
@@ -118,3 +122,13 @@ AI 는 이미 방대한 데이터로 학습돼 있어서, 역할을 지정한다
 ## 출처
 
 - [https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view](https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 3개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 맥락으로 답변 품질 높이기 | `context-rich-prompting` | [drive.google.com](https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view) |
+| 맥락 기반 프롬프트 엔지니어링 (상황, 독자, 제약 활용) | `contextual-prompt-engineering` | [drive.google.com](https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view?fbclid=PAVERFWARzvMlleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAac9ReryTj2M2HecWc75nuN_1QNHYVheaZ7NCDQG1DaCdbZawL3NQf2QoIPCVw_aem_PZS53-BUbxksGQHRXQziBw) |
+| 상황 기반 맥락 주입 프롬프트 엔지니어링 | `context-based-prompt-engineering` | [drive.google.com](https://drive.google.com/file/d/1VyKG8kkBxKlnroB3sXFhEQB9deLApp_l/view) |

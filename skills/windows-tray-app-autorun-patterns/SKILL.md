@@ -8,6 +8,10 @@ category: 개발
 ai_tools: ["Claude", "Claude Code"]
 sources:
   - https://github.com/600-g/shutdown-timer
+originals:
+  - windows-tray-app-autorun-patterns | 윈도우 트레이 상주 앱 필수 패턴 (C#) | https://github.com/600-g/shutdown-timer
+  - winforms-iphone-style-ownerdraw-ui | WinForms 아이폰풍 오너드로우 UI 기법 | https://github.com/600-g/shutdown-timer
+  - winforms-mono-cross-build-linux | 리눅스에서 윈도우 exe 빌드 + 화면 검증 (mono) | https://github.com/600-g/shutdown-timer
 ---
 
 # 윈도우 트레이 상주 앱 만들기
@@ -331,3 +335,13 @@ print([im.getpixel((x, 150)) for x in range(40, 60)])   # 1px 선이 한 칸인�
 ## 출처
 
 - [https://github.com/600-g/shutdown-timer](https://github.com/600-g/shutdown-timer)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 3개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 윈도우 트레이 상주 앱 필수 패턴 (C#) | `windows-tray-app-autorun-patterns` | [github.com](https://github.com/600-g/shutdown-timer) |
+| WinForms 아이폰풍 오너드로우 UI 기법 | `winforms-iphone-style-ownerdraw-ui` | [github.com](https://github.com/600-g/shutdown-timer) |
+| 리눅스에서 윈도우 exe 빌드 + 화면 검증 (mono) | `winforms-mono-cross-build-linux` | [github.com](https://github.com/600-g/shutdown-timer) |

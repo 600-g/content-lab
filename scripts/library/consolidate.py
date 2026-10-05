@@ -27,6 +27,7 @@ from typing import Callable, Optional
 from scripts.analyzer.gemini import AnalysisResult
 from scripts.analyzer.merger import merge_with_existing, _parse_existing_skill_md
 from scripts.skill_builder import render_skill_md
+from scripts.skill_builder.originals import apply_to_md, merge_lists, originals_of, read_originals
 from scripts.skill_builder.installer import LOCAL_MIRROR_DIR, _global_skills_dir, normalize_url
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,7 @@ def merge_pair(
             urls.append(u)
             seen.add(normalize_url(u))
     merged.raw["_merged_source_urls"] = urls
+    merged.raw["_originals"] = merge_lists(originals_of(kp), originals_of(ap))
     merged.skill_name = keeper
     md = render_skill_md(merged, primary, "web")
 
@@ -206,6 +208,8 @@ def apply_synthesized(
     if problems:
         return {"ok": False, "reason": "; ".join(problems), "keeper": keeper}
 
+    # 원본 목록 — 멤버마다 이미 가진 원본들(없으면 자기 자신)을 이어 붙여 frontmatter + 출처 아래 표로
+    content = apply_to_md(content, merge_lists(*(originals_of(mirror_dir / s / "SKILL.md") for s in members)))
     any_global = any((gdir / slug / "SKILL.md").exists() for slug in members)
     if backup_dir:
         b = Path(backup_dir)
@@ -234,7 +238,8 @@ def apply_synthesized(
         logger.warning("임베딩 갱신 실패 (통합 자체는 완료): %s", e)
 
     logger.info("합성본 적용: %s ← %s (%d자, 출처 %d, 전역=%s)", keeper, ",".join(absorbed), len(content), len(required), any_global)
-    return {"ok": True, "keeper": keeper, "absorbed": absorbed, "chars": len(content), "global": any_global}
+    return {"ok": True, "keeper": keeper, "absorbed": absorbed, "chars": len(content), "global": any_global,
+            "originals": len(read_originals(content)) or 1}
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -9,6 +9,9 @@ ai_tools: ["Claude", "Claude Code", "Codex"]
 sources:
   - https://github.com/dennykim123/claude-codex-battery
   - https://possible-timpani-b05.notion.site/3abf67ccdbf881c2b5e9f4bf449c950c?pvs=149
+originals:
+  - claude-codex-battery-menubar | 사용량 한도를 배터리로 표시 | https://github.com/dennykim123/claude-codex-battery
+  - claude-code-status-bar-setup | 클로드코드 상태바 세팅 가이드 | https://possible-timpani-b05.notion.site/3abf67ccdbf881c2b5e9f4bf449c950c?pvs=149
 ---
 
 # 사용량과 작업 상태 상시 표시
@@ -279,3 +282,12 @@ Mac에서도 `Python으로 만들어줘` 를 붙이는 것이 안전합니다. M
 
 - [https://github.com/dennykim123/claude-codex-battery](https://github.com/dennykim123/claude-codex-battery)
 - [https://possible-timpani-b05.notion.site/3abf67ccdbf881c2b5e9f4bf449c950c?pvs=149](https://possible-timpani-b05.notion.site/3abf67ccdbf881c2b5e9f4bf449c950c?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 사용량 한도를 배터리로 표시 | `claude-codex-battery-menubar` | [github.com](https://github.com/dennykim123/claude-codex-battery) |
+| 클로드코드 상태바 세팅 가이드 | `claude-code-status-bar-setup` | [possible-timpani-b05.notion.site](https://possible-timpani-b05.notion.site/3abf67ccdbf881c2b5e9f4bf449c950c?pvs=149) |

@@ -11,6 +11,11 @@ sources:
   - https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149
   - https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149
   - https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149
+originals:
+  - create-ai-assistant-for-notes | 내 모든 메모를 이해하는 AI 비서 만들기 | https://adu-llm-wiki.vercel.app/?fbclid=PAVERFWASrLkRleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafopEyq9qrMijCCDp96qb158X29Agwno0-jPsFSwe4cSeEzyVOwtKtfzy-DHw_aem_s3d4e4EQ4Xs6x0b10NDE6A
+  - obsidian-second-brain-vault-structure | 옵시디언 볼트 3단 구조화하기 | https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149
+  - save-and-organize-ai-content | AI 정보를 빠르게 저장하고 정리하기 | https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149
+  - llm-wiki-usage-guide | LLM WIKI 활용 가이드 | https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149
 ---
 
 # 내 메모를 이해하는 AI 비서
@@ -299,3 +304,14 @@ AI 에게 위키 점검을 요청해 오래된 주장, 모순, 끊긴 링크 등
 - [https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149](https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149)
 - [https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149](https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149)
 - [https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149](https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 4개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 내 모든 메모를 이해하는 AI 비서 만들기 | `create-ai-assistant-for-notes` | [adu-llm-wiki.vercel.app](https://adu-llm-wiki.vercel.app/?fbclid=PAVERFWASrLkRleHRuA2FlbQIxMABzcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAafopEyq9qrMijCCDp96qb158X29Agwno0-jPsFSwe4cSeEzyVOwtKtfzy-DHw_aem_s3d4e4EQ4Xs6x0b10NDE6A) |
+| 옵시디언 볼트 3단 구조화하기 | `obsidian-second-brain-vault-structure` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/x-2-352d86104de280d38258fefa2c024cbf?pvs=149) |
+| AI 정보를 빠르게 저장하고 정리하기 | `save-and-organize-ai-content` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/387d86104de2806f8657d947faa7156b?pvs=149) |
+| LLM WIKI 활용 가이드 | `llm-wiki-usage-guide` | [waiting-drug-536.notion.site](https://waiting-drug-536.notion.site/LLM-WIKI-39ed86104de28049b9d4ffaf2979a20b?pvs=149) |

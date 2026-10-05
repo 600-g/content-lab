@@ -9,6 +9,9 @@ ai_tools: ["Claude", "Claude Code", "도구무관"]
 sources:
   - https://github.com/600-g/shutdown-timer
   - https://600g.net
+originals:
+  - self-updating-app-release-pipeline | 스스로 업데이트하는 앱 배포 파이프라인 | https://github.com/600-g/shutdown-timer
+  - 600g-app-github-release-hub-onboarding | 600g 앱 배포 표준 — GitHub 릴리스 → 600g.net → 자동 업데이트 | https://github.com/600-g/shutdown-timer https://600g.net
 ---
 
 # 자동 업데이트 앱 배포 파이프라인
@@ -501,3 +504,12 @@ claude.ai 등이 GitHub 을 직접 고친 뒤 뒤처진 로컬 사본을 밀면 
 
 - [https://github.com/600-g/shutdown-timer](https://github.com/600-g/shutdown-timer)
 - [https://600g.net](https://600g.net)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 스스로 업데이트하는 앱 배포 파이프라인 | `self-updating-app-release-pipeline` | [github.com](https://github.com/600-g/shutdown-timer) |
+| 600g 앱 배포 표준 — GitHub 릴리스 → 600g.net → 자동 업데이트 | `600g-app-github-release-hub-onboarding` | [github.com](https://github.com/600-g/shutdown-timer) · [600g.net](https://600g.net) |

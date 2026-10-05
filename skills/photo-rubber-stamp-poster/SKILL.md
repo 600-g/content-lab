@@ -13,6 +13,13 @@ sources:
   - https://fieldby.notion.site/3e3d730b39538163b41bcb0d72663ef1?pvs=149
   - https://fieldby.notion.site/3a6d730b39538184855cde596254cee5?pvs=149
   - https://fieldby.notion.site/3b8d730b3953812c868aca0d22bb954b?pvs=149
+originals:
+  - photo-rubber-stamp-poster | 사진으로 러버 스탬프 포스터 만들기 | https://app.notion.com/p/3cb0cb665b9a80a8948eedf3973f0831?source=copy_link
+  - vintage-field-notes-poster-prompt | 사진을 빈티지 탐험노트로 변환 | https://fieldby.notion.site/3c9d730b395381d192fed44b806737b6?pvs=149
+  - image-to-minimalist-poster | 사진을 미니멀 포스터로 변환 | https://app.notion.com/p/3c004aeefb608081ac9bd7814df90e34?source=copy_link
+  - crayon-diary-poster-prompt | 사진을 크레용 포스터로 변환 | https://fieldby.notion.site/3e3d730b39538163b41bcb0d72663ef1?pvs=149
+  - iu-oh-hyuk-love-song-album-cover-prompt-guide | 사랑이 잘 앨범 커버 AI 프롬프트 생성 | https://fieldby.notion.site/3a6d730b39538184855cde596254cee5?pvs=149
+  - create-playlist-background-image | 사진으로 플레이리스트 배경화면 만들기 | https://fieldby.notion.site/3b8d730b3953812c868aca0d22bb954b?pvs=149
 ---
 
 # 사진으로 포스터·앨범커버 만들기
@@ -399,3 +406,16 @@ Use the uploaded photos as fixed identity references: Image 2 = the WOMAN\'s fac
 - [https://fieldby.notion.site/3e3d730b39538163b41bcb0d72663ef1?pvs=149](https://fieldby.notion.site/3e3d730b39538163b41bcb0d72663ef1?pvs=149)
 - [https://fieldby.notion.site/3a6d730b39538184855cde596254cee5?pvs=149](https://fieldby.notion.site/3a6d730b39538184855cde596254cee5?pvs=149)
 - [https://fieldby.notion.site/3b8d730b3953812c868aca0d22bb954b?pvs=149](https://fieldby.notion.site/3b8d730b3953812c868aca0d22bb954b?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 6개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 사진으로 러버 스탬프 포스터 만들기 | `photo-rubber-stamp-poster` | [app.notion.com](https://app.notion.com/p/3cb0cb665b9a80a8948eedf3973f0831?source=copy_link) |
+| 사진을 빈티지 탐험노트로 변환 | `vintage-field-notes-poster-prompt` | [fieldby.notion.site](https://fieldby.notion.site/3c9d730b395381d192fed44b806737b6?pvs=149) |
+| 사진을 미니멀 포스터로 변환 | `image-to-minimalist-poster` | [app.notion.com](https://app.notion.com/p/3c004aeefb608081ac9bd7814df90e34?source=copy_link) |
+| 사진을 크레용 포스터로 변환 | `crayon-diary-poster-prompt` | [fieldby.notion.site](https://fieldby.notion.site/3e3d730b39538163b41bcb0d72663ef1?pvs=149) |
+| 사랑이 잘 앨범 커버 AI 프롬프트 생성 | `iu-oh-hyuk-love-song-album-cover-prompt-guide` | [fieldby.notion.site](https://fieldby.notion.site/3a6d730b39538184855cde596254cee5?pvs=149) |
+| 사진으로 플레이리스트 배경화면 만들기 | `create-playlist-background-image` | [fieldby.notion.site](https://fieldby.notion.site/3b8d730b3953812c868aca0d22bb954b?pvs=149) |

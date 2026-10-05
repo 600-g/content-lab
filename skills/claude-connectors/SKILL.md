@@ -11,6 +11,12 @@ sources:
   - https://developers.notion.com/guides/mcp/get-started-with-mcp
   - https://abounding-helmet-0e4.notion.site/Claude-Canva-33973c7b15ad81cf8f9cce23a4ae4fe7?pvs=149
   - https://playmcp.kakao.com/
+originals:
+  - claude-connectors | 클로드 연동 16가지 | https://yongk.notion.site/16-37f47642a71380a48581d7fff9063e2d?pvs=149
+  - claude-connectors-for-automation | 클로드에 16가지 AI 도구 연결하기 | https://yongk.notion.site/16-37f47642a71380a48581d7fff9063e2d?pvs=149
+  - claude-code-notion-mcp | Claude Code × Notion MCP 연동 | https://developers.notion.com/guides/mcp/get-started-with-mcp
+  - claude-canva-mcp-integration | Claude x Canva MCP 서버 연동을 통한 AI 디자인 자동화 | https://abounding-helmet-0e4.notion.site/Claude-Canva-33973c7b15ad81cf8f9cce23a4ae4fe7?pvs=149
+  - kakao-playmcp-catalog | 카카오 PlayMCP — AI에서 카톡·맵·멜론 연동 | https://playmcp.kakao.com/
 ---
 
 # 클로드 외부 서비스 연결 가이드
@@ -484,3 +490,15 @@ MCP 도구는 LLM 이 판단해 호출하므로, 도구를 쓰게 하려면 "Can
 - [https://developers.notion.com/guides/mcp/get-started-with-mcp](https://developers.notion.com/guides/mcp/get-started-with-mcp)
 - [https://abounding-helmet-0e4.notion.site/Claude-Canva-33973c7b15ad81cf8f9cce23a4ae4fe7?pvs=149](https://abounding-helmet-0e4.notion.site/Claude-Canva-33973c7b15ad81cf8f9cce23a4ae4fe7?pvs=149)
 - [https://playmcp.kakao.com/](https://playmcp.kakao.com/)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 5개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 클로드 연동 16가지 | `claude-connectors` | [yongk.notion.site](https://yongk.notion.site/16-37f47642a71380a48581d7fff9063e2d?pvs=149) |
+| 클로드에 16가지 AI 도구 연결하기 | `claude-connectors-for-automation` | [yongk.notion.site](https://yongk.notion.site/16-37f47642a71380a48581d7fff9063e2d?pvs=149) |
+| Claude Code × Notion MCP 연동 | `claude-code-notion-mcp` | [developers.notion.com](https://developers.notion.com/guides/mcp/get-started-with-mcp) |
+| Claude x Canva MCP 서버 연동을 통한 AI 디자인 자동화 | `claude-canva-mcp-integration` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/Claude-Canva-33973c7b15ad81cf8f9cce23a4ae4fe7?pvs=149) |
+| 카카오 PlayMCP — AI에서 카톡·맵·멜론 연동 | `kakao-playmcp-catalog` | [playmcp.kakao.com](https://playmcp.kakao.com/) |

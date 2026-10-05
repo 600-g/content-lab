@@ -9,6 +9,9 @@ ai_tools: ["Claude", "GPT", "Gemini"]
 sources:
   - https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149
   - https://tangerine-yeot-ec42fb.netlify.app/?fbclid=PAVERFWAS918FwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwl4xTMuIm7jtgVDY-xDdWkxyoEeU5CVfSRf7N3C0-lrvgBUqVUwWMcY1rqF_aem_aGn05hQ9klwtewKaYkydrw#cat-invest
+originals:
+  - claude-60-multidimensional-prompts | Claude 프롬프트 60선 — 입문자용 복붙 라이브러리 | https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149
+  - fable-5-70 | AI 활용 만능 프롬프트 70개 모음집 | https://tangerine-yeot-ec42fb.netlify.app/?fbclid=PAVERFWAS918FwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwl4xTMuIm7jtgVDY-xDdWkxyoEeU5CVfSRf7N3C0-lrvgBUqVUwWMcY1rqF_aem_aGn05hQ9klwtewKaYkydrw#cat-invest
 ---
 
 # 목적별 복붙 프롬프트 라이브러리
@@ -237,3 +240,12 @@ AI에게 매번 처음부터 지시문을 쓰지 않도록, 목적별로 미리 
 
 - [https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149](https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149)
 - [https://tangerine-yeot-ec42fb.netlify.app/?fbclid=PAVERFWAS918FwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwl4xTMuIm7jtgVDY-xDdWkxyoEeU5CVfSRf7N3C0-lrvgBUqVUwWMcY1rqF_aem_aGn05hQ9klwtewKaYkydrw#cat-invest](https://tangerine-yeot-ec42fb.netlify.app/?fbclid=PAVERFWAS918FwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwl4xTMuIm7jtgVDY-xDdWkxyoEeU5CVfSRf7N3C0-lrvgBUqVUwWMcY1rqF_aem_aGn05hQ9klwtewKaYkydrw#cat-invest)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 2개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| Claude 프롬프트 60선 — 입문자용 복붙 라이브러리 | `claude-60-multidimensional-prompts` | [vaulted-decade-3b2.notion.site](https://vaulted-decade-3b2.notion.site/Claude-60-353f563cd70680479c4df488e5621043?pvs=149) |
+| AI 활용 만능 프롬프트 70개 모음집 | `fable-5-70` | [tangerine-yeot-ec42fb.netlify.app](https://tangerine-yeot-ec42fb.netlify.app/?fbclid=PAVERFWAS918FwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABpwl4xTMuIm7jtgVDY-xDdWkxyoEeU5CVfSRf7N3C0-lrvgBUqVUwWMcY1rqF_aem_aGn05hQ9klwtewKaYkydrw#cat-invest) |

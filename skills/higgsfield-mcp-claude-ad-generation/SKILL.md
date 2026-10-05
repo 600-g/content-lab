@@ -13,6 +13,11 @@ sources:
   - https://adu-marketing-assistant.vercel.app/?fbclid=PAVERFWAS_8ptwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp4QZw6kI82IReo5sFPsD4JWsRo1HMdYx2bNPgMArMJnL3DnFvnYUd2Es2aUf_aem_NccJXC5ml8Y3kfRxb1oF1w
   - https://resonant-frog-df5.notion.site/HyperFrames-Claude-3503a1a3234380b685bddfa2931f3665
   - https://abounding-helmet-0e4.notion.site/3c373c7b15ad81c2980ff1fd5eddb9e1?pvs=149
+originals:
+  - higgsfield-mcp-claude-ad-generation | MCP로 광고영상 자동생성 | https://dour-tailor-5c6.notion.site/X-37861c2773b18071b093cde019e9f86e?pvs=149 https://aduaihiggsfield1.netlify.app/
+  - claude-meta-ads-mcp-automation | Claude로 메타 광고 자동화 | https://ink-jay-f32.notion.site/360f2e12ad5c81b0b2faf12936955f85?pvs=149 https://adu-marketing-assistant.vercel.app/?fbclid=PAVERFWAS_8ptwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp4QZw6kI82IReo5sFPsD4JWsRo1HMdYx2bNPgMArMJnL3DnFvnYUd2Es2aUf_aem_NccJXC5ml8Y3kfRxb1oF1w
+  - hyperframes-url-to-video | URL → 광고영상+BGM 자동 제작 (HyperFrames) | https://resonant-frog-df5.notion.site/HyperFrames-Claude-3503a1a3234380b685bddfa2931f3665
+  - ai-powered-ad-preset-generator | AI로 광고 프리셋 자동 생성 | https://abounding-helmet-0e4.notion.site/3c373c7b15ad81c2980ff1fd5eddb9e1?pvs=149
 ---
 
 # AI 광고 소재 제작과 메타 운영
@@ -605,3 +610,14 @@ J-pop rock, anime opening, energetic, female vocal, refreshing, 1 minute
 - [https://adu-marketing-assistant.vercel.app/?fbclid=PAVERFWAS_8ptwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp4QZw6kI82IReo5sFPsD4JWsRo1HMdYx2bNPgMArMJnL3DnFvnYUd2Es2aUf_aem_NccJXC5ml8Y3kfRxb1oF1w](https://adu-marketing-assistant.vercel.app/?fbclid=PAVERFWAS_8ptwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp4QZw6kI82IReo5sFPsD4JWsRo1HMdYx2bNPgMArMJnL3DnFvnYUd2Es2aUf_aem_NccJXC5ml8Y3kfRxb1oF1w)
 - [https://resonant-frog-df5.notion.site/HyperFrames-Claude-3503a1a3234380b685bddfa2931f3665](https://resonant-frog-df5.notion.site/HyperFrames-Claude-3503a1a3234380b685bddfa2931f3665)
 - [https://abounding-helmet-0e4.notion.site/3c373c7b15ad81c2980ff1fd5eddb9e1?pvs=149](https://abounding-helmet-0e4.notion.site/3c373c7b15ad81c2980ff1fd5eddb9e1?pvs=149)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 4개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| MCP로 광고영상 자동생성 | `higgsfield-mcp-claude-ad-generation` | [dour-tailor-5c6.notion.site](https://dour-tailor-5c6.notion.site/X-37861c2773b18071b093cde019e9f86e?pvs=149) · [aduaihiggsfield1.netlify.app](https://aduaihiggsfield1.netlify.app/) |
+| Claude로 메타 광고 자동화 | `claude-meta-ads-mcp-automation` | [ink-jay-f32.notion.site](https://ink-jay-f32.notion.site/360f2e12ad5c81b0b2faf12936955f85?pvs=149) · [adu-marketing-assistant.vercel.app](https://adu-marketing-assistant.vercel.app/?fbclid=PAVERFWAS_8ptwZG9mAmV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp4QZw6kI82IReo5sFPsD4JWsRo1HMdYx2bNPgMArMJnL3DnFvnYUd2Es2aUf_aem_NccJXC5ml8Y3kfRxb1oF1w) |
+| URL → 광고영상+BGM 자동 제작 (HyperFrames) | `hyperframes-url-to-video` | [resonant-frog-df5.notion.site](https://resonant-frog-df5.notion.site/HyperFrames-Claude-3503a1a3234380b685bddfa2931f3665) |
+| AI로 광고 프리셋 자동 생성 | `ai-powered-ad-preset-generator` | [abounding-helmet-0e4.notion.site](https://abounding-helmet-0e4.notion.site/3c373c7b15ad81c2980ff1fd5eddb9e1?pvs=149) |

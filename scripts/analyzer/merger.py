@@ -295,6 +295,14 @@ def merge_with_existing(
             merged.raw["_merged_source_urls"] = merged_urls
             merged.raw["_merged_collected_at"] = existing.get("collected_at") or datetime.date.today().isoformat()
             merged.raw["_is_merged"] = True
+            try:  # 원본 목록 이어가기 — 기존 문서의 원본들 + 이번에 들어온 신규 1건
+                from scripts.skill_builder.originals import originals_of, make_entry, merge_lists
+                merged.raw["_originals"] = merge_lists(
+                    originals_of(Path(existing_path)),
+                    [make_entry(new_result.skill_name, new_result.skill_title_ko,
+                                list(new_result.raw.get("_source_urls") or []) or [new_source_url])])
+            except Exception as e:  # noqa: BLE001
+                logger.warning("원본 목록 계산 실패 (합병 자체는 진행): %s", e)
             logger.info("스킬 합병 완료: %s (출처 %d→%d, provider=%s)", merged.skill_name, len(existing_urls), len(merged_urls), provider)
             return merged
         except Exception as e:  # noqa: BLE001

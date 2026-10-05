@@ -9,6 +9,10 @@ ai_tools: ["Claude", "Gemini", "GPT"]
 sources:
   - https://petalite-mayonnaise-ed7.notion.site/5-36efe1c9c8bb80be871bcdb4e4f60bc6?pvs=149
   - https://www.notion.so/35e485d1c310809fbb58f8d7bdbead4e?pvs=39
+originals:
+  - investment-prompt-golden-ratio-5 | 투자 고수들의 황금 프롬프트 5가지 | https://petalite-mayonnaise-ed7.notion.site/5-36efe1c9c8bb80be871bcdb4e4f60bc6?pvs=149
+  - gemini-stock-analysis-prompts | 뉴스 기반 주가 영향도 분석 및 종목 비교 | https://www.notion.so/35e485d1c310809fbb58f8d7bdbead4e?pvs=39
+  - future-leading-sector-analysis | 미래 주도 섹터 분석 (수석 애널리스트 모드) | https://www.notion.so/35e485d1c310809fbb58f8d7bdbead4e?pvs=39
 ---
 
 # AI 투자 분석 프롬프트 모음
@@ -349,3 +353,13 @@ AI를 내 포트폴리오 관리 에이전트로 지정하고, 단계마다 쓸 
 
 - [https://petalite-mayonnaise-ed7.notion.site/5-36efe1c9c8bb80be871bcdb4e4f60bc6?pvs=149](https://petalite-mayonnaise-ed7.notion.site/5-36efe1c9c8bb80be871bcdb4e4f60bc6?pvs=149)
 - [https://www.notion.so/35e485d1c310809fbb58f8d7bdbead4e?pvs=39](https://www.notion.so/35e485d1c310809fbb58f8d7bdbead4e?pvs=39)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 3개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 투자 고수들의 황금 프롬프트 5가지 | `investment-prompt-golden-ratio-5` | [petalite-mayonnaise-ed7.notion.site](https://petalite-mayonnaise-ed7.notion.site/5-36efe1c9c8bb80be871bcdb4e4f60bc6?pvs=149) |
+| 뉴스 기반 주가 영향도 분석 및 종목 비교 | `gemini-stock-analysis-prompts` | [notion.so](https://www.notion.so/35e485d1c310809fbb58f8d7bdbead4e?pvs=39) |
+| 미래 주도 섹터 분석 (수석 애널리스트 모드) | `future-leading-sector-analysis` | [notion.so](https://www.notion.so/35e485d1c310809fbb58f8d7bdbead4e?pvs=39) |

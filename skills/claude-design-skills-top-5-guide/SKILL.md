@@ -10,6 +10,10 @@ sources:
   - https://fieldby.notion.site/TOP-5-392d730b3953818184e8c0700d2d7548?pvs=149
   - https://every-ai-guides.vercel.app/posts/bamti-free-icon-sites-5?from=dm&fbclid=PAVERFWAUk-jhleHRuA2FlbQIxMABwZG9mAmZkaWQWUPIylD577BF_RVZaqtiuhtZmwanARnNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp8MsxXxRuNcdfhkzUnLBaTepV-M9ZugNTtYt_LV43lfdf-wJrwtCr9aemDEV_aem_DWy0zphRxiK19Q42PX1wdw
   - https://app.notion.com/p/design-3c0fd99f0e5f8102ad3ed2294e75c755?source=copy_link
+originals:
+  - claude-design-skills-top-5-guide | 클로드 디자인 스킬 5가지 설치 | https://fieldby.notion.site/TOP-5-392d730b3953818184e8c0700d2d7548?pvs=149
+  - free-icon-sites-replace-emoji-prompt | 이모지를 무료 아이콘 세트로 교체 | https://every-ai-guides.vercel.app/posts/bamti-free-icon-sites-5?from=dm&fbclid=PAVERFWAUk-jhleHRuA2FlbQIxMABwZG9mAmZkaWQWUPIylD577BF_RVZaqtiuhtZmwanARnNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp8MsxXxRuNcdfhkzUnLBaTepV-M9ZugNTtYt_LV43lfdf-wJrwtCr9aemDEV_aem_DWy0zphRxiK19Q42PX1wdw
+  - claude-code-design-skill | 화면 시안을 코드로 만드는 Claude | https://app.notion.com/p/design-3c0fd99f0e5f8102ad3ed2294e75c755?source=copy_link
 ---
 
 # AI 화면 고급스럽게 만들기
@@ -307,3 +311,13 @@ claude mcp add figma -s user -- npx figma-developer-mcp --figma-api-key=[피그�
 - [https://fieldby.notion.site/TOP-5-392d730b3953818184e8c0700d2d7548?pvs=149](https://fieldby.notion.site/TOP-5-392d730b3953818184e8c0700d2d7548?pvs=149)
 - [https://every-ai-guides.vercel.app/posts/bamti-free-icon-sites-5?from=dm&fbclid=PAVERFWAUk-jhleHRuA2FlbQIxMABwZG9mAmZkaWQWUPIylD577BF_RVZaqtiuhtZmwanARnNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp8MsxXxRuNcdfhkzUnLBaTepV-M9ZugNTtYt_LV43lfdf-wJrwtCr9aemDEV_aem_DWy0zphRxiK19Q42PX1wdw](https://every-ai-guides.vercel.app/posts/bamti-free-icon-sites-5?from=dm&fbclid=PAVERFWAUk-jhleHRuA2FlbQIxMABwZG9mAmZkaWQWUPIylD577BF_RVZaqtiuhtZmwanARnNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp8MsxXxRuNcdfhkzUnLBaTepV-M9ZugNTtYt_LV43lfdf-wJrwtCr9aemDEV_aem_DWy0zphRxiK19Q42PX1wdw)
 - [https://app.notion.com/p/design-3c0fd99f0e5f8102ad3ed2294e75c755?source=copy_link](https://app.notion.com/p/design-3c0fd99f0e5f8102ad3ed2294e75c755?source=copy_link)
+
+### 합쳐진 원본 문서
+
+이 문서는 아래 3개 문서를 하나로 합쳐 새로 정리한 것입니다.
+
+| 원본 문서 | 원래 슬러그 | 원본 출처 |
+|---|---|---|
+| 클로드 디자인 스킬 5가지 설치 | `claude-design-skills-top-5-guide` | [fieldby.notion.site](https://fieldby.notion.site/TOP-5-392d730b3953818184e8c0700d2d7548?pvs=149) |
+| 이모지를 무료 아이콘 세트로 교체 | `free-icon-sites-replace-emoji-prompt` | [every-ai-guides.vercel.app](https://every-ai-guides.vercel.app/posts/bamti-free-icon-sites-5?from=dm&fbclid=PAVERFWAUk-jhleHRuA2FlbQIxMABwZG9mAmZkaWQWUPIylD577BF_RVZaqtiuhtZmwanARnNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp8MsxXxRuNcdfhkzUnLBaTepV-M9ZugNTtYt_LV43lfdf-wJrwtCr9aemDEV_aem_DWy0zphRxiK19Q42PX1wdw) |
+| 화면 시안을 코드로 만드는 Claude | `claude-code-design-skill` | [app.notion.com](https://app.notion.com/p/design-3c0fd99f0e5f8102ad3ed2294e75c755?source=copy_link) |
